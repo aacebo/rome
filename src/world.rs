@@ -1,34 +1,13 @@
 use std::collections::{BTreeMap, VecDeque};
 
 use crate::{
+    Facet, Tick,
     context::Context,
     diagnostic::{Diagnostic, DiagnosticBuilder, DiagnosticId},
-    entity::{Entity, EntityId, Facet},
+    entity::{Entity, EntityDraft, EntityId},
     math,
     meta::Meta,
 };
-
-#[derive(
-    Debug,
-    Default,
-    Copy,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
-)]
-#[serde(transparent)]
-pub struct Tick(u64);
-
-impl Tick {
-    pub fn next(&self) -> Self {
-        Self(self.0 + 1)
-    }
-}
 
 #[derive(Debug, Default, serde::Serialize)]
 pub struct World {
@@ -68,22 +47,49 @@ impl World {
         self.items.get_mut(id)
     }
 
-    pub fn put(&mut self, mut entity: Entity) {
-        let is_new = !self.items.contains_key(&entity.id);
-        let mut facets: Vec<Box<dyn Facet>> = entity.facets.drain(..).collect();
-        let ctx = Context { world: self };
-        let mut entity_ctx = ctx.with_entity(&mut entity);
+    pub fn create(
+        &mut self,
+        name: impl Into<String>,
+        transform: math::Transform,
+        fnc: impl FnOnce(&mut EntityDraft),
+    ) {
+        let id = self.entity_id;
+        self.entity_id = self.entity_id.next();
+        let mut draft = EntityDraft {
+            parent_id: None,
+            meta: Meta::default(),
+            name: name.into(),
+            transform,
+            children: vec![],
+            facets: vec![],
+        };
 
-        for facet in facets.iter_mut() {
-            if is_new {
-                facet.on_create(&mut entity_ctx);
-            } else {
-                facet.on_update(&mut entity_ctx);
-            }
+        fnc(&mut draft);
+
+        let mut entity = Entity {
+            id,
+            parent_id: draft.parent_id,
+            meta: draft.meta,
+            name: draft.name,
+            transform: draft.transform,
+            children: draft.children,
+            facets: vec![],
+        };
+
+        let mut ctx = Context { world: self }.with_entity(&mut entity);
+
+        for facet in draft.facets.iter() {
+            facet.on_create(&mut ctx);
         }
 
-        entity.facets = facets;
-        self.items.insert(entity.id, entity);
+        entity.facets = draft.facets;
+        self.items.insert(id, entity);
+    }
+
+    pub fn update(&mut self, id: &EntityId, fnc: impl FnOnce(&mut Entity)) {
+        if let Some(entity) = self.get_mut(id) {
+            fnc(entity);
+        }
     }
 
     pub fn delete(&mut self, id: &EntityId) {
@@ -98,35 +104,13 @@ impl World {
         }
     }
 
-    pub fn create(&mut self, name: impl Into<String>, transform: math::Transform) -> &mut Entity {
-        let id = self.entity_id;
-        self.entity_id = self.entity_id.next();
-
-        let mut entity = Entity {
-            id,
-            parent_id: None,
-            meta: Meta::default(),
-            name: name.into(),
-            transform,
-            children: vec![],
-            facets: vec![],
-        };
-
-        let mut facets: Vec<Box<dyn Facet>> = entity.facets.drain(..).collect();
-        let ctx = Context { world: self };
-        let mut entity_ctx = ctx.with_entity(&mut entity);
-
-        for facet in facets.iter_mut() {
-            facet.on_create(&mut entity_ctx);
-        }
-
-        entity.facets = facets;
-        self.items.entry(id).or_insert(entity)
-    }
-
-    pub fn emit(&mut self, func: impl FnOnce(DiagnosticBuilder) -> Diagnostic) {
+    pub fn emit(&mut self, fnc: impl FnOnce(DiagnosticBuilder) -> Diagnostic) {
         let id = self.diagnostic_id;
         self.diagnostic_id = self.diagnostic_id.next();
-        self.diagnostics.push_back(func(DiagnosticBuilder::new(id)));
+        self.diagnostics.push_back(fnc(DiagnosticBuilder::new(id)));
+    }
+
+    pub fn next(&mut self) {
+        self.tick = self.tick.next();
     }
 }
