@@ -1,5 +1,3 @@
-use std::sync::Arc;
-
 use crate::{context::EntityContext, math, meta::Meta};
 
 #[derive(
@@ -35,7 +33,7 @@ impl EntityId {
 /// - Facets provide focused capabilities, state, and optional behavior
 ///
 /// Complex behavior emerges from the combination of Facets attached to an Entity.
-#[derive(Clone, Debug, serde::Serialize)]
+#[derive(Debug, serde::Serialize)]
 pub struct Entity {
     pub id: EntityId,
     pub parent_id: Option<EntityId>,
@@ -43,7 +41,7 @@ pub struct Entity {
     pub name: String,
     pub transform: math::Transform,
     pub children: Vec<EntityId>,
-    pub facets: Vec<Arc<dyn Facet>>,
+    pub facets: Vec<Box<dyn Facet>>,
 }
 
 impl Entity {
@@ -73,7 +71,7 @@ impl<'a> Accessor<'a> {
     }
 
     pub fn facet(self, facet: impl Facet) -> Self {
-        self.entity.facets.push(Arc::new(facet));
+        self.entity.facets.push(Box::new(facet));
         self
     }
 

@@ -1,8 +1,9 @@
 use std::collections::{BTreeMap, VecDeque};
 
 use crate::{
+    context::Context,
     diagnostic::{Diagnostic, DiagnosticBuilder, DiagnosticId},
-    entity::{Entity, EntityId},
+    entity::{Entity, EntityId, Facet},
     math,
     meta::Meta,
 };
@@ -29,7 +30,7 @@ impl Tick {
     }
 }
 
-#[derive(Debug, Default, Clone, serde::Serialize)]
+#[derive(Debug, Default, serde::Serialize)]
 pub struct World {
     tick: Tick,
     entity_id: EntityId,
@@ -67,34 +68,41 @@ impl World {
         self.items.get_mut(id)
     }
 
-    pub fn put(&mut self, entity: Entity) {
-        // let id = entity.id;
-        // let exists = self.has(&id);
-        // let mut ctx = RefCell::new(Context { world: self }.with_entity(&mut entity));
+    pub fn put(&mut self, mut entity: Entity) {
+        let is_new = !self.items.contains_key(&entity.id);
+        let mut facets: Vec<Box<dyn Facet>> = entity.facets.drain(..).collect();
+        let ctx = Context { world: self };
+        let mut entity_ctx = ctx.with_entity(&mut entity);
 
-        // if exists {
-        //     let reference = ctx.get_mut();
+        for facet in facets.iter_mut() {
+            if is_new {
+                facet.on_create(&mut entity_ctx);
+            } else {
+                facet.on_update(&mut entity_ctx);
+            }
+        }
 
-        //     for facet in reference.entity_mut().facets.iter_mut() {
-        //         if let Some(v) = Arc::get_mut(facet) {
-        //             v.on_update(reference);
-        //         }
-        //     }
-        // } else {
-
-        // }
-
+        entity.facets = facets;
         self.items.insert(entity.id, entity);
     }
 
     pub fn delete(&mut self, id: &EntityId) {
-        self.items.remove(id);
+        if let Some(mut entity) = self.items.remove(id) {
+            let mut facets: Vec<Box<dyn Facet>> = entity.facets.drain(..).collect();
+            let ctx = Context { world: self };
+            let mut entity_ctx = ctx.with_entity(&mut entity);
+
+            for facet in facets.iter_mut() {
+                facet.on_delete(&mut entity_ctx);
+            }
+        }
     }
 
     pub fn create(&mut self, name: impl Into<String>, transform: math::Transform) -> &mut Entity {
         let id = self.entity_id;
         self.entity_id = self.entity_id.next();
-        self.items.entry(id).or_insert(Entity {
+
+        let mut entity = Entity {
             id,
             parent_id: None,
             meta: Meta::default(),
@@ -102,7 +110,18 @@ impl World {
             transform,
             children: vec![],
             facets: vec![],
-        })
+        };
+
+        let mut facets: Vec<Box<dyn Facet>> = entity.facets.drain(..).collect();
+        let ctx = Context { world: self };
+        let mut entity_ctx = ctx.with_entity(&mut entity);
+
+        for facet in facets.iter_mut() {
+            facet.on_create(&mut entity_ctx);
+        }
+
+        entity.facets = facets;
+        self.items.entry(id).or_insert(entity)
     }
 
     pub fn emit(&mut self, func: impl FnOnce(DiagnosticBuilder) -> Diagnostic) {
