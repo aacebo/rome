@@ -9,11 +9,11 @@ pub mod world;
 
 pub use tick::*;
 
-/// A Module represents a logical world layer/system.
+/// A Layer represents a logical world system.
 ///
 /// Modules are systems that coordinate entities in a world and
 /// drive more complex multi-entity logic (ex. Phsyics).
-pub trait Module: Send + Sync + 'static {
+pub trait Layer: Send + Sync + 'static {
     fn on_start(&self, _ctx: &mut context::Context) {}
     fn on_tick(&self, _ctx: &mut context::Context) {}
     fn on_stop(&self, _ctx: &mut context::Context) {}
@@ -26,7 +26,7 @@ pub trait Module: Send + Sync + 'static {
 /// depending directly on other Facets.
 ///
 /// Complex interactions between Facets should be coordinated externally
-/// (e.g. via Modules) rather than through tight coupling.
+/// (e.g. via Layers) rather than through tight coupling.
 ///
 /// In this model:
 /// - Entities provide identity and composition
@@ -34,9 +34,9 @@ pub trait Module: Send + Sync + 'static {
 pub trait Facet: Send + Sync + 'static {
     fn name(&self) -> &str;
 
-    fn on_create(&self, _ctx: &mut context::EntityContext) {}
-    fn on_update(&self, _ctx: &mut context::EntityContext) {}
-    fn on_delete(&self, _ctx: &mut context::EntityContext) {}
+    fn on_create(&mut self, _ctx: &mut context::EntityContext) {}
+    fn on_update(&mut self, _ctx: &mut context::EntityContext) {}
+    fn on_delete(&mut self, _ctx: &mut context::EntityContext) {}
 }
 
 impl serde::Serialize for dyn Facet {

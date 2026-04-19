@@ -78,7 +78,7 @@ impl World {
 
         let mut ctx = Context { world: self }.with_entity(&mut entity);
 
-        for facet in draft.facets.iter() {
+        for facet in draft.facets.iter_mut() {
             facet.on_create(&mut ctx);
         }
 
