@@ -1,5 +1,5 @@
-pub fn new(id: DiagnosticId) -> DiagnosticBuilder {
-    DiagnosticBuilder::new(id)
+pub fn new() -> DiagnosticBuilder {
+    DiagnosticBuilder::new()
 }
 
 #[derive(
@@ -53,7 +53,6 @@ impl From<u64> for DiagnosticId {
 
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub struct Diagnostic {
-    pub id: DiagnosticId,
     pub severity: Severity,
     pub message: Option<String>,
     pub children: Vec<Self>,
@@ -62,18 +61,14 @@ pub struct Diagnostic {
 
 #[derive(Default)]
 pub struct DiagnosticBuilder {
-    id: DiagnosticId,
     severity: Severity,
     message: Option<String>,
     children: Vec<Diagnostic>,
 }
 
 impl DiagnosticBuilder {
-    pub fn new(id: DiagnosticId) -> Self {
-        Self {
-            id,
-            ..Default::default()
-        }
+    pub fn new() -> Self {
+        Self::default()
     }
 
     pub fn severity(mut self, severity: Severity) -> Self {
@@ -93,7 +88,6 @@ impl DiagnosticBuilder {
 
     pub fn build(self) -> Diagnostic {
         Diagnostic {
-            id: self.id,
             severity: self.severity,
             message: self.message,
             children: self.children,

@@ -1,12 +1,13 @@
-pub mod context;
+pub mod action;
 pub mod diagnostic;
 pub mod entity;
-pub mod event;
 pub mod math;
 pub mod meta;
+mod runtime;
 mod tick;
 pub mod world;
 
+pub use runtime::*;
 pub use tick::*;
 
 /// A Layer represents a logical world system.
@@ -14,9 +15,27 @@ pub use tick::*;
 /// Modules are systems that coordinate entities in a world and
 /// drive more complex multi-entity logic (ex. Phsyics).
 pub trait Layer: Send + Sync + 'static {
-    fn on_start(&self, _ctx: &mut context::Context) {}
-    fn on_tick(&self, _ctx: &mut context::Context) {}
-    fn on_stop(&self, _ctx: &mut context::Context) {}
+    fn name(&self) -> &str;
+
+    fn on_start(&mut self, _state: &mut State) {}
+    fn on_tick(&mut self, _state: &mut State) {}
+    fn on_stop(&mut self, _state: &mut State) {}
+}
+
+/// Schedules world-layer execution for an engine.
+///
+/// A `Scheduler` defines **how** and **when** layers run during the engine
+/// lifecycle. The simplest implementation executes every layer sequentially
+/// on each tick, but other schedulers may support phased execution,
+/// dependency ordering, fixed timesteps, or parallel dispatch.
+///
+/// A scheduler does not own world state. It coordinates execution against
+/// a mutable [`context::Context`], which provides access to the active world
+/// and any engine-scoped services needed during a tick.
+pub trait Scheduler: Send + Sync + 'static {
+    fn on_start(&mut self, _state: &mut State, _layers: &mut [Box<dyn Layer>]) {}
+    fn on_tick(&mut self, state: &mut State, layers: &mut [Box<dyn Layer>]);
+    fn on_stop(&mut self, _state: &mut State, _layers: &mut [Box<dyn Layer>]) {}
 }
 
 /// A Facet represents a single, focused aspect of an Entity's state and behavior.
@@ -34,9 +53,9 @@ pub trait Layer: Send + Sync + 'static {
 pub trait Facet: Send + Sync + 'static {
     fn name(&self) -> &str;
 
-    fn on_create(&mut self, _ctx: &mut context::EntityContext) {}
-    fn on_update(&mut self, _ctx: &mut context::EntityContext) {}
-    fn on_delete(&mut self, _ctx: &mut context::EntityContext) {}
+    fn on_create(&mut self, _state: &mut EntityState) {}
+    fn on_update(&mut self, _state: &mut EntityState) {}
+    fn on_delete(&mut self, _state: &mut EntityState) {}
 }
 
 impl serde::Serialize for dyn Facet {
