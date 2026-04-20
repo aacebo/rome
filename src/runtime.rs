@@ -1,8 +1,9 @@
-use crate::{Context, Layer, Tick, world::World};
+use crate::{Context, Layer, Scheduler, Tick, schedule, world::World};
 
 pub struct Runtime {
     tick: Tick,
     world: World,
+    scheduler: Box<dyn Scheduler>,
     layers: Vec<Box<dyn Layer>>,
 }
 
@@ -14,36 +15,34 @@ impl Runtime {
     /// Start the runtime which will continue
     /// until a Stop action is received.
     pub fn start(&mut self) {
-        let mut ctx = Context::new(&mut self.world);
-
-        for layer in self.layers.iter_mut() {
-            layer.on_start(&mut ctx);
-            ctx.apply();
-        }
+        self.tick = self.tick.next();
+        let mut ctx = Context::new(self.tick, &mut self.world);
+        self.scheduler.on_start(&mut ctx, &mut self.layers);
 
         while !ctx.is_cancelled() {
-            self.tick = self.tick.next();
-
-            for layer in self.layers.iter_mut() {
-                layer.on_tick(&mut ctx);
-                ctx.apply();
-            }
+            self.scheduler.on_tick(&mut ctx, &mut self.layers);
         }
 
-        for layer in self.layers.iter_mut() {
-            layer.on_stop(&mut ctx);
-            ctx.apply();
-        }
+        self.scheduler.on_stop(&mut ctx, &mut self.layers);
     }
 }
 
 pub struct RuntimeBuilder {
+    scheduler: Box<dyn Scheduler>,
     layers: Vec<Box<dyn Layer>>,
 }
 
 impl RuntimeBuilder {
     pub fn new() -> Self {
-        Self { layers: vec![] }
+        Self {
+            scheduler: Box::new(schedule::Sequence),
+            layers: vec![],
+        }
+    }
+
+    pub fn scheduler(mut self, scheduler: impl Scheduler) -> Self {
+        self.scheduler = Box::new(scheduler);
+        self
     }
 
     pub fn layer(mut self, layer: impl Layer) -> Self {
@@ -55,6 +54,7 @@ impl RuntimeBuilder {
         Runtime {
             tick: Tick::default(),
             world: World::new(),
+            scheduler: self.scheduler,
             layers: self.layers,
         }
     }

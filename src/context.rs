@@ -1,5 +1,5 @@
 use crate::{
-    CancelSource, CancelToken,
+    CancelSource, CancelToken, Tick,
     action::{Action, Actions},
     diagnostic::{Diagnostic, Diagnostics},
     world::World,
@@ -7,6 +7,7 @@ use crate::{
 
 #[derive(Debug)]
 pub struct Context<'a> {
+    tick: Tick,
     world: &'a mut World,
     actions: Actions,
     diagnostics: Diagnostics,
@@ -15,17 +16,22 @@ pub struct Context<'a> {
 }
 
 impl<'a> Context<'a> {
-    pub fn new(world: &'a mut World) -> Self {
+    pub fn new(tick: Tick, world: &'a mut World) -> Self {
         let cancel_source = CancelSource::new();
         let cancel_token = cancel_source.token();
 
         Self {
+            tick,
             world,
             actions: Actions::new(),
             diagnostics: Diagnostics::new(),
             cancel_source,
             cancel_token,
         }
+    }
+
+    pub fn tick(&self) -> Tick {
+        self.tick
     }
 
     pub fn world(&self) -> &World {
