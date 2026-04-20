@@ -10,6 +10,8 @@ pub mod world;
 pub use runtime::*;
 pub use tick::*;
 
+use crate::entity::Entity;
+
 /// A Layer represents a logical world system.
 ///
 /// Modules are systems that coordinate entities in a world and
@@ -53,9 +55,9 @@ pub trait Scheduler: Send + Sync + 'static {
 pub trait Facet: Send + Sync + 'static {
     fn name(&self) -> &str;
 
-    fn on_create(&mut self, _state: &mut EntityState) {}
-    fn on_update(&mut self, _state: &mut EntityState) {}
-    fn on_delete(&mut self, _state: &mut EntityState) {}
+    fn on_create(&mut self, _state: &mut State, _entity: &mut Entity) {}
+    fn on_update(&mut self, _state: &mut State, _entity: &mut Entity) {}
+    fn on_delete(&mut self, _state: &mut State, _entity: &mut Entity) {}
 }
 
 impl serde::Serialize for dyn Facet {
