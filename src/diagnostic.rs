@@ -97,9 +97,9 @@ impl DiagnosticBuilder {
 }
 
 #[derive(Debug)]
-pub struct DiagnosticBuffer(Vec<Diagnostic>);
+pub struct Diagnostics(Vec<Diagnostic>);
 
-impl DiagnosticBuffer {
+impl Diagnostics {
     pub fn new() -> Self {
         Self(vec![])
     }
@@ -120,8 +120,8 @@ impl DiagnosticBuffer {
         self.0.last()
     }
 
-    pub fn read(&mut self) -> Option<Diagnostic> {
-        self.0.pop()
+    pub fn drain(&mut self) -> std::vec::Drain<'_, Diagnostic> {
+        self.0.drain(..)
     }
 
     pub fn write(&mut self, diagnostic: Diagnostic) -> &mut Self {

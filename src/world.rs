@@ -63,4 +63,12 @@ impl World {
     pub fn get_mut(&mut self, id: &EntityId) -> Option<&mut Entity> {
         self.items.get_mut(id)
     }
+
+    pub fn set(&mut self, entity: Entity) {
+        self.items.insert(entity.id, entity);
+    }
+
+    pub fn del(&mut self, id: &EntityId) {
+        self.items.remove(id);
+    }
 }

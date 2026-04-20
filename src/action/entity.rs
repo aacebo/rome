@@ -1,6 +1,6 @@
 use crate::{
     action::Action,
-    diagnostic::DiagnosticBuffer,
+    diagnostic::Diagnostics,
     entity::{Entity, EntityDraft, EntityId},
     world::World,
 };
@@ -22,7 +22,7 @@ impl Action for EntityAction {
         }
     }
 
-    fn apply(self: Box<Self>, world: &mut World, _diagnostics: &mut DiagnosticBuffer) {
+    fn apply(self: Box<Self>, world: &mut World, _diagnostics: &mut Diagnostics) {
         match *self {
             EntityAction::Create { draft } => {
                 let id = world.entity_id;

@@ -1,13 +1,8 @@
 mod entity;
-mod system;
 
 pub use entity::*;
-pub use system::*;
 
-use crate::{
-    diagnostic::{Diagnostic, DiagnosticBuffer},
-    world::World,
-};
+use crate::{diagnostic::Diagnostics, world::World};
 
 /// An Action represents a request for state to be changed.
 pub trait Action: std::fmt::Debug + 'static {
@@ -16,23 +11,13 @@ pub trait Action: std::fmt::Debug + 'static {
 
     /// Called by the Runtime to persist an Action
     /// to the State.
-    fn apply(self: Box<Self>, world: &mut World, diagnostics: &mut DiagnosticBuffer);
-}
-
-impl Action for Diagnostic {
-    fn name(&self) -> &str {
-        "diagnostic"
-    }
-
-    fn apply(self: Box<Self>, _world: &mut World, diagnostics: &mut DiagnosticBuffer) {
-        diagnostics.write(*self);
-    }
+    fn apply(self: Box<Self>, world: &mut World, diagnostics: &mut Diagnostics);
 }
 
 #[derive(Debug)]
-pub struct ActionBuffer(Vec<Box<dyn Action>>);
+pub struct Actions(Vec<Box<dyn Action>>);
 
-impl ActionBuffer {
+impl Actions {
     pub fn new() -> Self {
         Self(vec![])
     }
@@ -59,8 +44,8 @@ impl ActionBuffer {
         }
     }
 
-    pub fn read(&mut self) -> Option<Box<dyn Action>> {
-        self.0.pop()
+    pub fn drain(&mut self) -> std::vec::Drain<'_, Box<dyn Action>> {
+        self.0.drain(..)
     }
 
     pub fn write(&mut self, action: impl Action) -> &mut Self {
