@@ -1,7 +1,7 @@
 use crate::{
-    Facet, Layer, Tick,
-    action::{Action, ActionBuffer, EntityAction},
-    diagnostic::{Diagnostic, DiagnosticId},
+    Layer, Tick,
+    action::{ActionBuffer, EntityAction, SystemAction},
+    diagnostic::{Diagnostic, DiagnosticBuffer},
     entity::{Entity, EntityDraft, EntityId},
     world::World,
 };
@@ -11,8 +11,7 @@ pub struct Runtime {
     world: World,
     layers: Vec<Box<dyn Layer>>,
     actions: ActionBuffer,
-    diagnostic_id: DiagnosticId,
-    diagnostics: Vec<(DiagnosticId, Diagnostic)>,
+    diagnostics: DiagnosticBuffer,
 }
 
 impl Runtime {
@@ -20,6 +19,8 @@ impl Runtime {
         RuntimeBuilder::new()
     }
 
+    /// Start the runtime which will continue
+    /// until a Stop action is received.
     pub fn start(&mut self) {
         for layer in self.layers.iter_mut() {
             let mut state = State {
@@ -31,24 +32,17 @@ impl Runtime {
         }
 
         self.flush();
-    }
 
-    pub fn next(&mut self) {
-        self.tick = self.tick.next();
+        loop {
+            self.next();
 
-        for layer in self.layers.iter_mut() {
-            let mut state = State {
-                world: &self.world,
-                actions: &mut self.actions,
+            if let Some(SystemAction::Stop) = self.flush() {
+                break;
             };
-
-            layer.on_tick(&mut state);
         }
 
         self.flush();
-    }
 
-    pub fn stop(&mut self) {
         for layer in self.layers.iter_mut() {
             let mut state = State {
                 world: &self.world,
@@ -61,81 +55,30 @@ impl Runtime {
         self.flush();
     }
 
-    pub fn flush(&mut self) {
-        while let Some(action) = self.actions.read() {
-            match action {
-                Action::Emit(diagnostic) => {
-                    let id = self.diagnostic_id;
-                    self.diagnostic_id = id.next();
-                    self.diagnostics.push((id, diagnostic));
-                }
-                Action::Entity(entity_action) => match entity_action {
-                    EntityAction::Create { draft } => {
-                        let id = self.world.entity_id;
-                        self.world.entity_id = self.world.entity_id.next();
-                        let mut facets = draft.facets;
-                        let mut entity = Entity {
-                            id,
-                            parent_id: draft.parent_id,
-                            meta: draft.meta,
-                            name: draft.name,
-                            transform: draft.transform,
-                            children: draft.children,
-                            facets: vec![],
-                        };
+    /// Issue a Stop action.
+    pub fn stop(&mut self) {
+        self.actions.write(SystemAction::Stop);
+    }
 
-                        for facet in facets.iter_mut() {
-                            let mut state = State {
-                                world: &self.world,
-                                actions: &mut self.actions,
-                            };
+    fn next(&mut self) {
+        self.tick = self.tick.next();
 
-                            facet.on_create(&mut state, &mut entity);
-                        }
+        for layer in self.layers.iter_mut() {
+            let mut state = State {
+                world: &self.world,
+                actions: &mut self.actions,
+            };
 
-                        entity.facets = facets;
-                        self.world.items.insert(entity.id, entity);
-                    }
-                    EntityAction::Update { id, draft } => {
-                        if let Some(mut entity) = self.world.items.remove(&id) {
-                            let mut facets: Vec<Box<dyn Facet>> = entity.facets.drain(..).collect();
-
-                            entity.parent_id = draft.parent_id;
-                            entity.meta = draft.meta;
-                            entity.name = draft.name;
-                            entity.transform = draft.transform;
-                            entity.children = draft.children;
-
-                            for facet in facets.iter_mut() {
-                                let mut state = State {
-                                    world: &self.world,
-                                    actions: &mut self.actions,
-                                };
-
-                                facet.on_update(&mut state, &mut entity);
-                            }
-
-                            entity.facets = facets;
-                            self.world.items.insert(entity.id, entity);
-                        }
-                    }
-                    EntityAction::Delete { id } => {
-                        if let Some(mut entity) = self.world.items.remove(&id) {
-                            let mut facets: Vec<Box<dyn Facet>> = entity.facets.drain(..).collect();
-
-                            for facet in facets.iter_mut() {
-                                let mut state = State {
-                                    world: &self.world,
-                                    actions: &mut self.actions,
-                                };
-
-                                facet.on_delete(&mut state, &mut entity);
-                            }
-                        }
-                    }
-                },
-            }
+            layer.on_tick(&mut state);
         }
+    }
+
+    fn flush(&mut self) -> Option<SystemAction> {
+        while let Some(action) = self.actions.read() {
+            action.apply(&mut self.world, &mut self.diagnostics);
+        }
+
+        None
     }
 }
 
@@ -159,8 +102,7 @@ impl RuntimeBuilder {
             world: World::new(),
             layers: self.layers,
             actions: ActionBuffer::new(),
-            diagnostic_id: DiagnosticId::default(),
-            diagnostics: vec![],
+            diagnostics: DiagnosticBuffer::new(),
         }
     }
 }
@@ -192,21 +134,18 @@ impl<'a> State<'a> {
     }
 
     pub fn create(&mut self, draft: EntityDraft) {
-        self.actions
-            .write(Action::Entity(EntityAction::Create { draft }));
+        self.actions.write(EntityAction::Create { draft });
     }
 
     pub fn update(&mut self, id: EntityId, draft: EntityDraft) {
-        self.actions
-            .write(Action::Entity(EntityAction::Update { id, draft }));
+        self.actions.write(EntityAction::Update { id, draft });
     }
 
     pub fn delete(&mut self, id: EntityId) {
-        self.actions
-            .write(Action::Entity(EntityAction::Delete { id }));
+        self.actions.write(EntityAction::Delete { id });
     }
 
     pub fn emit(&mut self, diagnostic: Diagnostic) {
-        self.actions.write(Action::from(diagnostic));
+        self.actions.write(diagnostic);
     }
 }

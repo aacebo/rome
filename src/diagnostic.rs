@@ -95,3 +95,37 @@ impl DiagnosticBuilder {
         }
     }
 }
+
+#[derive(Debug)]
+pub struct DiagnosticBuffer(Vec<Diagnostic>);
+
+impl DiagnosticBuffer {
+    pub fn new() -> Self {
+        Self(vec![])
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
+    }
+
+    pub fn len(&self) -> usize {
+        self.0.len()
+    }
+
+    pub fn first(&self) -> Option<&Diagnostic> {
+        self.0.first()
+    }
+
+    pub fn last(&self) -> Option<&Diagnostic> {
+        self.0.last()
+    }
+
+    pub fn read(&mut self) -> Option<Diagnostic> {
+        self.0.pop()
+    }
+
+    pub fn write(&mut self, diagnostic: Diagnostic) -> &mut Self {
+        self.0.push(diagnostic);
+        self
+    }
+}

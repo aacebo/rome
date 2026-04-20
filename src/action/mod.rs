@@ -1,30 +1,36 @@
 mod entity;
+mod system;
 
 pub use entity::*;
+pub use system::*;
 
-use crate::diagnostic::Diagnostic;
+use crate::{
+    diagnostic::{Diagnostic, DiagnosticBuffer},
+    world::World,
+};
 
-#[derive(Debug, serde::Serialize)]
-#[serde(tag = "type")]
-pub enum Action {
-    Emit(Diagnostic),
-    Entity(EntityAction),
+/// An Action represents a request for state to be changed.
+pub trait Action: std::fmt::Debug + 'static {
+    /// ex. `entity.create`
+    fn name(&self) -> &str;
+
+    /// Called by the Runtime to persist an Action
+    /// to the State.
+    fn apply(self: Box<Self>, world: &mut World, diagnostics: &mut DiagnosticBuffer);
 }
 
-impl From<Diagnostic> for Action {
-    fn from(value: Diagnostic) -> Self {
-        Self::Emit(value)
+impl Action for Diagnostic {
+    fn name(&self) -> &str {
+        "diagnostic"
     }
-}
 
-impl From<EntityAction> for Action {
-    fn from(value: EntityAction) -> Self {
-        Self::Entity(value)
+    fn apply(self: Box<Self>, _world: &mut World, diagnostics: &mut DiagnosticBuffer) {
+        diagnostics.write(*self);
     }
 }
 
 #[derive(Debug)]
-pub struct ActionBuffer(Vec<Action>);
+pub struct ActionBuffer(Vec<Box<dyn Action>>);
 
 impl ActionBuffer {
     pub fn new() -> Self {
@@ -39,20 +45,26 @@ impl ActionBuffer {
         self.0.len()
     }
 
-    pub fn first(&self) -> Option<&Action> {
-        self.0.first()
+    pub fn first(&self) -> Option<&dyn Action> {
+        match self.0.first() {
+            None => None,
+            Some(v) => Some(v.as_ref()),
+        }
     }
 
-    pub fn last(&self) -> Option<&Action> {
-        self.0.last()
+    pub fn last(&self) -> Option<&dyn Action> {
+        match self.0.last() {
+            None => None,
+            Some(v) => Some(v.as_ref()),
+        }
     }
 
-    pub fn read(&mut self) -> Option<Action> {
+    pub fn read(&mut self) -> Option<Box<dyn Action>> {
         self.0.pop()
     }
 
-    pub fn write(&mut self, action: Action) -> &mut Self {
-        self.0.push(action);
+    pub fn write(&mut self, action: impl Action) -> &mut Self {
+        self.0.push(Box::new(action));
         self
     }
 }
