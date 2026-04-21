@@ -1,5 +1,5 @@
 use crate::{
-    CancelSource, CancelToken, Tick,
+    Cancellation, Tick,
     action::{Action, Actions},
     diagnostic::{Diagnostic, Diagnostics},
     world::World,
@@ -11,23 +11,23 @@ pub struct Context<'a> {
     world: &'a mut World,
     actions: Actions,
     diagnostics: Diagnostics,
-    cancel_source: CancelSource,
-    cancel_token: CancelToken,
+    cancellation: &'a Cancellation,
 }
 
 impl<'a> Context<'a> {
-    pub fn new(tick: Tick, world: &'a mut World) -> Self {
-        let cancel_source = CancelSource::new();
-        let cancel_token = cancel_source.token();
-
+    pub fn new(tick: Tick, world: &'a mut World, cancellation: &'a Cancellation) -> Self {
         Self {
             tick,
             world,
             actions: Actions::new(),
             diagnostics: Diagnostics::new(),
-            cancel_source,
-            cancel_token,
+            cancellation,
         }
+    }
+
+    pub fn next(mut self, tick: Tick) -> Self {
+        self.tick = tick;
+        self
     }
 
     pub fn tick(&self) -> Tick {
@@ -39,11 +39,11 @@ impl<'a> Context<'a> {
     }
 
     pub fn is_cancelled(&self) -> bool {
-        self.cancel_token.is_cancelled()
+        self.cancellation.is_cancelled()
     }
 
     pub fn cancel(&self) {
-        self.cancel_source.cancel();
+        self.cancellation.cancel();
     }
 
     pub fn dispatch(&mut self, action: impl Action) -> &mut Self {

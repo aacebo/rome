@@ -1,10 +1,11 @@
-use crate::{Clock, Context, Layer, Scheduler, schedule, time, world::World};
+use crate::{Cancellation, Clock, Context, Layer, Scheduler, schedule, time, world::World};
 
 pub struct Runtime {
     world: World,
     clock: Box<dyn Clock>,
     scheduler: Box<dyn Scheduler>,
     layers: Vec<Box<dyn Layer>>,
+    cancellation: Option<Cancellation>,
 }
 
 impl Runtime {
@@ -13,14 +14,47 @@ impl Runtime {
     }
 
     /// Start the runtime which will continue
-    /// until a Stop action is received.
-    pub fn next(&mut self, delta: std::time::Duration) {
-        let tick = self.clock.advance_by(delta);
-        let mut ctx = Context::new(tick, &mut self.world);
+    /// until cancelled.
+    pub fn run(&mut self) {
+        let cancellation = Cancellation::default();
+        self.cancellation = Some(cancellation.clone());
+
+        let mut last = std::time::Instant::now();
+        let mut ctx = Context::new(
+            self.clock.advance_by(std::time::Duration::ZERO),
+            &mut self.world,
+            &cancellation,
+        );
 
         self.scheduler.on_start(&mut ctx, &mut self.layers);
-        self.scheduler.on_tick(&mut ctx, &mut self.layers);
+
+        while !cancellation.is_cancelled() {
+            let now = std::time::Instant::now();
+            let delta = now - last;
+            let tick = self.clock.advance_by(delta);
+
+            ctx = ctx.next(tick);
+            last = now;
+
+            for _ in 0..tick.steps {
+                self.scheduler.on_tick(&mut ctx, &mut self.layers);
+
+                if cancellation.is_cancelled() {
+                    break;
+                }
+
+                self.clock.wait();
+            }
+        }
+
         self.scheduler.on_stop(&mut ctx, &mut self.layers);
+        self.cancellation = None;
+    }
+
+    pub fn cancel(&self) {
+        if let Some(cancellation) = &self.cancellation {
+            cancellation.cancel();
+        }
     }
 }
 
@@ -33,7 +67,7 @@ pub struct RuntimeBuilder {
 impl RuntimeBuilder {
     pub fn new() -> Self {
         Self {
-            clock: Box::new(time::Fixed::from_hz(60)),
+            clock: Box::new(time::Fixed::new(60)),
             scheduler: Box::new(schedule::Sequence),
             layers: vec![],
         }
@@ -60,6 +94,7 @@ impl RuntimeBuilder {
             clock: self.clock,
             scheduler: self.scheduler,
             layers: self.layers,
+            cancellation: None,
         }
     }
 }

@@ -1,24 +1,19 @@
-use crate::time::{Clock, Tick, TickId};
+use crate::time::{Clock, Rate, Tick};
 use std::time::Duration;
 
 pub struct Fixed {
-    next: TickId,
+    tick: Tick,
     max: u32,
-    timestep: Duration,
+    rate: Rate,
     accumulator: Duration,
 }
 
 impl Fixed {
-    pub fn from_hz(hz: u64) -> Self {
-        let step = Duration::from_nanos(1_000_000_000 / hz);
-        Self::from_timestep(step)
-    }
-
-    pub fn from_timestep(timestep: Duration) -> Self {
+    pub fn new(rate: impl Into<Rate>) -> Self {
         Self {
-            next: TickId::default(),
+            tick: Tick::default(),
             max: 5,
-            timestep,
+            rate: rate.into(),
             accumulator: Duration::ZERO,
         }
     }
@@ -31,34 +26,37 @@ impl Fixed {
 
 impl Default for Fixed {
     fn default() -> Self {
-        Self::from_hz(60)
+        Self::new(60)
     }
 }
 
 impl Clock for Fixed {
+    fn tick(&self) -> Tick {
+        self.tick
+    }
+
     fn advance_by(&mut self, delta: Duration) -> Tick {
         self.accumulator += delta;
         let mut steps = 0;
+        let rate = self.rate.duration();
 
-        while self.accumulator >= self.timestep && steps < self.max {
-            self.accumulator -= self.timestep;
+        while self.accumulator >= rate && steps < self.max {
+            self.accumulator -= rate;
             steps += 1;
         }
 
-        if steps >= self.max && self.accumulator >= self.timestep {
+        if steps >= self.max && self.accumulator >= rate {
             self.accumulator = Duration::ZERO; // anti spiral-of-death
         }
 
-        let id = self.next;
-        self.next = self.next.next();
-
-        Tick {
-            id,
+        self.tick = Tick {
+            id: self.tick.id.next(),
             steps,
-            timestep: self.timestep,
-            next: self.timestep.saturating_sub(self.accumulator),
+            rate: self.rate,
+            duration: rate.saturating_sub(self.accumulator),
             started_at: std::time::SystemTime::now(),
-            ended_at: None,
-        }
+        };
+
+        self.tick
     }
 }

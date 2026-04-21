@@ -11,9 +11,22 @@ pub use fixed::*;
 /// This trait is intended to be implemented by engine developers who want
 /// control over runtime tick behavior.
 pub trait Clock: Send + 'static {
+    /// Get the current clock time.
+    fn tick(&self) -> Tick;
+
     /// Advances the clock by the given wall-clock delta and returns the tick
     /// decision for the current runtime step.
     fn advance_by(&mut self, delta: std::time::Duration) -> Tick;
+
+    /// Wait until the end of the current tick.
+    fn wait(&self) {
+        let tick = self.tick();
+        let spent = tick
+            .started_at
+            .elapsed()
+            .unwrap_or(std::time::Duration::ZERO);
+        std::thread::sleep(tick.rate.duration().saturating_sub(spent));
+    }
 }
 
 /// Identifies a discrete step in world simulation time.
@@ -57,37 +70,60 @@ pub struct Tick {
     pub steps: u32,
 
     /// The simulation timestep to use for each tick.
-    pub timestep: std::time::Duration,
+    pub rate: Rate,
 
     /// The amount of time till the next tick.
-    pub next: std::time::Duration,
+    pub duration: std::time::Duration,
 
     /// The start time of the tick.
     pub started_at: std::time::SystemTime,
-
-    /// The end time of the tick (or None if still running).
-    pub ended_at: Option<std::time::SystemTime>,
 }
 
-impl Tick {
-    pub fn end(mut self) -> Self {
-        self.ended_at = Some(std::time::SystemTime::now());
-        self
-    }
-
-    pub fn elapsed(&self) -> Option<std::time::Duration> {
-        if let Some(ended_at) = &self.ended_at {
-            return Some(
-                ended_at
-                    .duration_since(self.started_at)
-                    .expect("started_at must be earlier than ended_at"),
-            );
+impl Default for Tick {
+    fn default() -> Self {
+        Self {
+            id: TickId::default(),
+            steps: 0,
+            rate: Rate::Period(std::time::Duration::ZERO),
+            duration: std::time::Duration::ZERO,
+            started_at: std::time::SystemTime::now(),
         }
-
-        None
     }
+}
 
-    pub fn wait(&self) {
-        std::thread::sleep(self.next);
+#[derive(Debug, Copy, Clone, PartialEq, Eq, Hash, serde::Serialize, serde::Deserialize)]
+pub enum Rate {
+    Hz(u64),
+    Period(std::time::Duration),
+}
+
+impl Rate {
+    pub fn duration(&self) -> std::time::Duration {
+        match self {
+            Self::Period(v) => *v,
+            Self::Hz(v) => std::time::Duration::from_nanos(1_000_000_000 / v),
+        }
+    }
+}
+
+impl From<u64> for Rate {
+    fn from(value: u64) -> Self {
+        assert!(value > 0);
+        Self::Hz(value)
+    }
+}
+
+impl From<std::time::Duration> for Rate {
+    fn from(value: std::time::Duration) -> Self {
+        Self::Period(value)
+    }
+}
+
+impl std::fmt::Display for Rate {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        match self {
+            Self::Hz(v) => write!(f, "{}Hz", v),
+            Self::Period(v) => write!(f, "{:?}", v),
+        }
     }
 }
