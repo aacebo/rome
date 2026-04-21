@@ -13,6 +13,10 @@ impl Runtime {
         RuntimeBuilder::new()
     }
 
+    pub fn world(&self) -> &World {
+        &self.world
+    }
+
     /// Start the runtime which will continue
     /// until cancelled.
     pub fn run(&mut self) {
