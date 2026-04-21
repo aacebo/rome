@@ -17,12 +17,9 @@ impl Runtime {
     pub fn next(&mut self, delta: std::time::Duration) {
         let tick = self.clock.advance_by(delta);
         let mut ctx = Context::new(tick, &mut self.world);
+
         self.scheduler.on_start(&mut ctx, &mut self.layers);
-
-        while !ctx.is_cancelled() {
-            self.scheduler.on_tick(&mut ctx, &mut self.layers);
-        }
-
+        self.scheduler.on_tick(&mut ctx, &mut self.layers);
         self.scheduler.on_stop(&mut ctx, &mut self.layers);
     }
 }
