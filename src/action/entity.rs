@@ -1,8 +1,7 @@
 use crate::{
+    ContextMut,
     action::Action,
-    diagnostic::Diagnostics,
     entity::{Entity, EntityDraft, EntityId},
-    world::World,
 };
 
 #[derive(Debug, serde::Serialize)]
@@ -22,30 +21,61 @@ impl Action for EntityAction {
         }
     }
 
-    fn apply(self: Box<Self>, world: &mut World, _diagnostics: &mut Diagnostics) {
+    fn apply(self: Box<Self>, ctx: &mut ContextMut) {
         match *self {
             EntityAction::Create { draft } => {
-                world.set(Entity {
-                    id: world.next_id(),
+                let id = ctx.next_id();
+                let mut entity = Entity {
+                    id,
                     parent_id: draft.parent_id,
                     meta: draft.meta.clone(),
                     name: draft.name,
                     transform: draft.transform,
                     children: draft.children,
                     facets: draft.facets,
-                });
+                };
+
+                let mut facets = std::mem::take(&mut entity.facets);
+
+                for facet in facets.iter_mut() {
+                    facet.on_create(ctx.context(), &mut entity);
+                }
+
+                entity.facets = facets;
+                ctx.set(entity);
             }
             EntityAction::Update { id, draft } => {
-                if let Some(entity) = world.get_mut(&id) {
-                    entity.parent_id = draft.parent_id;
-                    entity.meta = draft.meta;
-                    entity.name = draft.name;
-                    entity.transform = draft.transform;
-                    entity.children = draft.children;
-                    entity.facets = draft.facets;
+                let Some(mut entity) = ctx.take(&id) else {
+                    return;
+                };
+
+                entity.parent_id = draft.parent_id;
+                entity.meta = draft.meta;
+                entity.name = draft.name;
+                entity.transform = draft.transform;
+                entity.children = draft.children;
+                entity.facets = draft.facets;
+
+                let mut facets = std::mem::take(&mut entity.facets);
+
+                for facet in facets.iter_mut() {
+                    facet.on_update(ctx.context(), &mut entity);
+                }
+
+                entity.facets = facets;
+                ctx.set(entity);
+            }
+            EntityAction::Delete { id } => {
+                let Some(mut entity) = ctx.take(&id) else {
+                    return;
+                };
+
+                let mut facets = std::mem::take(&mut entity.facets);
+
+                for facet in facets.iter_mut() {
+                    facet.on_delete(ctx.context(), &mut entity);
                 }
             }
-            EntityAction::Delete { id } => world.del(&id),
         }
     }
 }

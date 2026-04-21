@@ -72,6 +72,10 @@ impl World {
         self.items.remove(id);
     }
 
+    pub fn take(&mut self, id: &EntityId) -> Option<Entity> {
+        self.items.remove(id)
+    }
+
     pub fn next_id(&mut self) -> EntityId {
         let id = self.entity_id;
         self.entity_id = self.entity_id.next();

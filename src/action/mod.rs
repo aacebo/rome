@@ -2,7 +2,7 @@ mod entity;
 
 pub use entity::*;
 
-use crate::{diagnostic::Diagnostics, world::World};
+use crate::ContextMut;
 
 /// An Action represents a request for state to be changed.
 pub trait Action: std::fmt::Debug + 'static {
@@ -11,7 +11,7 @@ pub trait Action: std::fmt::Debug + 'static {
 
     /// Called by the Runtime to persist an Action
     /// to the State.
-    fn apply(self: Box<Self>, world: &mut World, diagnostics: &mut Diagnostics);
+    fn apply(self: Box<Self>, ctx: &mut ContextMut);
 }
 
 #[derive(Debug)]
