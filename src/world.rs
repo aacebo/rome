@@ -26,9 +26,9 @@ impl WorldId {
 
 #[derive(Debug, Default, serde::Serialize)]
 pub struct World {
-    pub(crate) id: WorldId,
-    pub(crate) entity_id: EntityId,
-    pub(crate) items: BTreeMap<EntityId, Entity>,
+    id: WorldId,
+    entity_id: EntityId,
+    items: BTreeMap<EntityId, Entity>,
 }
 
 impl World {
@@ -70,5 +70,11 @@ impl World {
 
     pub fn del(&mut self, id: &EntityId) {
         self.items.remove(id);
+    }
+
+    pub fn next_entity_id(&mut self) -> EntityId {
+        let id = self.entity_id;
+        self.entity_id = self.entity_id.next();
+        id
     }
 }

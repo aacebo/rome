@@ -25,23 +25,18 @@ impl Action for EntityAction {
     fn apply(self: Box<Self>, world: &mut World, _diagnostics: &mut Diagnostics) {
         match *self {
             EntityAction::Create { draft } => {
-                let id = world.entity_id;
-                world.entity_id = world.entity_id.next();
-                world.items.insert(
-                    id,
-                    Entity {
-                        id,
-                        parent_id: draft.parent_id,
-                        meta: draft.meta.clone(),
-                        name: draft.name,
-                        transform: draft.transform,
-                        children: draft.children,
-                        facets: draft.facets,
-                    },
-                );
+                world.set(Entity {
+                    id: world.next_entity_id(),
+                    parent_id: draft.parent_id,
+                    meta: draft.meta.clone(),
+                    name: draft.name,
+                    transform: draft.transform,
+                    children: draft.children,
+                    facets: draft.facets,
+                });
             }
             EntityAction::Update { id, draft } => {
-                if let Some(entity) = world.items.get_mut(&id) {
+                if let Some(entity) = world.get_mut(&id) {
                     entity.parent_id = draft.parent_id;
                     entity.meta = draft.meta;
                     entity.name = draft.name;
@@ -50,9 +45,7 @@ impl Action for EntityAction {
                     entity.facets = draft.facets;
                 }
             }
-            EntityAction::Delete { id } => {
-                world.items.remove(&id);
-            }
+            EntityAction::Delete { id } => world.del(&id),
         }
     }
 }
