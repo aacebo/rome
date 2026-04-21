@@ -11,15 +11,9 @@ impl Scheduler for Sequence {
     }
 
     fn on_tick(&mut self, ctx: &mut Context, layers: &mut [Box<dyn Layer>]) {
-        for _ in 0..ctx.tick().steps {
-            if ctx.is_cancelled() {
-                break;
-            }
-
-            for layer in layers.iter_mut() {
-                layer.on_tick(ctx);
-                ctx.apply();
-            }
+        for layer in layers.iter_mut() {
+            layer.on_tick(ctx);
+            ctx.apply();
         }
     }
 
