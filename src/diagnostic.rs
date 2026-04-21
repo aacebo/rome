@@ -56,7 +56,7 @@ pub struct Diagnostic {
     pub severity: Severity,
     pub message: Option<String>,
     pub children: Vec<Self>,
-    pub timestamp: chrono::DateTime<chrono::Utc>,
+    pub timestamp: std::time::SystemTime,
 }
 
 #[derive(Default)]
@@ -91,7 +91,7 @@ impl DiagnosticBuilder {
             severity: self.severity,
             message: self.message,
             children: self.children,
-            timestamp: chrono::Utc::now(),
+            timestamp: std::time::SystemTime::now(),
         }
     }
 }

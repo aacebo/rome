@@ -15,7 +15,7 @@ pub use cancel::*;
 pub use context::*;
 pub use runtime::*;
 pub use schedule::Scheduler;
-pub use time::Tick;
+pub use time::{Clock, Tick, TickId};
 
 use crate::entity::Entity;
 
