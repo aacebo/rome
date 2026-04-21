@@ -26,7 +26,7 @@ impl Action for EntityAction {
         match *self {
             EntityAction::Create { draft } => {
                 world.set(Entity {
-                    id: world.next_entity_id(),
+                    id: world.next_id(),
                     parent_id: draft.parent_id,
                     meta: draft.meta.clone(),
                     name: draft.name,

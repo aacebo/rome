@@ -72,7 +72,7 @@ impl World {
         self.items.remove(id);
     }
 
-    pub fn next_entity_id(&mut self) -> EntityId {
+    pub fn next_id(&mut self) -> EntityId {
         let id = self.entity_id;
         self.entity_id = self.entity_id.next();
         id
