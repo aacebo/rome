@@ -4,6 +4,7 @@ pub mod entity;
 pub mod math;
 pub mod meta;
 pub mod schedule;
+pub mod store;
 pub mod time;
 pub mod world;
 
@@ -11,11 +12,11 @@ mod cancel;
 mod context;
 mod runtime;
 
+pub use action::Action;
 pub use cancel::*;
 pub use context::*;
-pub use runtime::*;
 pub use entity::{Entity, EntityId};
-pub use action::Action;
+pub use runtime::*;
 pub use schedule::Scheduler;
 pub use time::{Clock, Tick, TickId};
 
