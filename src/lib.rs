@@ -14,10 +14,10 @@ mod runtime;
 pub use cancel::*;
 pub use context::*;
 pub use runtime::*;
+pub use entity::{Entity, EntityId};
+pub use action::Action;
 pub use schedule::Scheduler;
 pub use time::{Clock, Tick, TickId};
-
-use crate::entity::Entity;
 
 /// A Layer represents a logical world system.
 ///
