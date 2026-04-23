@@ -1,6 +1,4 @@
-use std::sync::{Arc, nonpoison::*};
-
-use crate::state::{Accessor, Dispatcher};
+use crate::state::{Accessor, Action, ArcCell};
 
 /// Central coordinator that owns state and processes actions.
 ///
@@ -17,13 +15,13 @@ use crate::state::{Accessor, Dispatcher};
 /// contain business logic; it orchestrates reducers and triggers, which
 /// define the system’s behavior.
 pub struct Store<TState: 'static> {
-    state: RwLock<Arc<TState>>,
+    state: ArcCell<TState>,
 }
 
-impl<TState> Store<TState> {
-    pub fn new(state: TState) -> Self {
+impl<TState: 'static> Store<TState> {
+    pub fn new(init: TState) -> Self {
         Self {
-            state: RwLock::new(Arc::new(state)),
+            state: ArcCell::new(init),
         }
     }
 
@@ -31,31 +29,26 @@ impl<TState> Store<TState> {
         &'a self,
         select: impl FnOnce(&'a TState) -> T + 'a,
     ) -> Accessor<'a, TState, T> {
-        let state = self.state.read().clone();
-        Accessor::new(state, select)
-    }
-
-    pub fn dispatcher(&self) -> Dispatcher<'_, TState> {
-        Dispatcher::new(self.state.write())
+        Accessor::new(self.state.load(), select)
     }
 }
 
-impl<TState> Default for Store<TState>
-where
-    TState: Default,
-{
+impl<TState: Clone + 'static> Store<TState> {
+    pub fn dispatch<TAction: Action<State = TState>>(&self, action: TAction) {
+        self.state.with_mut(|s| action.reduce(s));
+    }
+}
+
+impl<TState: Default + 'static> Default for Store<TState> {
     fn default() -> Self {
         Self::new(TState::default())
     }
 }
 
-impl<TState> std::fmt::Debug for Store<TState>
-where
-    TState: std::fmt::Debug,
-{
+impl<TState: std::fmt::Debug + 'static> std::fmt::Debug for Store<TState> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_tuple(std::any::type_name::<Self>())
-            .field(&self.state)
+            .field(&*self.state.load())
             .finish()
     }
 }

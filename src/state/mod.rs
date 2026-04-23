@@ -1,9 +1,9 @@
 mod access;
-mod dispatch;
+mod arc_cell;
 mod store;
 
 pub use access::*;
-pub use dispatch::*;
+pub use arc_cell::*;
 pub use store::*;
 
 /// Represents an event that describes something that occurred in the system.
@@ -11,26 +11,15 @@ pub trait Action: Send + Sync + 'static {
     type State;
 
     fn name(&self) -> &'static str;
-    fn reduce(self, state: &mut Self::State);
+    fn reduce(&self, state: &mut Self::State);
 }
-
-/// Projects a value from store state without mutating it.
-///
-/// A selector is a read-only query over state used to retrieve a derived
-/// value, slice, or view of the current state. Selectors should be free of
-/// side triggers and should not depend on external mutable state.
-///
-/// In most cases, selectors are small pure projections such as reading a
-/// field, computing a count, or transforming part of the state into a more
-/// convenient shape for consumers.
-pub trait Selector<TState, TOut> = FnOnce(&TState) -> TOut;
 
 /// Reacts to an action and state transition by performing follow-up work.
 ///
 /// A `Trigger` is the side-effecting counterpart to a reducer. Whereas reducers
 /// synchronously derive new state from an action, triggers observe the current
 /// state and incoming action and may produce further actions by dispatching them
-/// through the provided [`Dispatcher`].
+/// back into the store.
 pub trait Trigger<TAction: Action> {
     fn trigger(
         &self,
@@ -43,6 +32,7 @@ pub trait Trigger<TAction: Action> {
 mod tests {
     use super::*;
 
+    #[derive(Clone)]
     struct UserState {
         pub name: String,
     }
@@ -58,10 +48,10 @@ mod tests {
             "user"
         }
 
-        fn reduce(self, state: &mut Self::State) {
+        fn reduce(&self, state: &mut Self::State) {
             match self {
                 Self::Rename(v) => {
-                    state.name = v;
+                    state.name = v.clone();
                 }
             }
         }
@@ -77,11 +67,10 @@ mod tests {
 
         assert_eq!(name, "test user");
         assert_eq!(name.len(), 9);
-        drop(name);
 
-        store
-            .dispatcher()
-            .dispatch(UserAction::Rename("hello world".to_string()));
+        store.dispatch(UserAction::Rename("hello world".to_string()));
+
+        assert_eq!(name, "test user");
 
         assert_eq!(store.select(|s| s.name.as_str()), "hello world");
     }

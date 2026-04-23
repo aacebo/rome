@@ -1,10 +1,4 @@
-#![feature(
-    trait_alias,
-    sync_nonpoison,
-    nonpoison_rwlock,
-    nonpoison_mutex,
-    mapped_lock_guards
-)]
+#![feature(sync_nonpoison, nonpoison_mutex)]
 
 pub mod action;
 pub mod diagnostic;
