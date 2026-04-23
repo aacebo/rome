@@ -1,3 +1,5 @@
+#![feature(trait_alias, sync_nonpoison, nonpoison_rwlock, mapped_lock_guards)]
+
 pub mod action;
 pub mod diagnostic;
 pub mod entity;

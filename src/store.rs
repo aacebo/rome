@@ -1,4 +1,7 @@
-use std::sync::{Arc, RwLock};
+use std::sync::{
+    Arc,
+    nonpoison::{MappedRwLockReadGuard, RwLock, RwLockReadGuard, RwLockWriteGuard},
+};
 
 /// Represents an event that describes something that occurred in the system.
 pub trait Action: Send + Sync + 'static {
@@ -17,22 +20,7 @@ pub trait Action: Send + Sync + 'static {
 /// In most cases, selectors are small pure projections such as reading a
 /// field, computing a count, or transforming part of the state into a more
 /// convenient shape for consumers.
-pub trait Selector<TState> {
-    type Out;
-
-    fn select(&self, state: &TState) -> Self::Out;
-}
-
-impl<TState, TOut, T> Selector<TState> for T
-where
-    Self: Fn(&TState) -> TOut,
-{
-    type Out = TOut;
-
-    fn select(&self, state: &TState) -> Self::Out {
-        self(state)
-    }
-}
+pub trait Selector<TState, TOut: ?Sized> = for<'a> Fn(&'a TState) -> &'a TOut;
 
 /// Reacts to an action and state transition by performing follow-up work.
 ///
@@ -73,20 +61,20 @@ impl<TState> Store<TState> {
         }
     }
 
-    pub fn select<TSelector>(&self, selector: &TSelector) -> TSelector::Out
-    where
-        TSelector: Selector<TState>,
-    {
-        let state = self.state.read().unwrap();
-        selector.select(&state)
+    pub fn select<R>(&self, selector: impl FnOnce(&TState) -> R) -> R {
+        selector(&self.state.read())
     }
 
-    pub fn dispatch<TAction>(&self, action: TAction)
+    pub fn select_as<TOut, TSelector>(&self, selector: TSelector) -> MappedRwLockReadGuard<'_, TOut>
     where
-        TAction: Action<State = TState>,
+        TOut: ?Sized,
+        TSelector: Selector<TState, TOut>,
     {
-        let mut state = self.state.write().unwrap();
-        action.reduce(&mut state);
+        RwLockReadGuard::map(self.state.read(), selector)
+    }
+
+    pub fn dispatcher(&self) -> Dispatcher<'_, TState> {
+        Dispatcher(self.state.write())
     }
 }
 
@@ -107,5 +95,65 @@ where
         f.debug_tuple(std::any::type_name::<Self>())
             .field(&self.state)
             .finish()
+    }
+}
+
+pub struct Dispatcher<'a, TState>(RwLockWriteGuard<'a, TState>);
+
+impl<'a, TState> Dispatcher<'a, TState> {
+    pub fn dispatch<TAction>(&mut self, action: TAction)
+    where
+        TAction: Action<State = TState>,
+    {
+        action.reduce(&mut self.0);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use std::ops::Deref;
+
+    use super::*;
+
+    struct UserState {
+        pub name: String,
+    }
+
+    enum UserAction {
+        Rename(String),
+    }
+
+    impl Action for UserAction {
+        type State = UserState;
+
+        fn name(&self) -> &'static str {
+            "user"
+        }
+
+        fn reduce(self, state: &mut Self::State) {
+            match self {
+                Self::Rename(v) => {
+                    state.name = v;
+                }
+            }
+        }
+    }
+
+    #[test]
+    fn user_name_selected() {
+        let store = Store::new(UserState {
+            name: "test user".to_string(),
+        });
+
+        let name = store.select_as(|s: &UserState| &s.name);
+
+        assert_eq!(name.deref(), "test user");
+        assert_eq!(store.select(|s| s.name.len()), 9);
+
+        store
+            .dispatcher()
+            .dispatch(UserAction::Rename("hello world".to_string()));
+
+        assert_eq!(name.deref(), "hello world");
     }
 }
