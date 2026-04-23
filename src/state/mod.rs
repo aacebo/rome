@@ -1,5 +1,9 @@
+mod access;
+mod dispatch;
 mod store;
 
+pub use access::*;
+pub use dispatch::*;
 pub use store::*;
 
 /// Represents an event that describes something that occurred in the system.
@@ -19,7 +23,7 @@ pub trait Action: Send + Sync + 'static {
 /// In most cases, selectors are small pure projections such as reading a
 /// field, computing a count, or transforming part of the state into a more
 /// convenient shape for consumers.
-pub trait Selector<TState, TOut: ?Sized> = for<'a> Fn(&'a TState) -> &'a TOut;
+pub trait Selector<TState, TOut> = FnOnce(&TState) -> TOut;
 
 /// Reacts to an action and state transition by performing follow-up work.
 ///
@@ -37,8 +41,6 @@ pub trait Trigger<TAction: Action> {
 
 #[cfg(test)]
 mod tests {
-    use std::ops::Deref;
-
     use super::*;
 
     struct UserState {
@@ -71,15 +73,16 @@ mod tests {
             name: "test user".to_string(),
         });
 
-        let name = store.select_as(|s: &UserState| &s.name);
+        let name = store.select(|s| s.name.as_str());
 
-        assert_eq!(name.deref(), "test user");
-        assert_eq!(store.select(|s| s.name.len()), 9);
+        assert_eq!(name, "test user");
+        assert_eq!(name.len(), 9);
+        drop(name);
 
         store
             .dispatcher()
             .dispatch(UserAction::Rename("hello world".to_string()));
 
-        assert_eq!(name.deref(), "hello world");
+        assert_eq!(store.select(|s| s.name.as_str()), "hello world");
     }
 }

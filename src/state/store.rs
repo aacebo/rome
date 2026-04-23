@@ -1,6 +1,6 @@
 use std::sync::{Arc, nonpoison::*};
 
-use crate::state::{Action, Selector};
+use crate::state::{Accessor, Dispatcher};
 
 /// Central coordinator that owns state and processes actions.
 ///
@@ -16,31 +16,27 @@ use crate::state::{Action, Selector};
 /// derived values from state via selectors. The store itself should not
 /// contain business logic; it orchestrates reducers and triggers, which
 /// define the system’s behavior.
-pub struct Store<TState> {
-    state: Arc<RwLock<TState>>,
+pub struct Store<TState: 'static> {
+    state: RwLock<Arc<TState>>,
 }
 
 impl<TState> Store<TState> {
     pub fn new(state: TState) -> Self {
         Self {
-            state: Arc::new(RwLock::new(state)),
+            state: RwLock::new(Arc::new(state)),
         }
     }
 
-    pub fn select<R>(&self, selector: impl FnOnce(&TState) -> R) -> R {
-        selector(&self.state.read())
-    }
-
-    pub fn select_as<TOut, TSelector>(&self, selector: TSelector) -> MappedRwLockReadGuard<'_, TOut>
-    where
-        TOut: ?Sized,
-        TSelector: Selector<TState, TOut>,
-    {
-        RwLockReadGuard::map(self.state.read(), selector)
+    pub fn select<'a, T: 'a>(
+        &'a self,
+        select: impl FnOnce(&'a TState) -> T + 'a,
+    ) -> Accessor<'a, TState, T> {
+        let state = self.state.read().clone();
+        Accessor::new(state, select)
     }
 
     pub fn dispatcher(&self) -> Dispatcher<'_, TState> {
-        Dispatcher(self.state.write())
+        Dispatcher::new(self.state.write())
     }
 }
 
@@ -61,16 +57,5 @@ where
         f.debug_tuple(std::any::type_name::<Self>())
             .field(&self.state)
             .finish()
-    }
-}
-
-pub struct Dispatcher<'a, TState>(RwLockWriteGuard<'a, TState>);
-
-impl<'a, TState> Dispatcher<'a, TState> {
-    pub fn dispatch<TAction>(&mut self, action: TAction)
-    where
-        TAction: Action<State = TState>,
-    {
-        action.reduce(&mut self.0);
     }
 }
