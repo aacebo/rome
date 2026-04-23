@@ -11,7 +11,7 @@ pub trait Action: Send + Sync + 'static {
     type State;
 
     fn name(&self) -> &'static str;
-    fn reduce(&self, state: &mut Self::State);
+    fn reduce(self, state: &mut Self::State);
 }
 
 /// Reacts to an action and state transition by performing follow-up work.
@@ -48,10 +48,10 @@ mod tests {
             "user"
         }
 
-        fn reduce(&self, state: &mut Self::State) {
+        fn reduce(self, state: &mut Self::State) {
             match self {
                 Self::Rename(v) => {
-                    state.name = v.clone();
+                    state.name = v;
                 }
             }
         }
