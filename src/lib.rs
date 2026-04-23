@@ -6,7 +6,7 @@ pub mod entity;
 pub mod math;
 pub mod meta;
 pub mod schedule;
-pub mod store;
+pub mod state;
 pub mod time;
 pub mod world;
 
