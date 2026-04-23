@@ -21,11 +21,36 @@ impl<T> ArcCell<T> {
     pub fn store(&self, value: Arc<T>) {
         *self.0.lock() = value;
     }
-}
 
-impl<T: Clone> ArcCell<T> {
-    pub fn with_mut<R>(&self, f: impl FnOnce(&mut T) -> R) -> R {
+    /// Atomically swap to `new` iff the currently-stored Arc is the same
+    /// allocation as `expected` (pointer equality via `Arc::ptr_eq`).
+    /// Returns `Ok(())` on success, or `Err(current)` giving the caller a
+    /// fresh snapshot to retry with.
+    pub fn compare_and_swap(&self, expected: &Arc<T>, new: Arc<T>) -> Result<(), Arc<T>> {
         let mut guard = self.0.lock();
-        f(Arc::make_mut(&mut *guard))
+
+        if Arc::ptr_eq(&*guard, expected) {
+            *guard = new;
+            Ok(())
+        } else {
+            Err(guard.clone())
+        }
+    }
+
+    /// Read-copy-update. Repeatedly builds a new value from the current one
+    /// and tries to install it atomically; retries if another writer raced us.
+    /// The closure may be invoked multiple times under contention, so it must
+    /// be pure (no observable side effects). Returns the installed Arc.
+    pub fn rcu(&self, mut f: impl FnMut(&T) -> T) -> Arc<T> {
+        let mut current = self.load();
+
+        loop {
+            let next = Arc::new(f(&*current));
+
+            match self.compare_and_swap(&current, next.clone()) {
+                Ok(()) => return next,
+                Err(fresh) => current = fresh,
+            }
+        }
     }
 }

@@ -34,8 +34,26 @@ impl<TState: 'static> Store<TState> {
 }
 
 impl<TState: Clone + 'static> Store<TState> {
-    pub fn dispatch<TAction: Action<State = TState>>(&self, action: TAction) {
-        self.state.with_mut(|s| action.reduce(s));
+    /// Dispatch an action, applying its reducer under a compare-and-swap loop.
+    ///
+    /// The reducer may run more than once under concurrent dispatches — it must
+    /// be pure. Clones happen outside the lock; the critical section is a
+    /// pointer compare + swap.
+    pub fn dispatch<TAction: Action<State = TState> + Clone>(&self, action: TAction) {
+        let mut current = self.state.load();
+
+        loop {
+            let mut next = (*current).clone();
+            action.clone().reduce(&mut next);
+
+            match self
+                .state
+                .compare_and_swap(&current, std::sync::Arc::new(next))
+            {
+                Ok(()) => return,
+                Err(fresh) => current = fresh,
+            }
+        }
     }
 }
 

@@ -37,6 +37,7 @@ mod tests {
         pub name: String,
     }
 
+    #[derive(Clone)]
     enum UserAction {
         Rename(String),
     }
@@ -73,5 +74,45 @@ mod tests {
         assert_eq!(name, "test user");
 
         assert_eq!(store.select(|s| s.name.as_str()), "hello world");
+    }
+
+    #[test]
+    fn concurrent_dispatch_no_lost_updates() {
+        use std::sync::Arc;
+
+        #[derive(Clone)]
+        struct Counter {
+            n: u32,
+        }
+
+        #[derive(Clone)]
+        struct Bump;
+
+        impl Action for Bump {
+            type State = Counter;
+
+            fn name(&self) -> &'static str {
+                "bump"
+            }
+
+            fn reduce(self, state: &mut Counter) {
+                state.n += 1;
+            }
+        }
+
+        let store = Arc::new(Store::new(Counter { n: 0 }));
+
+        std::thread::scope(|scope| {
+            for _ in 0..4 {
+                let s = store.clone();
+                scope.spawn(move || {
+                    for _ in 0..1000 {
+                        s.dispatch(Bump);
+                    }
+                });
+            }
+        });
+
+        assert_eq!(store.select(|c| c.n), 4000);
     }
 }
