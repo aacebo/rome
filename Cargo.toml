@@ -13,5 +13,7 @@ doctest = false
 
 [dependencies]
 wgpu = "29"
+rayon = "1"
 futures = "0.3"
+crossbeam = "0.8"
 serde = { version = "1", features = ["rc", "derive"] }
