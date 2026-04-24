@@ -32,13 +32,13 @@ impl<TState: 'static> ActionBuffer<TState> {
     }
 
     /// Enqueue an action. Blocks (spin, then yield) until space is available.
-    pub fn push<TAction: Action<State = TState>>(&self, action: TAction) {
+    pub fn push<TAction: Action<State = TState>>(&self, action: TAction) -> &Self {
         let mut boxed: Box<dyn Action<State = TState>> = Box::new(action);
         let mut spins = 0u32;
 
         loop {
             match self.pending.push(boxed) {
-                Ok(()) => return,
+                Ok(()) => break,
                 Err(returned) => {
                     boxed = returned;
 
@@ -51,19 +51,20 @@ impl<TState: 'static> ActionBuffer<TState> {
                 }
             }
         }
+
+        self
     }
 
     /// Drain all currently-queued actions into `sink` and return the count
     /// drained. Non-blocking: pushes arriving after this returns are picked
     /// up on the next drain.
-    pub fn drain_into(&self, sink: &mut Vec<Box<dyn Action<State = TState>>>) -> usize {
-        let mut n = 0;
+    pub fn drain(&self) -> Vec<Box<dyn Action<State = TState>>> {
+        let mut actions = Vec::with_capacity(self.pending.len());
 
         while let Some(action) = self.pending.pop() {
-            sink.push(action);
-            n += 1;
+            actions.push(action);
         }
 
-        n
+        actions
     }
 }

@@ -14,12 +14,12 @@ pub trait Action: std::fmt::Debug + 'static {
     fn apply(self: Box<Self>, ctx: &mut ContextMut);
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Actions(Vec<Box<dyn Action>>);
 
 impl Actions {
     pub fn new() -> Self {
-        Self(vec![])
+        Self::default()
     }
 
     pub fn is_empty(&self) -> bool {

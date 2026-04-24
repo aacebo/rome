@@ -102,3 +102,9 @@ impl RuntimeBuilder {
         }
     }
 }
+
+impl Default for RuntimeBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}

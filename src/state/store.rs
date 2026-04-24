@@ -16,7 +16,6 @@ use crate::state::{Accessor, Action, ActionBuffer, ArcCell};
 pub struct Store<TState: Clone + 'static> {
     state: ArcCell<TState>,
     buffer: ActionBuffer<TState>,
-    history: Mutex<Vec<Box<dyn Action<State = TState>>>>,
     flush_lock: Mutex<()>,
 }
 
@@ -25,7 +24,6 @@ impl<TState: Clone + 'static> Store<TState> {
         Self {
             state: ArcCell::new(init),
             buffer: ActionBuffer::with_capacity(1024),
-            history: Mutex::new(Vec::new()),
             flush_lock: Mutex::new(()),
         }
     }
@@ -55,9 +53,7 @@ impl<TState: Clone + 'static> Store<TState> {
     /// wasteful; callers should typically have a single flusher.
     pub fn flush(&self) {
         let _guard = self.flush_lock.lock();
-        let mut drained: Vec<Box<dyn Action<State = TState>>> = Vec::new();
-
-        self.buffer.drain_into(&mut drained);
+        let drained = self.buffer.drain();
 
         if drained.is_empty() {
             return;
@@ -71,53 +67,12 @@ impl<TState: Clone + 'static> Store<TState> {
         }
 
         self.state.store(Arc::new(next));
-
-        let mut history = self.history.lock();
-        history.extend(drained);
-    }
-
-    pub fn history_len(&self) -> usize {
-        self.history.lock().len()
-    }
-
-    pub fn buffer_len(&self) -> usize {
-        self.buffer.len()
-    }
-
-    pub fn buffer_is_empty(&self) -> bool {
-        self.buffer.is_empty()
-    }
-}
-
-impl<TState: Clone + Default + 'static> Store<TState> {
-    /// Rebuild a `TState` by replaying history entries `[from..]` against
-    /// `TState::default()`. Used for in-memory undo/redo and time-travel
-    /// debugging. Requires deterministic reducers.
-    pub fn replay_from(&self, from: usize) -> TState {
-        let history = self.history.lock();
-        let mut state = TState::default();
-
-        for action in &history[from..] {
-            action.reduce(&mut state);
-        }
-
-        state
     }
 }
 
 impl<TState: Clone + Default + 'static> Default for Store<TState> {
     fn default() -> Self {
         Self::new(TState::default())
-    }
-}
-
-impl<TState: Clone + std::fmt::Debug + 'static> std::fmt::Debug for Store<TState> {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct(std::any::type_name::<Self>())
-            .field("state", &*self.state.load())
-            .field("pending", &self.buffer.len())
-            .field("history_len", &self.history.lock().len())
-            .finish()
     }
 }
 

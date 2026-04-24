@@ -96,12 +96,12 @@ impl DiagnosticBuilder {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Default)]
 pub struct Diagnostics(Vec<Diagnostic>);
 
 impl Diagnostics {
     pub fn new() -> Self {
-        Self(vec![])
+        Self::default()
     }
 
     pub fn is_empty(&self) -> bool {

@@ -1,13 +1,11 @@
 mod access;
 mod arc_cell;
 mod buffer;
-mod record;
 mod store;
 
 pub use access::*;
 pub use arc_cell::*;
 pub use buffer::*;
-pub use record::*;
 pub use store::*;
 
 /// Represents an event that describes something that occurred in the system.
@@ -100,16 +98,14 @@ mod tests {
     }
 
     #[test]
-    fn flush_populates_history() {
+    fn flush_applies_dispatched_actions_in_order() {
         let store = Store::new(UserState::default());
 
         store.dispatch(UserAction::Rename("a".to_string()));
         store.dispatch(UserAction::Rename("b".to_string()));
         store.dispatch(UserAction::Rename("c".to_string()));
-        assert_eq!(store.history_len(), 0);
-
         store.flush();
-        assert_eq!(store.history_len(), 3);
+
         assert_eq!(store.select(|s| s.name.as_str()), "c");
     }
 
@@ -137,7 +133,7 @@ mod tests {
             let consumer = {
                 let s = store.clone();
                 scope.spawn(move || {
-                    while s.history_len() < 4000 {
+                    while *s.select(|c| c.n) < 4000 {
                         s.flush();
                         std::thread::yield_now();
                     }
@@ -154,7 +150,6 @@ mod tests {
         store.flush();
 
         assert_eq!(store.select(|c| c.n), 4000);
-        assert_eq!(store.history_len(), 4000);
     }
 
     #[test]
@@ -177,7 +172,7 @@ mod tests {
             let consumer = {
                 let s = store.clone();
                 scope.spawn(move || {
-                    while s.history_len() < 1000 {
+                    while *s.select(|c| c.n) < 1000 {
                         s.flush();
                         std::thread::yield_now();
                     }
@@ -190,7 +185,6 @@ mod tests {
 
         store.flush();
 
-        assert_eq!(store.history_len(), 1000);
         assert_eq!(store.select(|c| c.n), 1000);
     }
 
@@ -221,7 +215,7 @@ mod tests {
                     let done = done.clone();
 
                     scope.spawn(move || {
-                        while !done.load(Ordering::Acquire) || !s.buffer_is_empty() {
+                        while !done.load(Ordering::Acquire) || *s.select(|c| c.n) < 1000 {
                             s.flush();
                             std::thread::yield_now();
                         }
@@ -238,22 +232,6 @@ mod tests {
 
         store.flush();
 
-        assert_eq!(store.history_len(), 1000);
         assert_eq!(store.select(|c| c.n), 1000);
-    }
-
-    #[test]
-    fn replay_reconstructs_state() {
-        let store = Store::new(Counter { n: 0 });
-
-        for _ in 0..10 {
-            store.dispatch(Bump);
-        }
-
-        store.flush();
-        let reconstructed = store.replay_from(0);
-
-        assert_eq!(reconstructed.n, 10);
-        assert_eq!(store.select(|c| c.n), 10);
     }
 }
