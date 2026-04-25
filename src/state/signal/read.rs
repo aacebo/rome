@@ -1,13 +1,13 @@
 use std::sync::{Arc, Mutex, Weak};
 
-pub struct Stream<T> {
+pub struct Reader<T> {
     id: u64,
-    handle: Arc<StreamRef<T>>,
-    source: Weak<super::_Source<T>>,
+    handle: Arc<ReaderRef<T>>,
+    source: Weak<super::_Signal<T>>,
 }
 
-impl<T> Stream<T> {
-    pub(super) fn new(id: u64, handle: Arc<StreamRef<T>>, source: Weak<super::_Source<T>>) -> Self {
+impl<T> Reader<T> {
+    pub(super) fn new(id: u64, handle: Arc<ReaderRef<T>>, source: Weak<super::_Signal<T>>) -> Self {
         Self { id, handle, source }
     }
 
@@ -16,7 +16,7 @@ impl<T> Stream<T> {
     }
 }
 
-impl<T> Drop for Stream<T> {
+impl<T> Drop for Reader<T> {
     fn drop(&mut self) {
         if let Some(source) = self.source.upgrade() {
             source.remove(self.id);
@@ -24,7 +24,7 @@ impl<T> Drop for Stream<T> {
     }
 }
 
-impl<T> futures::Stream for Stream<T> {
+impl<T> futures::Stream for Reader<T> {
     type Item = Arc<T>;
 
     fn poll_next(
@@ -41,7 +41,7 @@ impl<T> futures::Stream for Stream<T> {
 
         self.handle.waker.register(cx.waker());
 
-        // Re-check after register: a Source drop racing with register
+        // Re-check after register: a Signal drop racing with register
         // would otherwise leave the task parked forever.
         if self.source.strong_count() == 0 {
             return std::task::Poll::Ready(None);
@@ -51,12 +51,12 @@ impl<T> futures::Stream for Stream<T> {
     }
 }
 
-pub(super) struct StreamRef<T> {
+pub(super) struct ReaderRef<T> {
     waker: futures::task::AtomicWaker,
     pending: Mutex<Option<Arc<T>>>,
 }
 
-impl<T> StreamRef<T> {
+impl<T> ReaderRef<T> {
     pub fn new() -> Self {
         Self {
             waker: futures::task::AtomicWaker::new(),

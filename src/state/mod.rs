@@ -1,11 +1,11 @@
 mod access;
 mod action;
-mod source;
+mod signal;
 mod store;
 
 pub use access::*;
 pub use action::*;
-pub use source::*;
+pub use signal::*;
 pub use store::*;
 
 /// Reacts to an action and state transition by performing follow-up work.

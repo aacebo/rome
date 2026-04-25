@@ -1,19 +1,19 @@
 mod operator;
-mod stream;
+mod read;
 
 pub use operator::*;
-pub use stream::*;
+pub use read::*;
 
 use std::{
     collections::HashMap,
     sync::{Arc, RwLock, atomic},
 };
 
-pub struct Source<T> {
-    inner: Arc<_Source<T>>,
+pub struct Signal<T> {
+    inner: Arc<_Signal<T>>,
 }
 
-impl<T> Clone for Source<T> {
+impl<T> Clone for Signal<T> {
     fn clone(&self) -> Self {
         Self {
             inner: self.inner.clone(),
@@ -21,10 +21,10 @@ impl<T> Clone for Source<T> {
     }
 }
 
-impl<T> Source<T> {
+impl<T> Signal<T> {
     pub fn new(value: impl Into<Arc<T>>) -> Self {
         Self {
-            inner: Arc::new(_Source::new(value)),
+            inner: Arc::new(_Signal::new(value)),
         }
     }
 
@@ -32,15 +32,15 @@ impl<T> Source<T> {
         self.inner.value()
     }
 
-    pub fn stream(&self) -> Stream<T> {
+    pub fn stream(&self) -> Reader<T> {
         let (id, handle) = self.inner.create();
-        let source = Arc::downgrade(&self.inner);
-        Stream::new(id, handle, source)
+        let signal = Arc::downgrade(&self.inner);
+        Reader::new(id, handle, signal)
     }
 
     pub fn pipe<O>(&self, op: O) -> O::Output
     where
-        O: Operator<Source<T>>,
+        O: Operator<Signal<T>>,
     {
         op.apply(self.clone())
     }
@@ -57,19 +57,19 @@ impl<T> Source<T> {
     }
 }
 
-impl<T: Into<Arc<T>>> From<T> for Source<T> {
+impl<T: Into<Arc<T>>> From<T> for Signal<T> {
     fn from(value: T) -> Self {
         Self::new(value)
     }
 }
 
-struct _Source<T> {
+struct _Signal<T> {
     next_id: atomic::AtomicU64,
     value: RwLock<Arc<T>>,
-    pool: RwLock<HashMap<u64, Arc<StreamRef<T>>>>,
+    pool: RwLock<HashMap<u64, Arc<ReaderRef<T>>>>,
 }
 
-impl<T> _Source<T> {
+impl<T> _Signal<T> {
     fn new(value: impl Into<Arc<T>>) -> Self {
         Self {
             next_id: atomic::AtomicU64::new(1),
@@ -82,9 +82,9 @@ impl<T> _Source<T> {
         self.value.read().unwrap().clone()
     }
 
-    fn create(&self) -> (u64, Arc<StreamRef<T>>) {
+    fn create(&self) -> (u64, Arc<ReaderRef<T>>) {
         let id = self.next_id.fetch_add(1, atomic::Ordering::Relaxed);
-        let handle = Arc::new(StreamRef::new());
+        let handle = Arc::new(ReaderRef::new());
         self.pool.write().unwrap().insert(id, handle.clone());
         (id, handle)
     }
@@ -93,7 +93,7 @@ impl<T> _Source<T> {
         self.pool.write().unwrap().remove(&id);
     }
 
-    fn snapshot(&self) -> Vec<Arc<StreamRef<T>>> {
+    fn snapshot(&self) -> Vec<Arc<ReaderRef<T>>> {
         self.pool.read().unwrap().values().cloned().collect()
     }
 
@@ -103,9 +103,9 @@ impl<T> _Source<T> {
     }
 }
 
-impl<T> Drop for _Source<T> {
+impl<T> Drop for _Signal<T> {
     fn drop(&mut self) {
-        // Last Arc<_Source> is going away; wake all subscribers so they
+        // Last Arc<_Signal> is going away; wake all subscribers so they
         // observe Weak::upgrade() == None on next poll.
         for stream in self.pool.get_mut().unwrap().values() {
             stream.wake();
@@ -128,12 +128,12 @@ mod tests {
 
     #[test]
     fn subscriber_receives_emitted_value() {
-        let source = Source::new(0u32);
-        let mut stream = source.stream();
+        let signal = Signal::new(0u32);
+        let mut stream = signal.stream();
 
         assert!(matches!(poll_once(&mut stream), Poll::Pending));
 
-        source.emit(42);
+        signal.emit(42);
 
         match poll_once(&mut stream) {
             Poll::Ready(Some(v)) => assert_eq!(*v, 42),
@@ -143,26 +143,26 @@ mod tests {
 
     #[test]
     fn drop_deregisters_subscriber() {
-        let source = Source::new(0u32);
-        let s1 = source.stream();
-        let s2 = source.stream();
-        let s3 = source.stream();
+        let signal = Signal::new(0u32);
+        let s1 = signal.stream();
+        let s2 = signal.stream();
+        let s3 = signal.stream();
 
-        assert_eq!(source.inner.len(), 3);
+        assert_eq!(signal.inner.len(), 3);
 
         drop(s1);
         drop(s2);
         drop(s3);
 
-        assert_eq!(source.inner.len(), 0);
+        assert_eq!(signal.inner.len(), 0);
     }
 
     #[test]
-    fn source_drop_terminates_streams() {
-        let source = Source::new(0u32);
-        let mut stream = source.stream();
+    fn signal_drop_terminates_streams() {
+        let signal = Signal::new(0u32);
+        let mut stream = signal.stream();
 
-        drop(source);
+        drop(signal);
 
         match poll_once(&mut stream) {
             Poll::Ready(None) => {}
@@ -171,12 +171,12 @@ mod tests {
     }
 
     #[test]
-    fn source_drop_with_pending_yields_value_then_none() {
-        let source = Source::new(0u32);
-        let mut stream = source.stream();
+    fn signal_drop_with_pending_yields_value_then_none() {
+        let signal = Signal::new(0u32);
+        let mut stream = signal.stream();
 
-        source.emit(7);
-        drop(source);
+        signal.emit(7);
+        drop(signal);
 
         match poll_once(&mut stream) {
             Poll::Ready(Some(v)) => assert_eq!(*v, 7),
@@ -191,11 +191,11 @@ mod tests {
 
     #[test]
     fn coalescing_drops_intermediate_values() {
-        let source = Source::new(0u32);
-        let mut stream = source.stream();
+        let signal = Signal::new(0u32);
+        let mut stream = signal.stream();
 
         for i in 1..=100 {
-            source.emit(i);
+            signal.emit(i);
         }
 
         match poll_once(&mut stream) {
@@ -209,27 +209,27 @@ mod tests {
     #[test]
     fn stream_is_send_static() {
         fn assert_send_static<T: Send + 'static>() {}
-        assert_send_static::<Stream<u32>>();
-        assert_send_static::<Source<u32>>();
+        assert_send_static::<Reader<u32>>();
+        assert_send_static::<Signal<u32>>();
     }
 
     #[test]
     fn value_returns_latest() {
-        let source = Source::new(1u32);
-        assert_eq!(*source.value(), 1);
-        source.emit(2);
-        assert_eq!(*source.value(), 2);
-        source.emit(3);
-        assert_eq!(*source.value(), 3);
+        let signal = Signal::new(1u32);
+        assert_eq!(*signal.value(), 1);
+        signal.emit(2);
+        assert_eq!(*signal.value(), 2);
+        signal.emit(3);
+        assert_eq!(*signal.value(), 3);
     }
 
     #[test]
     fn multiple_subscribers_each_receive() {
-        let source = Source::new(0u32);
-        let mut s1 = source.stream();
-        let mut s2 = source.stream();
+        let signal = Signal::new(0u32);
+        let mut s1 = signal.stream();
+        let mut s2 = signal.stream();
 
-        source.emit(99);
+        signal.emit(99);
 
         for s in [&mut s1, &mut s2] {
             match poll_once(s) {
@@ -241,23 +241,23 @@ mod tests {
 
     #[test]
     fn dropping_non_last_clone_does_not_terminate_stream() {
-        let source = Source::new(0u32);
-        let clone = source.clone();
-        let mut stream = source.stream();
+        let signal = Signal::new(0u32);
+        let clone = signal.clone();
+        let mut stream = signal.stream();
 
         drop(clone);
 
         // The original clone still exists, so the stream must remain open.
         assert!(matches!(poll_once(&mut stream), Poll::Pending));
 
-        source.emit(5);
+        signal.emit(5);
         match poll_once(&mut stream) {
             Poll::Ready(Some(v)) => assert_eq!(*v, 5),
             other => panic!("expected Ready(Some(5)), got {:?}", other.map(|_| ())),
         }
 
         // Now drop the last remaining clone; stream terminates.
-        drop(source);
+        drop(signal);
         match poll_once(&mut stream) {
             Poll::Ready(None) => {}
             other => panic!("expected Ready(None), got {:?}", other.map(|_| ())),
@@ -266,8 +266,8 @@ mod tests {
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn stream_is_spawnable_across_tasks() {
-        let source = Arc::new(Source::new(0u32));
-        let stream = source.stream();
+        let signal = Arc::new(Signal::new(0u32));
+        let stream = signal.stream();
 
         let task = tokio::spawn(async move {
             let mut stream = stream;
@@ -280,26 +280,26 @@ mod tests {
 
         // Yield so the spawned task can park on poll_next before we emit.
         tokio::task::yield_now().await;
-        source.emit(1);
-        source.emit(2);
-        source.emit(3);
+        signal.emit(1);
+        signal.emit(2);
+        signal.emit(3);
 
-        // Drop the only Source handle: the stream should terminate.
-        drop(Arc::try_unwrap(source).ok().expect("only one Arc"));
+        // Drop the only Signal handle: the stream should terminate.
+        drop(Arc::try_unwrap(signal).ok().expect("only one Arc"));
 
         let last = task.await.expect("task joined");
         assert!(matches!(last, Some(1) | Some(2) | Some(3)));
     }
 
     #[test]
-    fn pipe_from_source_directly() {
-        let source = Source::new(0u32);
-        let mapped = source.pipe(map(|v: Arc<u32>| *v + 1));
+    fn pipe_from_signal_directly() {
+        let signal = Signal::new(0u32);
+        let mapped = signal.pipe(map(|v: Arc<u32>| *v + 1));
         let mut sub = mapped.stream();
 
         assert!(matches!(poll_once(&mut sub), Poll::Pending));
 
-        source.emit(41);
+        signal.emit(41);
         match poll_once(&mut sub) {
             Poll::Ready(Some(v)) => assert_eq!(*v, 42),
             other => panic!("expected Ready(Some(42)), got {:?}", other.map(|_| ())),

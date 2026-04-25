@@ -1,20 +1,20 @@
 use std::sync::nonpoison::Mutex;
 
-use crate::state::{Accessor, Action, ActionBuffer, Source};
+use crate::state::{Accessor, Action, ActionBuffer, Signal};
 
 /// Central coordinator that owns state and processes actions.
 ///
 /// Dispatches are queued into a bounded lock-free buffer; state is advanced
 /// in batches by `flush`, which clones the current state once, runs every
 /// queued action's reducer against the clone, and emits the new state via
-/// the inner `Source`.
+/// the inner `Signal`.
 ///
 /// Ordering note: `ArrayQueue` is FIFO across all producers, but the
 /// interleaving of pushes from different threads is determined by atomic
 /// arrival order. Non-commutative reducers may produce different final
 /// states across runs under contention.
 pub struct Store<TState: Clone + 'static> {
-    state: Source<TState>,
+    state: Signal<TState>,
     buffer: ActionBuffer<TState>,
     flush_lock: Mutex<()>,
 }
@@ -22,7 +22,7 @@ pub struct Store<TState: Clone + 'static> {
 impl<TState: Clone + 'static> Store<TState> {
     pub fn new(init: TState) -> Self {
         Self {
-            state: Source::new(init),
+            state: Signal::new(init),
             buffer: ActionBuffer::with_capacity(1024),
             flush_lock: Mutex::new(()),
         }

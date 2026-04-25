@@ -6,7 +6,7 @@ use std::sync::{Arc, Mutex};
 use std::task::{Context, Poll};
 
 use super::Operator;
-use crate::state::source::{Source, Stream};
+use crate::state::signal::{Reader, Signal};
 
 pub fn map<Callback>(callback: Callback) -> Map<Callback> {
     Map { callback }
@@ -22,9 +22,9 @@ pub struct Mapped<In, Out> {
 }
 
 struct MappedState<In, Out> {
-    upstream: Mutex<Option<Stream<In>>>,
+    upstream: Mutex<Option<Reader<In>>>,
     callback: Mutex<Box<dyn FnMut(Arc<In>) -> Out + Send>>,
-    inner: Source<Out>,
+    inner: Signal<Out>,
     done: AtomicBool,
 }
 
@@ -33,8 +33,8 @@ where
     In: Send + Sync + 'static,
     Out: Send + Sync + 'static,
 {
-    pub fn stream(&self) -> MappedStream<In, Out> {
-        MappedStream {
+    pub fn stream(&self) -> MappedReader<In, Out> {
+        MappedReader {
             subscriber: self.state.inner.stream(),
             state: self.state.clone(),
         }
@@ -42,19 +42,19 @@ where
 }
 
 impl<In, Out> Deref for Mapped<In, Out> {
-    type Target = Source<Out>;
+    type Target = Signal<Out>;
 
-    fn deref(&self) -> &Source<Out> {
+    fn deref(&self) -> &Signal<Out> {
         &self.state.inner
     }
 }
 
-pub struct MappedStream<In, Out> {
+pub struct MappedReader<In, Out> {
     state: Arc<MappedState<In, Out>>,
-    subscriber: Stream<Out>,
+    subscriber: Reader<Out>,
 }
 
-impl<In, Out> futures::Stream for MappedStream<In, Out>
+impl<In, Out> futures::Stream for MappedReader<In, Out>
 where
     In: Send + Sync + 'static,
     Out: Send + Sync + 'static,
@@ -97,7 +97,7 @@ where
     }
 }
 
-impl<In, F, Out> Operator<Source<In>> for Map<F>
+impl<In, F, Out> Operator<Signal<In>> for Map<F>
 where
     F: FnMut(Arc<In>) -> Out + Send + 'static,
     In: Send + Sync + 'static,
@@ -105,15 +105,15 @@ where
 {
     type Output = Mapped<In, Out>;
 
-    fn apply(mut self, source: Source<In>) -> Mapped<In, Out> {
-        let initial = (self.callback)(source.value());
-        let upstream = source.stream();
+    fn apply(mut self, signal: Signal<In>) -> Mapped<In, Out> {
+        let initial = (self.callback)(signal.value());
+        let upstream = signal.stream();
 
         Mapped {
             state: Arc::new(MappedState {
                 upstream: Mutex::new(Some(upstream)),
                 callback: Mutex::new(Box::new(self.callback)),
-                inner: Source::new(initial),
+                inner: Signal::new(initial),
                 done: AtomicBool::new(false),
             }),
             _input: PhantomData,
@@ -128,7 +128,7 @@ mod tests {
     use std::task::{Context, Poll};
 
     use super::*;
-    use crate::state::source::Source;
+    use crate::state::signal::Signal;
 
     fn poll_once<S: futures::Stream + Unpin>(s: &mut S) -> Poll<Option<S::Item>> {
         let waker = futures::task::noop_waker();
@@ -138,16 +138,16 @@ mod tests {
 
     #[test]
     fn transforms_values() {
-        let source = Source::new(1u32);
+        let signal = Signal::new(1u32);
         let mapped = Map {
             callback: |v: Arc<u32>| *v * 2,
         }
-        .apply(source.clone());
+        .apply(signal.clone());
         let mut sub = mapped.stream();
 
         assert!(matches!(poll_once(&mut sub), Poll::Pending));
 
-        source.emit(5);
+        signal.emit(5);
         match poll_once(&mut sub) {
             Poll::Ready(Some(v)) => assert_eq!(*v, 10),
             other => panic!("expected Ready(Some(10)), got {:?}", other.map(|_| ())),
@@ -156,21 +156,21 @@ mod tests {
 
     #[test]
     fn value_returns_mapped_initial() {
-        let source = Source::new(3u32);
+        let signal = Signal::new(3u32);
         let mapped = Map {
             callback: |v: Arc<u32>| *v * 2,
         }
-        .apply(source);
+        .apply(signal);
         assert_eq!(*mapped.value(), 6);
     }
 
     #[test]
     fn chains() {
-        let source = Source::new(0u32);
+        let signal = Signal::new(0u32);
         let m1 = Map {
             callback: |v: Arc<u32>| *v + 1,
         }
-        .apply(source.clone());
+        .apply(signal.clone());
         let m2 = Map {
             callback: |v: Arc<u32>| *v * 10,
         }
@@ -180,8 +180,8 @@ mod tests {
 
         assert!(matches!(poll_once(&mut sub), Poll::Pending));
 
-        source.emit(4);
-        // Drive m1's pump so its inner Source emits 5; m2's pump (via sub) then sees it.
+        signal.emit(4);
+        // Drive m1's pump so its inner Signal emits 5; m2's pump (via sub) then sees it.
         let _ = poll_once(&mut m1_driver);
 
         match poll_once(&mut sub) {
@@ -191,15 +191,15 @@ mod tests {
     }
 
     #[test]
-    fn terminates_on_source_drop() {
-        let source = Source::new(0u32);
+    fn terminates_on_signal_drop() {
+        let signal = Signal::new(0u32);
         let mapped = Map {
             callback: |v: Arc<u32>| *v,
         }
-        .apply(source.clone());
+        .apply(signal.clone());
         let mut sub = mapped.stream();
 
-        drop(source);
+        drop(signal);
 
         match poll_once(&mut sub) {
             Poll::Ready(None) => {}
@@ -211,6 +211,6 @@ mod tests {
     fn is_send_static() {
         fn assert_send_static<T: Send + 'static>() {}
         assert_send_static::<Mapped<u32, u32>>();
-        assert_send_static::<MappedStream<u32, u32>>();
+        assert_send_static::<MappedReader<u32, u32>>();
     }
 }
