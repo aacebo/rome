@@ -8,6 +8,28 @@ pub use action::*;
 pub use source::*;
 pub use store::*;
 
+pub trait Signal {
+    type Value;
+
+    /// Returns the latest value snapshot.
+    fn get(&self) -> std::sync::Arc<Self::Value>;
+
+    /// Subscribes to future changes.
+    fn consume(&self) -> impl Consumer<Value = Self::Value>;
+}
+
+pub trait MutSignal: Signal {
+    /// Replaces the current value.
+    fn set(&self, value: impl Into<std::sync::Arc<Self::Value>>);
+}
+
+pub trait Consumer: futures::Stream<Item = std::sync::Arc<Self::Value>> {
+    type Value;
+
+    /// Returns the latest value snapshot.
+    fn get(&self) -> Option<std::sync::Arc<Self::Value>>;
+}
+
 /// Reacts to an action and state transition by performing follow-up work.
 ///
 /// A `Trigger` is the side-effecting counterpart to a reducer. Whereas reducers

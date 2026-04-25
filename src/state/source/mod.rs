@@ -9,6 +9,8 @@ use std::{
     sync::{Arc, RwLock, atomic},
 };
 
+use crate::state::Signal;
+
 pub struct Source<T> {
     inner: Arc<_Source<T>>,
 }
@@ -60,6 +62,20 @@ impl<T> Source<T> {
 impl<T: Into<Arc<T>>> From<T> for Source<T> {
     fn from(value: T) -> Self {
         Self::new(value)
+    }
+}
+
+impl<T> Signal for Source<T> {
+    type Value = T;
+
+    fn get(&self) -> std::sync::Arc<Self::Value> {
+        self.inner.value()
+    }
+
+    fn consume(&self) -> impl super::Consumer<Value = Self::Value> {
+        let (id, handle) = self.inner.create();
+        let source = Arc::downgrade(&self.inner);
+        Stream::new(id, handle, source)
     }
 }
 

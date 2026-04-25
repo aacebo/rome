@@ -1,5 +1,7 @@
 use std::sync::{Arc, Mutex, Weak};
 
+use crate::state::Consumer;
+
 pub struct Stream<T> {
     id: u64,
     handle: Arc<StreamRef<T>>,
@@ -21,6 +23,14 @@ impl<T> Drop for Stream<T> {
         if let Some(source) = self.source.upgrade() {
             source.remove(self.id);
         }
+    }
+}
+
+impl<T> Consumer for Stream<T> {
+    type Value = T;
+
+    fn get(&self) -> Option<std::sync::Arc<Self::Value>> {
+        Some(self.source.upgrade()?.value())
     }
 }
 
