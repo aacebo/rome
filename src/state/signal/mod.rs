@@ -32,7 +32,7 @@ impl<T> Signal<T> {
         self.inner.value()
     }
 
-    pub fn stream(&self) -> Reader<T> {
+    pub fn reader(&self) -> Reader<T> {
         let (id, handle) = self.inner.create();
         let signal = Arc::downgrade(&self.inner);
         Reader::new(id, handle, signal)
@@ -49,8 +49,8 @@ impl<T> Signal<T> {
         let ptr = value.into();
         *self.inner.value.write().unwrap() = ptr.clone();
 
-        for stream in self.inner.snapshot() {
-            stream.next(ptr.clone());
+        for reader in self.inner.snapshot() {
+            reader.next(ptr.clone());
         }
 
         self
@@ -107,8 +107,8 @@ impl<T> Drop for _Signal<T> {
     fn drop(&mut self) {
         // Last Arc<_Signal> is going away; wake all subscribers so they
         // observe Weak::upgrade() == None on next poll.
-        for stream in self.pool.get_mut().unwrap().values() {
-            stream.wake();
+        for reader in self.pool.get_mut().unwrap().values() {
+            reader.wake();
         }
     }
 }
@@ -129,13 +129,13 @@ mod tests {
     #[test]
     fn subscriber_receives_emitted_value() {
         let signal = Signal::new(0u32);
-        let mut stream = signal.stream();
+        let mut reader = signal.reader();
 
-        assert!(matches!(poll_once(&mut stream), Poll::Pending));
+        assert!(matches!(poll_once(&mut reader), Poll::Pending));
 
         signal.emit(42);
 
-        match poll_once(&mut stream) {
+        match poll_once(&mut reader) {
             Poll::Ready(Some(v)) => assert_eq!(*v, 42),
             other => panic!("expected Ready(Some(42)), got {:?}", other.map(|_| ())),
         }
@@ -144,9 +144,9 @@ mod tests {
     #[test]
     fn drop_deregisters_subscriber() {
         let signal = Signal::new(0u32);
-        let s1 = signal.stream();
-        let s2 = signal.stream();
-        let s3 = signal.stream();
+        let s1 = signal.reader();
+        let s2 = signal.reader();
+        let s3 = signal.reader();
 
         assert_eq!(signal.inner.len(), 3);
 
@@ -158,13 +158,13 @@ mod tests {
     }
 
     #[test]
-    fn signal_drop_terminates_streams() {
+    fn signal_drop_terminates_readers() {
         let signal = Signal::new(0u32);
-        let mut stream = signal.stream();
+        let mut reader = signal.reader();
 
         drop(signal);
 
-        match poll_once(&mut stream) {
+        match poll_once(&mut reader) {
             Poll::Ready(None) => {}
             other => panic!("expected Ready(None), got {:?}", other.map(|_| ())),
         }
@@ -173,17 +173,17 @@ mod tests {
     #[test]
     fn signal_drop_with_pending_yields_value_then_none() {
         let signal = Signal::new(0u32);
-        let mut stream = signal.stream();
+        let mut reader = signal.reader();
 
         signal.emit(7);
         drop(signal);
 
-        match poll_once(&mut stream) {
+        match poll_once(&mut reader) {
             Poll::Ready(Some(v)) => assert_eq!(*v, 7),
             other => panic!("expected Ready(Some(7)), got {:?}", other.map(|_| ())),
         }
 
-        match poll_once(&mut stream) {
+        match poll_once(&mut reader) {
             Poll::Ready(None) => {}
             other => panic!("expected Ready(None), got {:?}", other.map(|_| ())),
         }
@@ -192,22 +192,22 @@ mod tests {
     #[test]
     fn coalescing_drops_intermediate_values() {
         let signal = Signal::new(0u32);
-        let mut stream = signal.stream();
+        let mut reader = signal.reader();
 
         for i in 1..=100 {
             signal.emit(i);
         }
 
-        match poll_once(&mut stream) {
+        match poll_once(&mut reader) {
             Poll::Ready(Some(v)) => assert_eq!(*v, 100),
             other => panic!("expected Ready(Some(100)), got {:?}", other.map(|_| ())),
         }
 
-        assert!(matches!(poll_once(&mut stream), Poll::Pending));
+        assert!(matches!(poll_once(&mut reader), Poll::Pending));
     }
 
     #[test]
-    fn stream_is_send_static() {
+    fn reader_is_send_static() {
         fn assert_send_static<T: Send + 'static>() {}
         assert_send_static::<Reader<u32>>();
         assert_send_static::<Signal<u32>>();
@@ -226,8 +226,8 @@ mod tests {
     #[test]
     fn multiple_subscribers_each_receive() {
         let signal = Signal::new(0u32);
-        let mut s1 = signal.stream();
-        let mut s2 = signal.stream();
+        let mut s1 = signal.reader();
+        let mut s2 = signal.reader();
 
         signal.emit(99);
 
@@ -240,39 +240,39 @@ mod tests {
     }
 
     #[test]
-    fn dropping_non_last_clone_does_not_terminate_stream() {
+    fn dropping_non_last_clone_does_not_terminate_reader() {
         let signal = Signal::new(0u32);
         let clone = signal.clone();
-        let mut stream = signal.stream();
+        let mut reader = signal.reader();
 
         drop(clone);
 
-        // The original clone still exists, so the stream must remain open.
-        assert!(matches!(poll_once(&mut stream), Poll::Pending));
+        // The original clone still exists, so the reader must remain open.
+        assert!(matches!(poll_once(&mut reader), Poll::Pending));
 
         signal.emit(5);
-        match poll_once(&mut stream) {
+        match poll_once(&mut reader) {
             Poll::Ready(Some(v)) => assert_eq!(*v, 5),
             other => panic!("expected Ready(Some(5)), got {:?}", other.map(|_| ())),
         }
 
-        // Now drop the last remaining clone; stream terminates.
+        // Now drop the last remaining clone; reader terminates.
         drop(signal);
-        match poll_once(&mut stream) {
+        match poll_once(&mut reader) {
             Poll::Ready(None) => {}
             other => panic!("expected Ready(None), got {:?}", other.map(|_| ())),
         }
     }
 
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
-    async fn stream_is_spawnable_across_tasks() {
+    async fn reader_is_spawnable_across_tasks() {
         let signal = Arc::new(Signal::new(0u32));
-        let stream = signal.stream();
+        let reader = signal.reader();
 
         let task = tokio::spawn(async move {
-            let mut stream = stream;
+            let mut reader = reader;
             let mut last = None;
-            while let Some(v) = stream.next().await {
+            while let Some(v) = reader.next().await {
                 last = Some(*v);
             }
             last
@@ -284,7 +284,7 @@ mod tests {
         signal.emit(2);
         signal.emit(3);
 
-        // Drop the only Signal handle: the stream should terminate.
+        // Drop the only Signal handle: the reader should terminate.
         drop(Arc::try_unwrap(signal).ok().expect("only one Arc"));
 
         let last = task.await.expect("task joined");
@@ -295,7 +295,7 @@ mod tests {
     fn pipe_from_signal_directly() {
         let signal = Signal::new(0u32);
         let mapped = signal.pipe(map(|v: Arc<u32>| *v + 1));
-        let mut sub = mapped.stream();
+        let mut sub = mapped.reader();
 
         assert!(matches!(poll_once(&mut sub), Poll::Pending));
 

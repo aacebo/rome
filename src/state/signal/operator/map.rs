@@ -22,7 +22,7 @@ pub struct Mapped<In, Out> {
 }
 
 struct MappedState<In, Out> {
-    upstream: Mutex<Option<Reader<In>>>,
+    upreader: Mutex<Option<Reader<In>>>,
     callback: Mutex<Box<dyn FnMut(Arc<In>) -> Out + Send>>,
     inner: Signal<Out>,
     done: AtomicBool,
@@ -33,9 +33,9 @@ where
     In: Send + Sync + 'static,
     Out: Send + Sync + 'static,
 {
-    pub fn stream(&self) -> MappedReader<In, Out> {
+    pub fn reader(&self) -> MappedReader<In, Out> {
         MappedReader {
-            subscriber: self.state.inner.stream(),
+            subscriber: self.state.inner.reader(),
             state: self.state.clone(),
         }
     }
@@ -65,7 +65,7 @@ where
         let this = self.get_mut();
 
         #[allow(clippy::collapsible_if)]
-        if let Ok(mut up_slot) = this.state.upstream.try_lock() {
+        if let Ok(mut up_slot) = this.state.upreader.try_lock() {
             if let Some(up) = up_slot.as_mut() {
                 let mut f = this.state.callback.lock().unwrap();
                 loop {
@@ -107,11 +107,11 @@ where
 
     fn apply(mut self, signal: Signal<In>) -> Mapped<In, Out> {
         let initial = (self.callback)(signal.value());
-        let upstream = signal.stream();
+        let upreader = signal.reader();
 
         Mapped {
             state: Arc::new(MappedState {
-                upstream: Mutex::new(Some(upstream)),
+                upreader: Mutex::new(Some(upreader)),
                 callback: Mutex::new(Box::new(self.callback)),
                 inner: Signal::new(initial),
                 done: AtomicBool::new(false),
@@ -143,7 +143,7 @@ mod tests {
             callback: |v: Arc<u32>| *v * 2,
         }
         .apply(signal.clone());
-        let mut sub = mapped.stream();
+        let mut sub = mapped.reader();
 
         assert!(matches!(poll_once(&mut sub), Poll::Pending));
 
@@ -175,8 +175,8 @@ mod tests {
             callback: |v: Arc<u32>| *v * 10,
         }
         .apply((*m1).clone());
-        let mut sub = m2.stream();
-        let mut m1_driver = m1.stream();
+        let mut sub = m2.reader();
+        let mut m1_driver = m1.reader();
 
         assert!(matches!(poll_once(&mut sub), Poll::Pending));
 
@@ -197,7 +197,7 @@ mod tests {
             callback: |v: Arc<u32>| *v,
         }
         .apply(signal.clone());
-        let mut sub = mapped.stream();
+        let mut sub = mapped.reader();
 
         drop(signal);
 
