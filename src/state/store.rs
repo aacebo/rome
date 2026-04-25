@@ -6,8 +6,8 @@ use crate::state::{Accessor, Action, ActionBuffer, Source};
 ///
 /// Dispatches are queued into a bounded lock-free buffer; state is advanced
 /// in batches by `flush`, which clones the current state once, runs every
-/// queued action's reducer against the clone, installs the new state via
-/// `ArcCell`, and appends the applied actions to an unbounded history log.
+/// queued action's reducer against the clone, and emits the new state via
+/// the inner `Source`.
 ///
 /// Ordering note: `ArrayQueue` is FIFO across all producers, but the
 /// interleaving of pushes from different threads is determined by atomic

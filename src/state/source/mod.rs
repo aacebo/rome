@@ -9,9 +9,16 @@ use std::{
     sync::{Arc, RwLock, atomic},
 };
 
-#[derive(Clone)]
 pub struct Source<T> {
     inner: Arc<_Source<T>>,
+}
+
+impl<T> Clone for Source<T> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
 }
 
 impl<T> Source<T> {
@@ -33,9 +40,9 @@ impl<T> Source<T> {
 
     pub fn pipe<O>(&self, op: O) -> O::Output
     where
-        O: Operator<Stream<T>>,
+        O: Operator<Source<T>>,
     {
-        op.apply(self.stream())
+        op.apply(self.clone())
     }
 
     pub fn emit(&self, value: impl Into<Arc<T>>) -> &Self {
@@ -232,13 +239,6 @@ mod tests {
         }
     }
 
-    // Force-import StreamExt to ensure futures::Stream impl is exercised.
-    #[allow(dead_code)]
-    fn _uses_stream_ext<T>(s: Stream<T>) -> Stream<T> {
-        let _ = s.fuse();
-        unreachable!()
-    }
-
     #[test]
     fn dropping_non_last_clone_does_not_terminate_stream() {
         let source = Source::new(0u32);
@@ -294,11 +294,14 @@ mod tests {
     #[test]
     fn pipe_from_source_directly() {
         let source = Source::new(0u32);
-        let mut piped = source.pipe(map(|v: Arc<u32>| *v + 1));
+        let mapped = source.pipe(map(|v: Arc<u32>| *v + 1));
+        let mut sub = mapped.stream();
+
+        assert!(matches!(poll_once(&mut sub), Poll::Pending));
 
         source.emit(41);
-        match poll_once(&mut piped) {
-            Poll::Ready(Some(v)) => assert_eq!(v, 42),
+        match poll_once(&mut sub) {
+            Poll::Ready(Some(v)) => assert_eq!(*v, 42),
             other => panic!("expected Ready(Some(42)), got {:?}", other.map(|_| ())),
         }
     }
