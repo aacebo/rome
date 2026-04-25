@@ -1,11 +1,9 @@
 mod access;
-mod arc_cell;
 mod buffer;
 mod source;
 mod store;
 
 pub use access::*;
-pub use arc_cell::*;
 pub use buffer::*;
 pub use source::*;
 pub use store::*;

@@ -1,6 +1,6 @@
-use std::sync::{Arc, nonpoison::Mutex};
+use std::sync::nonpoison::Mutex;
 
-use crate::state::{Accessor, Action, ActionBuffer, ArcCell};
+use crate::state::{Accessor, Action, ActionBuffer, Source};
 
 /// Central coordinator that owns state and processes actions.
 ///
@@ -14,7 +14,7 @@ use crate::state::{Accessor, Action, ActionBuffer, ArcCell};
 /// arrival order. Non-commutative reducers may produce different final
 /// states across runs under contention.
 pub struct Store<TState: Clone + 'static> {
-    state: ArcCell<TState>,
+    state: Source<TState>,
     buffer: ActionBuffer<TState>,
     flush_lock: Mutex<()>,
 }
@@ -22,7 +22,7 @@ pub struct Store<TState: Clone + 'static> {
 impl<TState: Clone + 'static> Store<TState> {
     pub fn new(init: TState) -> Self {
         Self {
-            state: ArcCell::new(init),
+            state: Source::new(init),
             buffer: ActionBuffer::with_capacity(1024),
             flush_lock: Mutex::new(()),
         }
@@ -37,7 +37,7 @@ impl<TState: Clone + 'static> Store<TState> {
         &'a self,
         select: impl FnOnce(&'a TState) -> T + 'a,
     ) -> Accessor<'a, TState, T> {
-        Accessor::new(self.state.load(), select)
+        Accessor::new(self.state.value(), select)
     }
 
     /// Queue an action for application on the next `flush`. Blocks if the
@@ -59,14 +59,14 @@ impl<TState: Clone + 'static> Store<TState> {
             return;
         }
 
-        let current = self.state.load();
+        let current = self.state.value();
         let mut next = (*current).clone();
 
         for action in &drained {
             action.reduce(&mut next);
         }
 
-        self.state.store(Arc::new(next));
+        self.state.emit(next);
     }
 }
 
