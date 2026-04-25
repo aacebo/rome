@@ -79,10 +79,10 @@ mod tests {
         });
 
         store.dispatch(UserAction::Rename("hello world".to_string()));
-        assert_eq!(store.select(|s| s.name.as_str()), "test user");
+        assert_eq!(store.select(|s| s.name.clone()), "test user");
 
         store.flush();
-        assert_eq!(store.select(|s| s.name.as_str()), "hello world");
+        assert_eq!(store.select(|s| s.name.clone()), "hello world");
     }
 
     #[test]
@@ -94,7 +94,7 @@ mod tests {
         store.dispatch(UserAction::Rename("c".to_string()));
         store.flush();
 
-        assert_eq!(store.select(|s| s.name.as_str()), "c");
+        assert_eq!(store.select(|s| s.name.clone()), "c");
     }
 
     #[test]

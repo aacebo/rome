@@ -13,14 +13,6 @@ pub struct Signal<T> {
     inner: Arc<_Signal<T>>,
 }
 
-impl<T> Clone for Signal<T> {
-    fn clone(&self) -> Self {
-        Self {
-            inner: self.inner.clone(),
-        }
-    }
-}
-
 impl<T> Signal<T> {
     pub fn new(value: impl Into<Arc<T>>) -> Self {
         Self {
@@ -28,8 +20,8 @@ impl<T> Signal<T> {
         }
     }
 
-    pub fn value(&self) -> Arc<T> {
-        self.inner.value()
+    pub fn get(&self) -> Arc<T> {
+        self.inner.get()
     }
 
     pub fn reader(&self) -> Reader<T> {
@@ -57,9 +49,35 @@ impl<T> Signal<T> {
     }
 }
 
+impl<T> Clone for Signal<T> {
+    fn clone(&self) -> Self {
+        Self {
+            inner: self.inner.clone(),
+        }
+    }
+}
+
 impl<T: Into<Arc<T>>> From<T> for Signal<T> {
     fn from(value: T) -> Self {
         Self::new(value)
+    }
+}
+
+impl<T, U: ?Sized> PartialEq<U> for Signal<T>
+where
+    T: PartialEq<U>,
+{
+    fn eq(&self, other: &U) -> bool {
+        self.get().as_ref() == other
+    }
+}
+
+impl<T, U: ?Sized> PartialOrd<U> for Signal<T>
+where
+    T: PartialOrd<U>,
+{
+    fn partial_cmp(&self, other: &U) -> Option<std::cmp::Ordering> {
+        self.get().as_ref().partial_cmp(other)
     }
 }
 
@@ -78,7 +96,7 @@ impl<T> _Signal<T> {
         }
     }
 
-    fn value(&self) -> Arc<T> {
+    fn get(&self) -> Arc<T> {
         self.value.read().unwrap().clone()
     }
 
@@ -216,11 +234,11 @@ mod tests {
     #[test]
     fn value_returns_latest() {
         let signal = Signal::new(1u32);
-        assert_eq!(*signal.value(), 1);
+        assert_eq!(*signal.get(), 1);
         signal.emit(2);
-        assert_eq!(*signal.value(), 2);
+        assert_eq!(*signal.get(), 2);
         signal.emit(3);
-        assert_eq!(*signal.value(), 3);
+        assert_eq!(*signal.get(), 3);
     }
 
     #[test]

@@ -1,6 +1,6 @@
-use std::sync::nonpoison::Mutex;
+use std::sync::{Arc, nonpoison::Mutex};
 
-use crate::state::{Accessor, Action, ActionBuffer, Signal};
+use crate::state::{Action, ActionBuffer, Signal, signal};
 
 /// Central coordinator that owns state and processes actions.
 ///
@@ -33,11 +33,15 @@ impl<TState: Clone + 'static> Store<TState> {
         self
     }
 
-    pub fn select<'a, T: 'a>(
-        &'a self,
-        select: impl FnOnce(&'a TState) -> T + 'a,
-    ) -> Accessor<'a, TState, T> {
-        Accessor::new(self.state.value(), select)
+    pub fn select<T>(
+        &self,
+        f: impl FnMut(Arc<TState>) -> T + Send + 'static,
+    ) -> signal::Mapped<TState, T>
+    where
+        TState: Send + Sync,
+        T: Send + Sync + 'static,
+    {
+        self.state.pipe(signal::map(f))
     }
 
     /// Queue an action for application on the next `flush`. Blocks if the
@@ -59,7 +63,7 @@ impl<TState: Clone + 'static> Store<TState> {
             return;
         }
 
-        let current = self.state.value();
+        let current = self.state.get();
         let mut next = (*current).clone();
 
         for action in &drained {

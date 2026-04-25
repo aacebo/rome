@@ -11,8 +11,8 @@ impl<T> Reader<T> {
         Self { id, handle, source }
     }
 
-    pub fn value(&self) -> Option<Arc<T>> {
-        Some(self.source.upgrade()?.value())
+    pub fn get(&self) -> Option<Arc<T>> {
+        Some(self.source.upgrade()?.get())
     }
 }
 

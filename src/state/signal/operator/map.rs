@@ -28,11 +28,7 @@ struct MappedState<In, Out> {
     done: AtomicBool,
 }
 
-impl<In, Out> Mapped<In, Out>
-where
-    In: Send + Sync + 'static,
-    Out: Send + Sync + 'static,
-{
+impl<In, Out> Mapped<In, Out> {
     pub fn reader(&self) -> MappedReader<In, Out> {
         MappedReader {
             subscriber: self.state.inner.reader(),
@@ -49,16 +45,36 @@ impl<In, Out> Deref for Mapped<In, Out> {
     }
 }
 
+impl<In, Out, U: ?Sized> PartialEq<U> for Mapped<In, Out>
+where
+    Out: PartialEq<U>,
+{
+    fn eq(&self, other: &U) -> bool {
+        &**self == other
+    }
+}
+
+impl<In, Out, U: ?Sized> PartialOrd<U> for Mapped<In, Out>
+where
+    Out: PartialOrd<U>,
+{
+    fn partial_cmp(&self, other: &U) -> Option<std::cmp::Ordering> {
+        (**self).partial_cmp(other)
+    }
+}
+
+impl<In, Out: std::fmt::Debug> std::fmt::Debug for Mapped<In, Out> {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:#?}", &*(**self).get())
+    }
+}
+
 pub struct MappedReader<In, Out> {
     state: Arc<MappedState<In, Out>>,
     subscriber: Reader<Out>,
 }
 
-impl<In, Out> futures::Stream for MappedReader<In, Out>
-where
-    In: Send + Sync + 'static,
-    Out: Send + Sync + 'static,
-{
+impl<In, Out> futures::Stream for MappedReader<In, Out> {
     type Item = Arc<Out>;
 
     fn poll_next(self: Pin<&mut Self>, cx: &mut Context<'_>) -> Poll<Option<Self::Item>> {
@@ -106,7 +122,7 @@ where
     type Output = Mapped<In, Out>;
 
     fn apply(mut self, signal: Signal<In>) -> Mapped<In, Out> {
-        let initial = (self.callback)(signal.value());
+        let initial = (self.callback)(signal.get());
         let upreader = signal.reader();
 
         Mapped {
@@ -161,7 +177,7 @@ mod tests {
             callback: |v: Arc<u32>| *v * 2,
         }
         .apply(signal);
-        assert_eq!(*mapped.value(), 6);
+        assert_eq!(*mapped.get(), 6);
     }
 
     #[test]
