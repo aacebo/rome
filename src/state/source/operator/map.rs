@@ -8,12 +8,12 @@ use std::task::{Context, Poll};
 use super::Operator;
 use crate::state::source::{Source, Stream};
 
-pub fn map<F>(f: F) -> Map<F> {
-    Map { f }
+pub fn map<Callback>(callback: Callback) -> Map<Callback> {
+    Map { callback }
 }
 
 pub struct Map<F> {
-    f: F,
+    callback: F,
 }
 
 pub struct Mapped<In, Out> {
@@ -23,7 +23,7 @@ pub struct Mapped<In, Out> {
 
 struct MappedState<In, Out> {
     upstream: Mutex<Option<Stream<In>>>,
-    f: Mutex<Box<dyn FnMut(Arc<In>) -> Out + Send>>,
+    callback: Mutex<Box<dyn FnMut(Arc<In>) -> Out + Send>>,
     inner: Source<Out>,
     done: AtomicBool,
 }
@@ -67,7 +67,7 @@ where
         #[allow(clippy::collapsible_if)]
         if let Ok(mut up_slot) = this.state.upstream.try_lock() {
             if let Some(up) = up_slot.as_mut() {
-                let mut f = this.state.f.lock().unwrap();
+                let mut f = this.state.callback.lock().unwrap();
                 loop {
                     match Pin::new(&mut *up).poll_next(cx) {
                         Poll::Ready(Some(v)) => {
@@ -106,13 +106,13 @@ where
     type Output = Mapped<In, Out>;
 
     fn apply(mut self, source: Source<In>) -> Mapped<In, Out> {
-        let initial = (self.f)(source.value());
+        let initial = (self.callback)(source.value());
         let upstream = source.stream();
 
         Mapped {
             state: Arc::new(MappedState {
                 upstream: Mutex::new(Some(upstream)),
-                f: Mutex::new(Box::new(self.f)),
+                callback: Mutex::new(Box::new(self.callback)),
                 inner: Source::new(initial),
                 done: AtomicBool::new(false),
             }),
@@ -140,7 +140,7 @@ mod tests {
     fn transforms_values() {
         let source = Source::new(1u32);
         let mapped = Map {
-            f: |v: Arc<u32>| *v * 2,
+            callback: |v: Arc<u32>| *v * 2,
         }
         .apply(source.clone());
         let mut sub = mapped.stream();
@@ -158,7 +158,7 @@ mod tests {
     fn value_returns_mapped_initial() {
         let source = Source::new(3u32);
         let mapped = Map {
-            f: |v: Arc<u32>| *v * 2,
+            callback: |v: Arc<u32>| *v * 2,
         }
         .apply(source);
         assert_eq!(*mapped.value(), 6);
@@ -168,11 +168,11 @@ mod tests {
     fn chains() {
         let source = Source::new(0u32);
         let m1 = Map {
-            f: |v: Arc<u32>| *v + 1,
+            callback: |v: Arc<u32>| *v + 1,
         }
         .apply(source.clone());
         let m2 = Map {
-            f: |v: Arc<u32>| *v * 10,
+            callback: |v: Arc<u32>| *v * 10,
         }
         .apply((*m1).clone());
         let mut sub = m2.stream();
@@ -194,7 +194,7 @@ mod tests {
     fn terminates_on_source_drop() {
         let source = Source::new(0u32);
         let mapped = Map {
-            f: |v: Arc<u32>| *v,
+            callback: |v: Arc<u32>| *v,
         }
         .apply(source.clone());
         let mut sub = mapped.stream();
