@@ -1,6 +1,10 @@
+mod stream;
+
+pub use stream::*;
+
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex, RwLock, Weak, atomic},
+    sync::{Arc, RwLock, atomic},
 };
 
 #[derive(Clone)]
@@ -22,7 +26,7 @@ impl<T> Source<T> {
     pub fn stream(&self) -> Stream<T> {
         let (id, handle) = self.inner.create();
         let source = Arc::downgrade(&self.inner);
-        Stream { id, handle, source }
+        Stream::new(id, handle, source)
     }
 
     pub fn emit(&self, value: impl Into<Arc<T>>) -> &Self {
@@ -40,47 +44,6 @@ impl<T> Source<T> {
 impl<T: Into<Arc<T>>> From<T> for Source<T> {
     fn from(value: T) -> Self {
         Self::new(value)
-    }
-}
-
-pub struct Stream<T> {
-    id: u64,
-    handle: Arc<StreamRef<T>>,
-    source: Weak<_Source<T>>,
-}
-
-impl<T> Drop for Stream<T> {
-    fn drop(&mut self) {
-        if let Some(source) = self.source.upgrade() {
-            source.remove(self.id);
-        }
-    }
-}
-
-impl<T> futures::Stream for Stream<T> {
-    type Item = Arc<T>;
-
-    fn poll_next(
-        self: std::pin::Pin<&mut Self>,
-        cx: &mut std::task::Context<'_>,
-    ) -> std::task::Poll<Option<Self::Item>> {
-        if let Some(v) = self.handle.pending.lock().unwrap().take() {
-            return std::task::Poll::Ready(Some(v));
-        }
-
-        if self.source.strong_count() == 0 {
-            return std::task::Poll::Ready(None);
-        }
-
-        self.handle.waker.register(cx.waker());
-
-        // Re-check after register: a Source drop racing with register
-        // would otherwise leave the task parked forever.
-        if self.source.strong_count() == 0 {
-            return std::task::Poll::Ready(None);
-        }
-
-        std::task::Poll::Pending
     }
 }
 
@@ -125,27 +88,8 @@ impl<T> Drop for _Source<T> {
         // Last Arc<_Source> is going away; wake all subscribers so they
         // observe Weak::upgrade() == None on next poll.
         for stream in self.pool.get_mut().unwrap().values() {
-            stream.waker.wake();
+            stream.wake();
         }
-    }
-}
-
-struct StreamRef<T> {
-    waker: futures::task::AtomicWaker,
-    pending: Mutex<Option<Arc<T>>>,
-}
-
-impl<T> StreamRef<T> {
-    fn new() -> Self {
-        Self {
-            waker: futures::task::AtomicWaker::new(),
-            pending: Mutex::new(None),
-        }
-    }
-
-    fn next(&self, value: Arc<T>) {
-        *self.pending.lock().unwrap() = Some(value);
-        self.waker.wake();
     }
 }
 
