@@ -1,5 +1,7 @@
+mod operator;
 mod stream;
 
+pub use operator::*;
 pub use stream::*;
 
 use std::{
@@ -27,6 +29,13 @@ impl<T> Source<T> {
         let (id, handle) = self.inner.create();
         let source = Arc::downgrade(&self.inner);
         Stream::new(id, handle, source)
+    }
+
+    pub fn pipe<O>(&self, op: O) -> O::Output
+    where
+        O: Operator<Stream<T>>,
+    {
+        op.apply(self.stream())
     }
 
     pub fn emit(&self, value: impl Into<Arc<T>>) -> &Self {
@@ -280,5 +289,17 @@ mod tests {
 
         let last = task.await.expect("task joined");
         assert!(matches!(last, Some(1) | Some(2) | Some(3)));
+    }
+
+    #[test]
+    fn pipe_from_source_directly() {
+        let source = Source::new(0u32);
+        let mut piped = source.pipe(map(|v: Arc<u32>| *v + 1));
+
+        source.emit(41);
+        match poll_once(&mut piped) {
+            Poll::Ready(Some(v)) => assert_eq!(v, 42),
+            other => panic!("expected Ready(Some(42)), got {:?}", other.map(|_| ())),
+        }
     }
 }
