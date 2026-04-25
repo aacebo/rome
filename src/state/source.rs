@@ -9,7 +9,7 @@ pub struct Source<T> {
 }
 
 impl<T> Source<T> {
-    pub fn new(value: T) -> Self {
+    pub fn new(value: impl Into<Arc<T>>) -> Self {
         Self {
             inner: Arc::new(_Source::new(value)),
         }
@@ -25,8 +25,8 @@ impl<T> Source<T> {
         Stream { id, handle, source }
     }
 
-    pub fn emit(&self, value: T) -> &Self {
-        let ptr = Arc::new(value);
+    pub fn emit(&self, value: impl Into<Arc<T>>) -> &Self {
+        let ptr = value.into();
         *self.inner.value.write().unwrap() = ptr.clone();
 
         for stream in self.inner.snapshot() {
@@ -37,7 +37,7 @@ impl<T> Source<T> {
     }
 }
 
-impl<T> From<T> for Source<T> {
+impl<T: Into<Arc<T>>> From<T> for Source<T> {
     fn from(value: T) -> Self {
         Self::new(value)
     }
@@ -91,10 +91,10 @@ struct _Source<T> {
 }
 
 impl<T> _Source<T> {
-    fn new(value: T) -> Self {
+    fn new(value: impl Into<Arc<T>>) -> Self {
         Self {
             next_id: atomic::AtomicU64::new(1),
-            value: RwLock::new(Arc::new(value)),
+            value: RwLock::new(value.into()),
             pool: RwLock::new(HashMap::new()),
         }
     }
