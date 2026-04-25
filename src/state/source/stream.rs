@@ -10,6 +10,10 @@ impl<T> Stream<T> {
     pub(super) fn new(id: u64, handle: Arc<StreamRef<T>>, source: Weak<super::_Source<T>>) -> Self {
         Self { id, handle, source }
     }
+
+    pub fn value(&self) -> Option<Arc<T>> {
+        Some(self.source.upgrade()?.value())
+    }
 }
 
 impl<T> Drop for Stream<T> {

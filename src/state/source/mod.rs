@@ -20,7 +20,7 @@ impl<T> Source<T> {
     }
 
     pub fn value(&self) -> Arc<T> {
-        self.inner.value.read().unwrap().clone()
+        self.inner.value()
     }
 
     pub fn stream(&self) -> Stream<T> {
@@ -60,6 +60,10 @@ impl<T> _Source<T> {
             value: RwLock::new(value.into()),
             pool: RwLock::new(HashMap::new()),
         }
+    }
+
+    fn value(&self) -> Arc<T> {
+        self.value.read().unwrap().clone()
     }
 
     fn create(&self) -> (u64, Arc<StreamRef<T>>) {
