@@ -1,4 +1,4 @@
-use std::sync::{Arc, nonpoison::Mutex};
+use std::sync::nonpoison::Mutex;
 
 use crate::state::{Action, ActionBuffer, Signal, signal};
 
@@ -35,13 +35,13 @@ impl<TState: Clone + 'static> Store<TState> {
 
     pub fn select<T>(
         &self,
-        f: impl FnMut(Arc<TState>) -> T + Send + 'static,
-    ) -> signal::Mapped<TState, T>
+        f: impl Fn(&TState) -> T + Send + Sync + 'static,
+    ) -> signal::Select<TState, T>
     where
         TState: Send + Sync,
-        T: Send + Sync + 'static,
+        T: Send + 'static,
     {
-        self.state.pipe(signal::map(f))
+        signal::Select::new(self.state.clone(), f)
     }
 
     /// Queue an action for application on the next `flush`. Blocks if the

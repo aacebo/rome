@@ -1,8 +1,8 @@
-mod operator;
 mod read;
+mod select;
 
-pub use operator::*;
 pub use read::*;
+pub use select::*;
 
 use std::{
     collections::HashMap,
@@ -24,17 +24,10 @@ impl<T> Signal<T> {
         self.inner.get()
     }
 
-    pub fn reader(&self) -> Reader<T> {
+    pub fn stream(&self) -> Reader<T> {
         let (id, handle) = self.inner.create();
         let signal = Arc::downgrade(&self.inner);
         Reader::new(id, handle, signal)
-    }
-
-    pub fn pipe<O>(&self, op: O) -> O::Output
-    where
-        O: Operator<Signal<T>>,
-    {
-        op.apply(self.clone())
     }
 
     pub fn emit(&self, value: impl Into<Arc<T>>) -> &Self {
@@ -103,6 +96,7 @@ impl<T> _Signal<T> {
     fn create(&self) -> (u64, Arc<ReaderRef<T>>) {
         let id = self.next_id.fetch_add(1, atomic::Ordering::Relaxed);
         let handle = Arc::new(ReaderRef::new());
+        handle.next(self.value.read().unwrap().clone());
         self.pool.write().unwrap().insert(id, handle.clone());
         (id, handle)
     }
@@ -147,8 +141,13 @@ mod tests {
     #[test]
     fn subscriber_receives_emitted_value() {
         let signal = Signal::new(0u32);
-        let mut reader = signal.reader();
+        let mut reader = signal.stream();
 
+        // Fresh stream is seeded with the current value.
+        match poll_once(&mut reader) {
+            Poll::Ready(Some(v)) => assert_eq!(*v, 0),
+            other => panic!("expected Ready(Some(0)), got {:?}", other.map(|_| ())),
+        }
         assert!(matches!(poll_once(&mut reader), Poll::Pending));
 
         signal.emit(42);
@@ -162,9 +161,9 @@ mod tests {
     #[test]
     fn drop_deregisters_subscriber() {
         let signal = Signal::new(0u32);
-        let s1 = signal.reader();
-        let s2 = signal.reader();
-        let s3 = signal.reader();
+        let s1 = signal.stream();
+        let s2 = signal.stream();
+        let s3 = signal.stream();
 
         assert_eq!(signal.inner.len(), 3);
 
@@ -178,9 +177,15 @@ mod tests {
     #[test]
     fn signal_drop_terminates_readers() {
         let signal = Signal::new(0u32);
-        let mut reader = signal.reader();
+        let mut reader = signal.stream();
 
         drop(signal);
+
+        // Seeded current value still drains before termination.
+        match poll_once(&mut reader) {
+            Poll::Ready(Some(v)) => assert_eq!(*v, 0),
+            other => panic!("expected Ready(Some(0)), got {:?}", other.map(|_| ())),
+        }
 
         match poll_once(&mut reader) {
             Poll::Ready(None) => {}
@@ -191,7 +196,7 @@ mod tests {
     #[test]
     fn signal_drop_with_pending_yields_value_then_none() {
         let signal = Signal::new(0u32);
-        let mut reader = signal.reader();
+        let mut reader = signal.stream();
 
         signal.emit(7);
         drop(signal);
@@ -210,7 +215,7 @@ mod tests {
     #[test]
     fn coalescing_drops_intermediate_values() {
         let signal = Signal::new(0u32);
-        let mut reader = signal.reader();
+        let mut reader = signal.stream();
 
         for i in 1..=100 {
             signal.emit(i);
@@ -244,8 +249,8 @@ mod tests {
     #[test]
     fn multiple_subscribers_each_receive() {
         let signal = Signal::new(0u32);
-        let mut s1 = signal.reader();
-        let mut s2 = signal.reader();
+        let mut s1 = signal.stream();
+        let mut s2 = signal.stream();
 
         signal.emit(99);
 
@@ -261,11 +266,16 @@ mod tests {
     fn dropping_non_last_clone_does_not_terminate_reader() {
         let signal = Signal::new(0u32);
         let clone = signal.clone();
-        let mut reader = signal.reader();
+        let mut reader = signal.stream();
 
         drop(clone);
 
         // The original clone still exists, so the reader must remain open.
+        // Fresh stream is seeded with the current value (0), drain it first.
+        match poll_once(&mut reader) {
+            Poll::Ready(Some(v)) => assert_eq!(*v, 0),
+            other => panic!("expected Ready(Some(0)), got {:?}", other.map(|_| ())),
+        }
         assert!(matches!(poll_once(&mut reader), Poll::Pending));
 
         signal.emit(5);
@@ -285,7 +295,7 @@ mod tests {
     #[tokio::test(flavor = "multi_thread", worker_threads = 2)]
     async fn reader_is_spawnable_across_tasks() {
         let signal = Arc::new(Signal::new(0u32));
-        let reader = signal.reader();
+        let reader = signal.stream();
 
         let task = tokio::spawn(async move {
             let mut reader = reader;
@@ -310,16 +320,19 @@ mod tests {
     }
 
     #[test]
-    fn pipe_from_signal_directly() {
+    fn map_via_stream_ext() {
         let signal = Signal::new(0u32);
-        let mapped = signal.pipe(map(|v: Arc<u32>| *v + 1));
-        let mut sub = mapped.reader();
+        let mut sub = signal.stream().map(|v: Arc<u32>| *v + 1);
 
-        assert!(matches!(poll_once(&mut sub), Poll::Pending));
+        // Fresh stream is seeded with the current value (0); mapped to 1.
+        match poll_once(&mut sub) {
+            Poll::Ready(Some(v)) => assert_eq!(v, 1),
+            other => panic!("expected Ready(Some(1)), got {:?}", other.map(|_| ())),
+        }
 
         signal.emit(41);
         match poll_once(&mut sub) {
-            Poll::Ready(Some(v)) => assert_eq!(*v, 42),
+            Poll::Ready(Some(v)) => assert_eq!(v, 42),
             other => panic!("expected Ready(Some(42)), got {:?}", other.map(|_| ())),
         }
     }

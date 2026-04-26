@@ -119,7 +119,7 @@ mod tests {
             let consumer = {
                 let s = store.clone();
                 scope.spawn(move || {
-                    while *s.select(|c| c.n) < 4000 {
+                    while s.select(|c| c.n).get() < 4000 {
                         s.flush();
                         std::thread::yield_now();
                     }
@@ -158,7 +158,7 @@ mod tests {
             let consumer = {
                 let s = store.clone();
                 scope.spawn(move || {
-                    while *s.select(|c| c.n) < 1000 {
+                    while s.select(|c| c.n).get() < 1000 {
                         s.flush();
                         std::thread::yield_now();
                     }
@@ -201,7 +201,7 @@ mod tests {
                     let done = done.clone();
 
                     scope.spawn(move || {
-                        while !done.load(Ordering::Acquire) || *s.select(|c| c.n) < 1000 {
+                        while !done.load(Ordering::Acquire) || s.select(|c| c.n).get() < 1000 {
                             s.flush();
                             std::thread::yield_now();
                         }
