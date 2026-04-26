@@ -42,6 +42,25 @@ impl<T> Signal<T> {
     }
 }
 
+impl<T: Clone> Signal<T> {
+    /// Mutate the inner value in place using `Arc::make_mut` semantics:
+    /// if no other `Arc<T>` is outstanding, mutate without cloning;
+    /// otherwise clone, mutate the clone, swap in the new `Arc`. After
+    /// `f` returns, every subscriber is notified with the resulting `Arc<T>`.
+    pub fn with_mut<R>(&self, f: impl FnOnce(&mut T) -> R) -> R {
+        let mut guard = self.inner.value.write().unwrap();
+        let result = f(Arc::make_mut(&mut *guard));
+        let snapshot = guard.clone();
+        drop(guard);
+
+        for reader in self.inner.snapshot() {
+            reader.next(snapshot.clone());
+        }
+
+        result
+    }
+}
+
 impl<T> Clone for Signal<T> {
     fn clone(&self) -> Self {
         Self {

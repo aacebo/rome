@@ -50,8 +50,11 @@ impl<TState: Clone + 'static> Store<TState> {
         self.buffer.push(action);
     }
 
-    /// Drain queued actions, apply them in order to a fresh clone of state,
-    /// install the new state, and append the actions to the history log.
+    /// Drain queued actions and apply them in order to the current state in
+    /// place. `Signal::with_mut` uses `Arc::make_mut`, so the state clone is
+    /// elided when no subscriber holds an outstanding `Arc<TState>`. After
+    /// all actions are applied, subscribers are notified with one
+    /// `Arc<TState>`.
     ///
     /// Concurrent flushes serialize behind an internal lock — correct but
     /// wasteful; callers should typically have a single flusher.
@@ -63,14 +66,11 @@ impl<TState: Clone + 'static> Store<TState> {
             return;
         }
 
-        let current = self.state.get();
-        let mut next = (*current).clone();
-
-        for action in &drained {
-            action.reduce(&mut next);
-        }
-
-        self.state.emit(next);
+        self.state.with_mut(|state| {
+            for action in &drained {
+                action.reduce(state);
+            }
+        });
     }
 }
 
