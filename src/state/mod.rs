@@ -6,20 +6,6 @@ pub use action::*;
 pub use select::*;
 pub use store::*;
 
-/// Reacts to an action and state transition by performing follow-up work.
-///
-/// A `Trigger` is the side-effecting counterpart to a reducer. Whereas reducers
-/// synchronously derive new state from an action, triggers observe the current
-/// state and incoming action and may produce further actions by dispatching them
-/// back into the store.
-pub trait Trigger<TAction: Action> {
-    fn trigger(
-        &self,
-        state: &TAction::State,
-        action: &TAction,
-    ) -> impl Future<Output = impl futures::Stream<Item = TAction>>;
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
