@@ -1,5 +1,3 @@
-#![feature(sync_nonpoison, nonpoison_mutex)]
-
 pub mod action;
 pub mod diagnostic;
 pub mod entity;
@@ -9,7 +7,6 @@ pub mod schedule;
 pub mod state;
 pub mod time;
 pub mod world;
-pub mod channel;
 
 mod cancel;
 mod context;

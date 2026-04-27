@@ -29,26 +29,29 @@ fn flush_no_subscribers(b: &mut Bencher) {
     let store = Store::new(HeavyState {
         items: vec![0; 10_000],
     });
+
     b.iter(|| {
         for i in 0..32 {
             store.dispatch(Push(black_box(i)));
         }
+
         store.flush();
         black_box(&store);
     });
 }
 
 #[bench]
-fn flush_one_subscriber(b: &mut Bencher) {
+fn flush_one_selector(b: &mut Bencher) {
     let store = Store::new(HeavyState {
         items: vec![0; 10_000],
     });
-    let s = store.select(|s| s.items.len());
+
     b.iter(|| {
         for i in 0..32 {
             store.dispatch(Push(black_box(i)));
         }
+
         store.flush();
-        black_box(s.get());
+        black_box(&*store.select(|s| s.items.len()));
     });
 }

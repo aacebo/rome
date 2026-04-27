@@ -1,9 +1,7 @@
 mod action;
-pub mod signals;
 mod store;
 
 pub use action::*;
-pub use signals::Signal;
 pub use store::*;
 
 /// Reacts to an action and state transition by performing follow-up work.
@@ -23,12 +21,6 @@ pub trait Trigger<TAction: Action> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    fn poll_once<S: futures::Stream + Unpin>(s: &mut S) -> std::task::Poll<Option<S::Item>> {
-        let waker = futures::task::noop_waker();
-        let mut cx = std::task::Context::from_waker(&waker);
-        std::pin::Pin::new(s).poll_next(&mut cx)
-    }
 
     #[derive(Clone, Default, Debug, PartialEq)]
     struct UserState {
@@ -86,10 +78,10 @@ mod tests {
             });
 
             store.dispatch(UserAction::Rename("hello world".to_string()));
-            assert_eq!(store.select(|s| s.name.clone()), "test user");
+            assert_eq!(*store.select(|s| s.name.clone()), "test user");
 
             store.flush();
-            assert_eq!(store.select(|s| s.name.clone()), "hello world");
+            assert_eq!(*store.select(|s| s.name.clone()), "hello world");
         }
 
         #[test]
@@ -101,7 +93,26 @@ mod tests {
             store.dispatch(UserAction::Rename("c".to_string()));
             store.flush();
 
-            assert_eq!(store.select(|s| s.name.clone()), "c");
+            assert_eq!(*store.select(|s| s.name.clone()), "c");
+        }
+    }
+
+    mod selector {
+        use super::*;
+
+        #[test]
+        fn reprojects_after_flush() {
+            // Selector is a snapshot, not a live view: it captures the state
+            // at `select()` time and never updates. A second `select()` after
+            // a flush sees the new value.
+            let store = Store::new(Counter { n: 0 });
+
+            assert_eq!(*store.select(|c| c.n), 0);
+
+            store.dispatch(Bump);
+            store.flush();
+
+            assert_eq!(*store.select(|c| c.n), 1);
         }
     }
 
@@ -131,7 +142,7 @@ mod tests {
                 let consumer = {
                     let s = store.clone();
                     scope.spawn(move || {
-                        while s.select(|c| c.n).get() < 4000 {
+                        while *s.select(|c| c.n) < 4000 {
                             s.flush();
                             std::thread::yield_now();
                         }
@@ -146,12 +157,14 @@ mod tests {
             });
 
             store.flush();
-
-            assert_eq!(store.select(|c| c.n), 4000);
+            assert_eq!(*store.select(|c| c.n), 4000);
         }
 
         #[test]
-        fn backpressure_blocks_not_drops() {
+        fn backpressure_does_not_drop_pushes() {
+            // With a tiny buffer (capacity 4) and 1000 pushes from one
+            // producer, `dispatch` must block when full rather than drop —
+            // otherwise the final count would be < 1000.
             let store = Arc::new(Store::new(Counter { n: 0 }).with_capacity(4));
 
             std::thread::scope(|scope| {
@@ -168,7 +181,7 @@ mod tests {
                 let consumer = {
                     let s = store.clone();
                     scope.spawn(move || {
-                        while s.select(|c| c.n).get() < 1000 {
+                        while *s.select(|c| c.n) < 1000 {
                             s.flush();
                             std::thread::yield_now();
                         }
@@ -180,12 +193,14 @@ mod tests {
             });
 
             store.flush();
-
-            assert_eq!(store.select(|c| c.n), 1000);
+            assert_eq!(*store.select(|c| c.n), 1000);
         }
 
         #[test]
-        fn concurrent_flushes_serialize() {
+        fn concurrent_flushes_are_safe() {
+            // Two flushers race a single pusher. Serialization comes from
+            // the `RwLock` write guard inside `flush`; this test asserts the
+            // race produces the correct final count and never deadlocks.
             use std::sync::atomic::{AtomicBool, Ordering};
 
             let store = Arc::new(Store::new(Counter { n: 0 }));
@@ -210,7 +225,7 @@ mod tests {
                         let done = done.clone();
 
                         scope.spawn(move || {
-                            while !done.load(Ordering::Acquire) || s.select(|c| c.n).get() < 1000 {
+                            while !done.load(Ordering::Acquire) || *s.select(|c| c.n) < 1000 {
                                 s.flush();
                                 std::thread::yield_now();
                             }
@@ -226,78 +241,7 @@ mod tests {
             });
 
             store.flush();
-
-            assert_eq!(store.select(|c| c.n), 1000);
-        }
-    }
-
-    mod select_stream {
-        use super::*;
-        use std::task::Poll;
-
-        #[test]
-        fn observes_dispatched_changes() {
-            let store = Store::new(Counter { n: 0 });
-            let n = store.select(|c| c.n);
-            let mut sub = Box::pin(n.stream());
-
-            // Drain the seeded current value.
-            match poll_once(&mut sub) {
-                Poll::Ready(Some(v)) => assert_eq!(v, 0),
-                other => panic!("expected Ready(Some(0)), got {:?}", other.map(|_| ())),
-            }
-
-            store.dispatch(Bump);
-            store.flush();
-
-            match poll_once(&mut sub) {
-                Poll::Ready(Some(v)) => assert_eq!(v, 1),
-                other => panic!("expected Ready(Some(1)), got {:?}", other.map(|_| ())),
-            }
-        }
-
-        #[test]
-        fn coalesces_across_flushes() {
-            let store = Store::new(Counter { n: 0 });
-            let n = store.select(|c| c.n);
-            let mut sub = Box::pin(n.stream());
-
-            let _ = poll_once(&mut sub); // drain seed
-
-            // Three separate flushes between polls — only the latest is visible.
-            store.dispatch(Bump);
-            store.flush();
-            store.dispatch(Bump);
-            store.flush();
-            store.dispatch(Bump);
-            store.flush();
-
-            match poll_once(&mut sub) {
-                Poll::Ready(Some(v)) => assert_eq!(v, 3),
-                other => panic!("expected Ready(Some(3)), got {:?}", other.map(|_| ())),
-            }
-            assert!(matches!(poll_once(&mut sub), Poll::Pending));
-        }
-
-        #[test]
-        fn multiple_subscribers_each_receive() {
-            let store = Store::new(Counter { n: 0 });
-            let n = store.select(|c| c.n);
-            let mut s1 = Box::pin(n.stream());
-            let mut s2 = Box::pin(n.stream());
-
-            let _ = poll_once(&mut s1);
-            let _ = poll_once(&mut s2);
-
-            store.dispatch(Bump);
-            store.flush();
-
-            for s in [&mut s1, &mut s2] {
-                match poll_once(s) {
-                    Poll::Ready(Some(v)) => assert_eq!(v, 1),
-                    other => panic!("expected Ready(Some(1)), got {:?}", other.map(|_| ())),
-                }
-            }
+            assert_eq!(*store.select(|c| c.n), 1000);
         }
     }
 }
