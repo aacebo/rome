@@ -12,12 +12,12 @@ use crate::state::{Action, ActionBuffer, Selector};
 /// interleaving of pushes from different threads is determined by atomic
 /// arrival order. Non-commutative reducers may produce different final
 /// states across runs under contention.
-pub struct Store<TState: Clone + 'static> {
+pub struct Store<TState: 'static> {
     state: RwLock<TState>,
     buffer: ActionBuffer<TState>,
 }
 
-impl<TState: Clone + 'static> Store<TState> {
+impl<TState: 'static> Store<TState> {
     pub fn new(value: TState) -> Self {
         Self {
             state: RwLock::new(value),
@@ -63,13 +63,13 @@ impl<TState: Clone + 'static> Store<TState> {
     }
 }
 
-impl<TState: Clone + Default + 'static> Default for Store<TState> {
+impl<TState: Default + 'static> Default for Store<TState> {
     fn default() -> Self {
         Self::new(TState::default())
     }
 }
 
-impl<TState: Clone + 'static> Drop for Store<TState> {
+impl<TState: 'static> Drop for Store<TState> {
     fn drop(&mut self) {
         if !self.buffer.is_empty() {
             self.flush();
