@@ -1,6 +1,6 @@
 use std::sync::nonpoison::Mutex;
 
-use crate::state::{Action, ActionBuffer, Signal, signal};
+use crate::state::{Action, ActionBuffer, Signal};
 
 /// Central coordinator that owns state and processes actions.
 ///
@@ -33,16 +33,16 @@ impl<TState: Clone + 'static> Store<TState> {
         self
     }
 
-    pub fn select<T>(
-        &self,
-        f: impl Fn(&TState) -> T + Send + Sync + 'static,
-    ) -> signal::Select<TState, T>
-    where
-        TState: Send + Sync,
-        T: Send + 'static,
-    {
-        signal::Select::new(self.state.clone(), f)
-    }
+    // pub fn select<T>(
+    //     &self,
+    //     f: impl Fn(&TState) -> T + Send + Sync + 'static,
+    // ) -> signal::Select<TState, T>
+    // where
+    //     TState: Send + Sync,
+    //     T: Send + 'static,
+    // {
+    //     signal::Select::new(self.state.clone(), f)
+    // }
 
     /// Queue an action for application on the next `flush`. Blocks if the
     /// buffer is full (see `ActionBuffer::push`).

@@ -1,9 +1,9 @@
 mod action;
-pub mod signal;
+pub mod signals;
 mod store;
 
 pub use action::*;
-pub use signal::Signal;
+pub use signals::Signal;
 pub use store::*;
 
 /// Reacts to an action and state transition by performing follow-up work.
