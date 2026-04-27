@@ -1,7 +1,9 @@
 mod action;
+mod select;
 mod store;
 
 pub use action::*;
+pub use select::*;
 pub use store::*;
 
 /// Reacts to an action and state transition by performing follow-up work.
