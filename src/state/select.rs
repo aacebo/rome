@@ -2,13 +2,6 @@ use std::{cell::OnceCell, sync::RwLockReadGuard};
 
 /// Borrowed projection over the `Store`'s state, returned by
 /// [`Store::select`].
-///
-/// Holds an `RwLockReadGuard` and lazily applies the projection on first
-/// access via `AsRef`/`Deref`; the result is cached in a `OnceCell` for
-/// repeated reads. The guard is held for the `Selector`'s lifetime, so
-/// callers should drop it before dispatching actions that need to flush
-/// (which would block waiting for the write lock). `PartialEq` is
-/// implemented so callers can compare directly against `T` literals.
 pub struct Selector<'a, TState, TOut> {
     state: RwLockReadGuard<'a, TState>,
     output: OnceCell<TOut>,
