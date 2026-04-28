@@ -1,10 +1,12 @@
 mod action;
 mod select;
 mod store;
+mod trigger;
 
 pub use action::*;
 pub use select::*;
 pub use store::*;
+pub use trigger::*;
 
 #[cfg(test)]
 mod tests {

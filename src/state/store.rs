@@ -1,11 +1,12 @@
 use std::sync::RwLock;
 
-use crate::state::{Action, ActionBuffer, Selector};
+use crate::state::{Action, ActionBuffer, Selector, Trigger};
 
 /// Central coordinator that owns state and processes actions.
 pub struct Store<TState: 'static> {
     state: RwLock<TState>,
     buffer: ActionBuffer<TState>,
+    triggers: RwLock<Vec<Box<dyn Trigger<TState>>>>,
 }
 
 impl<TState: 'static> Store<TState> {
@@ -13,6 +14,7 @@ impl<TState: 'static> Store<TState> {
         Self {
             state: RwLock::new(value),
             buffer: ActionBuffer::with_capacity(1024),
+            triggers: RwLock::new(vec![]),
         }
     }
 
@@ -33,6 +35,10 @@ impl<TState: 'static> Store<TState> {
     /// buffer is full (see `ActionBuffer::push`).
     pub fn dispatch<TAction: Action<State = TState>>(&self, action: TAction) {
         self.buffer.push(action);
+    }
+
+    pub fn trigger<TTrigger: Trigger<TState>>(&self, trigger: TTrigger) {
+        self.triggers.write().unwrap().push(Box::new(trigger));
     }
 
     /// Drain queued actions and apply them in order to the current state.
