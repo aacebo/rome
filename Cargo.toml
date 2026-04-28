@@ -14,10 +14,8 @@ doctest = false
 [dependencies]
 wgpu = "29"
 rayon = "1"
-futures = "0.3"
 crossbeam = "0.8"
 serde = { version = "1", features = ["rc", "derive"] }
-arc-swap = { version = "1.9", features = ["serde", "weak"] }
 
 [[bench]]
 name = "store_flush"
