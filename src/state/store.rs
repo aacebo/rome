@@ -3,15 +3,6 @@ use std::sync::RwLock;
 use crate::state::{Action, ActionBuffer, Selector};
 
 /// Central coordinator that owns state and processes actions.
-///
-/// Dispatches are queued into a bounded lock-free buffer; `flush` takes the
-/// `RwLock` write guard once and applies every queued reducer in order
-/// against the live state.
-///
-/// Ordering note: `ArrayQueue` is FIFO across all producers, but the
-/// interleaving of pushes from different threads is determined by atomic
-/// arrival order. Non-commutative reducers may produce different final
-/// states across runs under contention.
 pub struct Store<TState: 'static> {
     state: RwLock<TState>,
     buffer: ActionBuffer<TState>,

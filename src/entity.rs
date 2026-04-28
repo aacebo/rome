@@ -44,48 +44,6 @@ pub struct Entity {
     pub facets: Vec<Box<dyn Facet>>,
 }
 
-impl Entity {
-    pub fn access(&mut self) -> Accessor<'_> {
-        Accessor::from(self)
-    }
-}
-
-pub struct Accessor<'a> {
-    entity: &'a mut Entity,
-}
-
-impl<'a> Accessor<'a> {
-    pub fn parent(self, id: EntityId) -> Self {
-        self.entity.parent_id = Some(id);
-        self
-    }
-
-    pub fn meta(self, meta: Meta) -> Self {
-        self.entity.meta = meta;
-        self
-    }
-
-    pub fn child(self, id: EntityId) -> Self {
-        self.entity.children.push(id);
-        self
-    }
-
-    pub fn facet(self, facet: impl Facet) -> Self {
-        self.entity.facets.push(Box::new(facet));
-        self
-    }
-
-    pub fn save(self) -> &'a mut Entity {
-        self.entity
-    }
-}
-
-impl<'a> From<&'a mut Entity> for Accessor<'a> {
-    fn from(entity: &'a mut Entity) -> Self {
-        Self { entity }
-    }
-}
-
 #[derive(Debug, serde::Serialize)]
 pub struct EntityDraft {
     pub parent_id: Option<EntityId>,

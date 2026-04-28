@@ -1,7 +1,7 @@
-use crate::{Cancellation, Clock, Context, Layer, Scheduler, schedule, time, world::World};
+use crate::{Cancellation, Clock, Context, Layer, Scheduler, Store, schedule, time, world::World};
 
 pub struct Runtime {
-    world: World,
+    world: Store<World>,
     clock: Box<dyn Clock>,
     scheduler: Box<dyn Scheduler>,
     layers: Vec<Box<dyn Layer>>,
@@ -13,7 +13,7 @@ impl Runtime {
         RuntimeBuilder::new()
     }
 
-    pub fn world(&self) -> &World {
+    pub fn world(&self) -> &Store<World> {
         &self.world
     }
 
@@ -94,7 +94,7 @@ impl RuntimeBuilder {
 
     pub fn build(self) -> Runtime {
         Runtime {
-            world: World::new(),
+            world: Store::new(World::new()),
             clock: self.clock,
             scheduler: self.scheduler,
             layers: self.layers,

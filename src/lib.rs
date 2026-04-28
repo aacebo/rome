@@ -1,4 +1,3 @@
-pub mod action;
 pub mod diagnostic;
 pub mod entity;
 pub mod math;
@@ -12,12 +11,12 @@ mod cancel;
 mod context;
 mod runtime;
 
-pub use action::Action;
 pub use cancel::*;
 pub use context::*;
 pub use entity::{Entity, EntityId};
 pub use runtime::*;
 pub use schedule::Scheduler;
+pub use state::Store;
 pub use time::{Clock, Tick, TickId};
 
 /// A Layer represents a logical world system.
