@@ -1,25 +1,25 @@
-use std::sync::RwLock;
+use std::{any::TypeId, collections::HashMap, sync::RwLock};
 
-use crate::state::{Action, ActionBuffer, Selector, Trigger};
+use crate::state::{Action, Next, Selector, Trigger, trigger};
 
 /// Central coordinator that owns state and processes actions.
 pub struct Store<TState: 'static> {
     state: RwLock<TState>,
-    buffer: ActionBuffer<TState>,
-    triggers: RwLock<Vec<Box<dyn Trigger<TState>>>>,
+    buffer: Next<TState>,
+    triggers: RwLock<HashMap<TypeId, Vec<Box<dyn trigger::ErasedTrigger<TState>>>>>,
 }
 
 impl<TState: 'static> Store<TState> {
     pub fn new(value: TState) -> Self {
         Self {
             state: RwLock::new(value),
-            buffer: ActionBuffer::with_capacity(1024),
-            triggers: RwLock::new(vec![]),
+            buffer: Next::with_capacity(1024),
+            triggers: RwLock::new(HashMap::new()),
         }
     }
 
     pub fn with_capacity(mut self, capacity: usize) -> Self {
-        self.buffer = ActionBuffer::with_capacity(capacity);
+        self.buffer = Next::with_capacity(capacity);
         self
     }
 
@@ -32,13 +32,26 @@ impl<TState: 'static> Store<TState> {
     }
 
     /// Queue an action for application on the next `flush`. Blocks if the
-    /// buffer is full (see `ActionBuffer::push`).
-    pub fn dispatch<TAction: Action<State = TState>>(&self, action: TAction) {
-        self.buffer.push(action);
+    /// buffer is full (see `Next::push`).
+    pub fn dispatch<TAction>(&self, action: TAction)
+    where
+        TAction: Action<State = TState>,
+    {
+        self.buffer.dispatch(action);
     }
 
-    pub fn trigger<TTrigger: Trigger<TState>>(&self, trigger: TTrigger) {
-        self.triggers.write().unwrap().push(Box::new(trigger));
+    /// Register a new Trigger that will be executed for each dispatch of [`TAction`]
+    pub fn trigger<TAction, T>(&self, trigger: T)
+    where
+        TAction: Action<State = TState>,
+        T: Trigger<TAction>,
+    {
+        self.triggers
+            .write()
+            .unwrap()
+            .entry(TypeId::of::<TAction>())
+            .or_default()
+            .push(Box::new(trigger::TriggerGuard::<TAction, T>::new(trigger)));
     }
 
     /// Drain queued actions and apply them in order to the current state.
@@ -46,16 +59,25 @@ impl<TState: 'static> Store<TState> {
     /// Concurrent flushes serialize behind the `RwLock` write guard —
     /// correct but wasteful; callers should typically have a single flusher.
     pub fn flush(&self) {
-        let drained = self.buffer.drain();
-
-        if drained.is_empty() {
+        if self.buffer.is_empty() {
             return;
         }
 
         let mut state = self.state.write().unwrap();
+        let triggers = self.triggers.read().unwrap();
 
-        for action in &drained {
-            action.reduce(&mut state);
+        while let drained = self.buffer.drain()
+            && !drained.is_empty()
+        {
+            for action in &drained {
+                action.reduce(&mut state);
+
+                if let Some(bucket) = triggers.get(&action.type_id()) {
+                    for trigger in bucket {
+                        trigger.execute_erased(&*state, action.as_ref(), &self.buffer);
+                    }
+                }
+            }
         }
     }
 }

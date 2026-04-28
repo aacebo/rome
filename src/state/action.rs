@@ -5,7 +5,7 @@ use crossbeam::queue::ArrayQueue;
 /// Reducers take `&self` so the boxed action can be moved into the replay log
 /// after being applied. Reducers must be pure — they may run during replay
 /// from any prior state.
-pub trait Action: std::fmt::Debug + Send + Sync + 'static {
+pub trait Action: std::any::Any + std::fmt::Debug + Send + Sync + 'static {
     type State;
 
     fn name(&self) -> &'static str;
@@ -18,11 +18,11 @@ pub trait Action: std::fmt::Debug + Send + Sync + 'static {
 /// queue is full; the flusher drains via `drain_into`. Capacity is fixed
 /// at construction — callers must size it so that backpressure is rare,
 /// or producers will stall waiting for the flusher.
-pub struct ActionBuffer<TState: 'static> {
+pub struct Next<TState: 'static> {
     pending: ArrayQueue<Box<dyn Action<State = TState>>>,
 }
 
-impl<TState: 'static> ActionBuffer<TState> {
+impl<TState: 'static> Next<TState> {
     pub fn with_capacity(cap: usize) -> Self {
         Self {
             pending: ArrayQueue::new(cap.max(1)),
@@ -42,7 +42,7 @@ impl<TState: 'static> ActionBuffer<TState> {
     }
 
     /// Enqueue an action. Blocks (spin, then yield) until space is available.
-    pub fn push<TAction: Action<State = TState>>(&self, action: TAction) -> &Self {
+    pub fn dispatch<TAction: Action<State = TState>>(&self, action: TAction) -> &Self {
         let mut boxed: Box<dyn Action<State = TState>> = Box::new(action);
         let mut spins = 0u32;
 

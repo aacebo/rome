@@ -6,7 +6,7 @@ mod trigger;
 pub use action::*;
 pub use select::*;
 pub use store::*;
-pub use trigger::*;
+pub use trigger::Trigger;
 
 #[cfg(test)]
 mod tests {
@@ -58,6 +58,21 @@ mod tests {
         }
     }
 
+    #[derive(Debug)]
+    struct Double;
+
+    impl Action for Double {
+        type State = Counter;
+
+        fn name(&self) -> &'static str {
+            "double"
+        }
+
+        fn reduce(&self, state: &mut Counter) {
+            state.n *= 2;
+        }
+    }
+
     mod dispatch {
         use super::*;
 
@@ -103,6 +118,23 @@ mod tests {
             store.flush();
 
             assert_eq!(*store.select(|c| c.n), 1);
+        }
+    }
+
+    mod trigger {
+        use super::*;
+
+        #[test]
+        fn executes_on_action() {
+            let store = Store::new(Counter { n: 5 });
+
+            store.trigger(|_state: &Counter, _action: &Bump, next: &Next<Counter>| {
+                next.dispatch(Double);
+            });
+
+            store.dispatch(Bump);
+            store.flush();
+            assert_eq!(*store.select(|c| c.n), 12);
         }
     }
 
