@@ -119,6 +119,7 @@ mod tests {
                 let producers: Vec<_> = (0..4)
                     .map(|_| {
                         let s = store.clone();
+
                         scope.spawn(move || {
                             for _ in 0..1000 {
                                 s.dispatch(Bump);
@@ -129,6 +130,7 @@ mod tests {
 
                 let consumer = {
                     let s = store.clone();
+
                     scope.spawn(move || {
                         while *s.select(|c| c.n) < 4000 {
                             s.flush();
@@ -203,6 +205,7 @@ mod tests {
                         for _ in 0..1000 {
                             s.dispatch(Bump);
                         }
+
                         done.store(true, Ordering::Release);
                     })
                 };
