@@ -16,7 +16,7 @@ pub struct Selector<'a, TState, TOut> {
 }
 
 impl<'a, TState, TOut> Selector<'a, TState, TOut> {
-    pub fn new(
+    pub fn map(
         state: RwLockReadGuard<'a, TState>,
         project: impl Fn(&TState) -> TOut + 'static,
     ) -> Self {

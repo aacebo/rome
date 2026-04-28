@@ -35,7 +35,7 @@ impl<TState: 'static> Store<TState> {
         F: Fn(&TState) -> T + Send + Sync + 'static,
         T: 'static,
     {
-        Selector::new(self.state.read().unwrap(), project)
+        Selector::map(self.state.read().unwrap(), project)
     }
 
     /// Queue an action for application on the next `flush`. Blocks if the
