@@ -15,3 +15,8 @@ doctest = false
 workspace = true
 
 [dependencies]
+crossbeam = "0.8"
+futures = "0.3"
+
+[dev-dependencies]
+tokio = { version = "1", features = ["rt", "macros"] }
