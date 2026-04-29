@@ -1,4 +1,4 @@
-use crate::{Cancellation, Clock, Context, Layer, Scheduler, Store, schedule, time, world::World};
+use crate::{Cancellation, Clock, Context, Layer, Scheduler, Store, entity::World, schedule, time};
 
 pub struct Runtime {
     world: Store<World>,
@@ -32,7 +32,7 @@ impl Runtime {
         let mut last = std::time::Instant::now();
         let mut ctx = Context::new(
             self.clock.advance_by(std::time::Duration::ZERO),
-            &mut self.world,
+            &self.world,
             &cancellation,
         );
 

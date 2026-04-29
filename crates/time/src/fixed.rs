@@ -1,5 +1,6 @@
-use crate::time::{Clock, Rate, Tick};
 use std::time::Duration;
+
+use crate::{Clock, Rate, Tick};
 
 pub struct Fixed {
     tick: Tick,

@@ -1,7 +1,7 @@
 #![feature(test)]
 extern crate test;
 
-use rome::state::{Action, Store};
+use ayr::state::{Action, Store};
 use test::{Bencher, black_box};
 
 #[derive(Clone, Default)]

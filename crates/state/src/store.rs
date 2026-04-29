@@ -1,6 +1,6 @@
 use std::{any::TypeId, collections::HashMap, sync::RwLock};
 
-use crate::state::{Action, Next, Selector, Trigger, trigger};
+use crate::{Action, Next, Selector, Trigger, trigger};
 
 /// Central coordinator that owns state and processes actions.
 pub struct Store<TState: 'static> {

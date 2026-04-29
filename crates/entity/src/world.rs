@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::entity::{Entity, EntityId};
+use crate::{Entity, EntityId};
 
 #[derive(
     Debug,

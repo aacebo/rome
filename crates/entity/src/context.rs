@@ -1,8 +1,9 @@
-use crate::{
-    Cancellation, Store, Tick,
-    diagnostic::{Diagnostic, Diagnostics},
-    world::World,
-};
+use ayr_diagnostic::{Diagnostic, Diagnostics};
+use ayr_state::Store;
+use ayr_task::Cancellation;
+use ayr_time::Tick;
+
+use crate::world::World;
 
 pub struct Context<'a> {
     tick: Tick,

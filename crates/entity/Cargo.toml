@@ -1,0 +1,23 @@
+[package]
+name = "ayr-entity"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[lib]
+doctest = false
+
+[lints]
+workspace = true
+
+[dependencies]
+serde.workspace = true
+ayr-diagnostic.path = "../diagnostic"
+ayr-math.path = "../math"
+ayr-state.path = "../state"
+ayr-task.path = "../task"
+ayr-time.path = "../time"

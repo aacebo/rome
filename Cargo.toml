@@ -1,21 +1,43 @@
-[package]
-name = "rome"
+[workspace]
+resolver = "3"
+members = [".", "crates/*"]
+default-members = [".", "crates/*"]
+
+[workspace.package]
 version = "0.0.0"
 edition = "2024"
 license = "MIT"
 readme = "README.md"
-documentation = "https://www.github.com/aacebo/rome"
-homepage = "https://www.github.com/aacebo/rome"
-repository = "https://www.github.com/aacebo/rome"
+documentation = "https://aacebo.github.io/ayr"
+homepage = "https://aacebo.github.io/ayr"
+repository = "https://www.github.com/aacebo/ayr"
+
+[workspace.lints.clippy]
+type_complexity = "allow"
+
+[workspace.dependencies]
+serde = { version = "1", features = ["rc", "derive"] }
+
+[package]
+name = "ayr"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+repository.workspace = true
 
 [lib]
 doctest = false
 
 [dependencies]
-wgpu = "29"
-rayon = "1"
-crossbeam = "0.8"
-serde = { version = "1", features = ["rc", "derive"] }
+ayr-diagnostic.path = "./crates/diagnostic"
+ayr-entity.path = "./crates/entity"
+ayr-math.path = "./crates/math"
+ayr-state.path = "./crates/state"
+ayr-task.path = "./crates/task"
+ayr-time.path = "./crates/time"
 
 [[bench]]
 name = "store_flush"
