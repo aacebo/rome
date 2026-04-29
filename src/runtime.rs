@@ -3,8 +3,8 @@ use crate::{Cancellation, Clock, Context, Layer, Scheduler, Store, schedule, tim
 pub struct Runtime {
     world: Store<World>,
     clock: Box<dyn Clock>,
-    scheduler: Box<dyn Scheduler>,
     layers: Vec<Box<dyn Layer>>,
+    scheduler: Box<dyn Scheduler>,
     cancellation: Option<Cancellation>,
 }
 
@@ -15,6 +15,12 @@ impl Runtime {
 
     pub fn world(&self) -> &Store<World> {
         &self.world
+    }
+
+    pub fn cancel(&self) {
+        if let Some(cancellation) = &self.cancellation {
+            cancellation.cancel();
+        }
     }
 
     /// Start the runtime which will continue
@@ -54,26 +60,20 @@ impl Runtime {
         self.scheduler.on_stop(&mut ctx, &mut self.layers);
         self.cancellation = None;
     }
-
-    pub fn cancel(&self) {
-        if let Some(cancellation) = &self.cancellation {
-            cancellation.cancel();
-        }
-    }
 }
 
 pub struct RuntimeBuilder {
     clock: Box<dyn Clock>,
-    scheduler: Box<dyn Scheduler>,
     layers: Vec<Box<dyn Layer>>,
+    scheduler: Box<dyn Scheduler>,
 }
 
 impl RuntimeBuilder {
     pub fn new() -> Self {
         Self {
             clock: Box::new(time::Fixed::new(60)),
-            scheduler: Box::new(schedule::Sequence),
             layers: vec![],
+            scheduler: Box::new(schedule::Sequence),
         }
     }
 
@@ -96,8 +96,8 @@ impl RuntimeBuilder {
         Runtime {
             world: Store::new(World::new()),
             clock: self.clock,
-            scheduler: self.scheduler,
             layers: self.layers,
+            scheduler: self.scheduler,
             cancellation: None,
         }
     }
