@@ -1,24 +1,36 @@
-use std::sync::{
-    Mutex,
-    atomic::{AtomicUsize, Ordering},
+use std::{
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, AtomicU64, Ordering},
+    },
+    task::Wake,
+    time::Duration,
 };
 
-use crate::{Task, Worker};
+use futures::FutureExt;
+
+use crate::{AtomicTaskStatus, Message, Task, TaskState, TaskStatus, Worker};
 
 pub struct TaskPool {
     name: String,
     capacity: usize,
-    next: AtomicUsize,
-    workers: Mutex<Vec<Worker>>,
+    next_id: AtomicU64,
+    workers: Mutex<Vec<Arc<Worker>>>,
+    sender: crossbeam::channel::Sender<Message>,
+    receiver: crossbeam::channel::Receiver<Message>,
 }
 
 impl TaskPool {
     pub fn new(name: impl Into<String>, capacity: usize) -> Self {
+        let (sender, receiver) = crossbeam::channel::unbounded();
+
         TaskPool {
             name: name.into(),
             capacity,
-            next: AtomicUsize::new(0),
+            next_id: AtomicU64::new(0),
             workers: Mutex::new(vec![]),
+            sender,
+            receiver,
         }
     }
 
@@ -34,8 +46,8 @@ impl TaskPool {
         let mut workers = vec![];
 
         for _ in 0..self.capacity {
-            let worker = Worker::new(self.name.clone());
-            worker.start();
+            let worker = Arc::new(Worker::new());
+            worker.start(&self.name, self.receiver.clone());
             workers.push(worker);
         }
 
@@ -46,6 +58,11 @@ impl TaskPool {
         let mut workers = self.workers.lock().unwrap();
 
         for worker in workers.drain(..) {
+            let _ = self
+                .sender
+                .send_timeout(Message::Stop, Duration::from_millis(200))
+                .unwrap();
+
             worker.stop();
         }
     }
@@ -54,14 +71,18 @@ impl TaskPool {
     where
         T: Send + 'static,
     {
-        let index = self.next.fetch_add(1, Ordering::Acquire);
-        let workers = self.workers.lock().unwrap();
+        let state = Arc::new(TaskState {
+            id: self.next_id.fetch_add(1, Ordering::SeqCst).into(),
+            status: AtomicTaskStatus::new(TaskStatus::default()),
+            aborted: AtomicBool::new(false),
+            join: Mutex::new(None),
+            sender: self.sender.clone(),
+            output: Mutex::new(None),
+            future: Mutex::new(Some(future.boxed())),
+        });
 
-        if index >= workers.len() - 1 {
-            self.next.store(0, Ordering::Release);
-        }
-
-        workers.get(index).unwrap().spawn(future)
+        state.wake_by_ref();
+        Task { state }
     }
 }
 

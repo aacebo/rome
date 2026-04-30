@@ -15,7 +15,6 @@ use crate::{AtomicTaskStatus, Job, Message, TaskId, TaskStatus};
 
 pub struct TaskState<T> {
     pub id: TaskId,
-    pub thread_id: std::thread::ThreadId,
 
     pub(crate) status: AtomicTaskStatus,
     pub(crate) aborted: AtomicBool,

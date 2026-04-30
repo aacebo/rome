@@ -32,7 +32,7 @@ use std::{
 //         .clone()
 // }
 
-trait Job: Send + Sync + 'static {
+pub trait Job: Send + Sync + 'static {
     fn task_id(&self) -> TaskId;
     fn run(self: std::sync::Arc<Self>);
 }
