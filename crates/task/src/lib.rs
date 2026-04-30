@@ -1,23 +1,26 @@
 mod cancel;
-mod cell;
 mod error;
 mod execute;
-mod join;
+mod pool;
 mod result;
 mod source;
 mod state;
+mod status;
+mod thread;
 
 pub use cancel::*;
-pub use cell::*;
 pub use error::*;
 pub use execute::*;
-pub use join::*;
+pub use pool::*;
 pub use result::*;
+#[allow(unused)]
 pub use source::*;
 pub use state::*;
+pub use status::*;
+pub use thread::*;
 
 use std::{
-    sync::{Arc, OnceLock, atomic::Ordering},
+    sync::{Arc, atomic::Ordering},
     task::Wake,
 };
 
@@ -29,7 +32,7 @@ use std::{
 //         .clone()
 // }
 
-trait Run: Send + Sync + 'static {
+trait Job: Send + Sync + 'static {
     fn run(self: std::sync::Arc<Self>);
 }
 
@@ -42,9 +45,14 @@ impl TaskId {
     }
 }
 
+impl From<u64> for TaskId {
+    fn from(value: u64) -> Self {
+        Self(value)
+    }
+}
+
 pub struct Task<T> {
-    cell: Arc<TaskCell<T>>,
-    receiver: crossbeam::channel::Receiver<Arc<dyn Run>>,
+    state: Arc<TaskState<T>>,
 }
 
 impl<T> Task<T>
@@ -52,16 +60,16 @@ where
     T: Send + 'static,
 {
     pub fn is_complete(&self) -> bool {
-        self.cell.state.load(Ordering::Acquire) == TaskState::Complete
+        self.state.status.load(Ordering::Acquire) == TaskStatus::Complete
     }
 
-    pub fn is_cancelled(&self) -> bool {
-        self.cell.aborted.load(Ordering::Acquire)
+    pub fn is_canstateed(&self) -> bool {
+        self.state.aborted.load(Ordering::Acquire)
     }
 
     pub fn cancel(&self) {
-        self.cell.aborted.store(true, Ordering::Release);
-        self.cell.wake_by_ref();
+        self.state.aborted.store(true, Ordering::Release);
+        self.state.wake_by_ref();
     }
 }
 
@@ -75,13 +83,13 @@ where
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Self::Output> {
-        if self.cell.state.load(Ordering::Acquire) == TaskState::Complete {
-            if self.cell.aborted.load(Ordering::Acquire) {
+        if self.state.status.load(Ordering::Acquire) == TaskStatus::Complete {
+            if self.state.aborted.load(Ordering::Acquire) {
                 return std::task::Poll::Ready(Err(TaskError::Cancelled));
             }
 
             let value = self
-                .cell
+                .state
                 .output
                 .lock()
                 .unwrap()
@@ -91,22 +99,13 @@ where
             return std::task::Poll::Ready(Ok(value));
         }
 
-        *self.cell.join.lock().unwrap() = Some(cx.waker().clone());
+        *self.state.join.lock().unwrap() = Some(cx.waker().clone());
 
-        if self.cell.state.load(Ordering::Acquire) == TaskState::Complete {
+        if self.state.status.load(Ordering::Acquire) == TaskStatus::Complete {
             cx.waker().wake_by_ref();
         }
 
-        match self.receiver.try_recv() {
-            Err(crossbeam::channel::TryRecvError::Empty) => std::task::Poll::Pending,
-            Err(crossbeam::channel::TryRecvError::Disconnected) => {
-                std::task::Poll::Ready(Err(TaskError::Dropped))
-            }
-            Ok(v) => {
-                v.run();
-                std::task::Poll::Pending
-            }
-        }
+        std::task::Poll::Pending
     }
 }
 
@@ -116,9 +115,11 @@ mod tests {
 
     #[tokio::test]
     async fn should_have_value() {
-        let ex = Executor::new();
+        let ex = Executor::sizeof(1);
+        ex.start();
         let task = ex.spawn(async { 12 });
         let out = task.await.unwrap();
+        ex.stop();
         assert_eq!(out, 12)
     }
 }

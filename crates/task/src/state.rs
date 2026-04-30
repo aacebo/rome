@@ -1,67 +1,116 @@
-use std::sync::atomic::{AtomicU8, Ordering};
+use std::{
+    sync::{
+        Arc, Mutex,
+        atomic::{AtomicBool, Ordering},
+    },
+    task::{Context, Poll, Wake, Waker},
+};
 
-#[repr(u8)]
-#[derive(Default, Copy, Clone, PartialEq, Eq, PartialOrd, Ord)]
-pub enum TaskState {
-    #[default]
-    Parked,
-    Queued,
-    Running,
-    Complete,
+use futures::{
+    future::BoxFuture,
+    task::{ArcWake, waker_ref},
+};
+
+use crate::{AtomicTaskStatus, Job, Message, TaskId, TaskStatus};
+
+pub struct TaskState<T> {
+    pub id: TaskId,
+    pub thread_id: std::thread::ThreadId,
+
+    pub(crate) status: AtomicTaskStatus,
+    pub(crate) aborted: AtomicBool,
+    pub(crate) join: Mutex<Option<Waker>>,
+    pub(crate) sender: crossbeam::channel::Sender<Message>,
+    pub(crate) output: Mutex<Option<T>>,
+    pub(crate) future: Mutex<Option<BoxFuture<'static, T>>>,
 }
 
-impl std::fmt::Debug for TaskState {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        match self {
-            Self::Parked => write!(f, "parked"),
-            Self::Queued => write!(f, "queued"),
-            Self::Running => write!(f, "running"),
-            Self::Complete => write!(f, "complete"),
+impl<T> Wake for TaskState<T>
+where
+    T: Send + 'static,
+{
+    fn wake(self: Arc<Self>) {
+        self.wake_by_ref();
+    }
+
+    fn wake_by_ref(self: &Arc<Self>) {
+        // if complete do nothing
+        if self.status.load(Ordering::Acquire) == TaskStatus::Complete {
+            return;
+        }
+
+        // mark as queued, if previous status was not queued
+        // then queue the task
+        if self.status.swap(TaskStatus::Queued, Ordering::AcqRel) != TaskStatus::Queued {
+            let _ = self.sender.send(Message::Job(self.clone()));
         }
     }
 }
 
-impl From<u8> for TaskState {
-    fn from(value: u8) -> Self {
-        match value {
-            0 => Self::Parked,
-            1 => Self::Queued,
-            2 => Self::Running,
-            3 => Self::Complete,
-            _ => unreachable!("invalid TaskStatus discriminant"),
+impl<T> ArcWake for TaskState<T>
+where
+    T: Send + 'static,
+{
+    fn wake_by_ref(task: &Arc<Self>) {
+        // if complete do nothing
+        if task.status.load(Ordering::Acquire) == TaskStatus::Complete {
+            return;
+        }
+
+        // mark as queued, if previous status was not queued
+        // then queue the task
+        if task.status.swap(TaskStatus::Queued, Ordering::AcqRel) != TaskStatus::Queued {
+            let _ = task.sender.send(Message::Job(task.clone()));
         }
     }
 }
 
-pub struct AtomicTaskState(AtomicU8);
+impl<T> Job for TaskState<T>
+where
+    T: Send + 'static,
+{
+    fn run(self: std::sync::Arc<Self>) {
+        let status = self.status.swap(TaskStatus::Running, Ordering::AcqRel);
 
-impl AtomicTaskState {
-    pub const fn new(value: TaskState) -> Self {
-        Self(AtomicU8::new(value as u8))
-    }
+        // if complete do nothing
+        if status == TaskStatus::Complete {
+            self.status.store(TaskStatus::Complete, Ordering::Release);
+            return;
+        }
 
-    pub fn load(&self, order: Ordering) -> TaskState {
-        self.0.load(order).into()
-    }
+        if self.aborted.load(Ordering::Acquire) {
+            *self.future.lock().unwrap() = None;
+            self.status.store(TaskStatus::Complete, Ordering::Release);
 
-    pub fn store(&self, value: TaskState, order: Ordering) {
-        self.0.store(value as u8, order);
-    }
+            if let Some(waker) = self.join.lock().unwrap().take() {
+                waker.wake();
+            }
 
-    pub fn swap(&self, value: TaskState, order: Ordering) -> TaskState {
-        self.0.swap(value as u8, order).into()
-    }
+            return;
+        }
 
-    pub fn compare_exchange(
-        &self,
-        curr: TaskState,
-        next: TaskState,
-        success: Ordering,
-        failure: Ordering,
-    ) -> Result<TaskState, TaskState> {
-        self.0
-            .compare_exchange(curr as u8, next as u8, success, failure)
-            .map(|v| v.into())
-            .map_err(|v| v.into())
+        let waker = waker_ref(&self);
+        let mut cx = Context::from_waker(&*waker);
+        let mut slot = self.future.lock().unwrap();
+        let Some(future) = slot.as_mut() else {
+            return;
+        };
+
+        match future.as_mut().poll(&mut cx) {
+            Poll::Pending => {
+                if let Some(waker) = self.join.lock().unwrap().as_ref() {
+                    waker.wake_by_ref();
+                }
+            }
+            Poll::Ready(value) => {
+                *slot = None;
+                *self.output.lock().unwrap() = Some(value);
+                self.status.store(TaskStatus::Complete, Ordering::Release);
+
+                if let Some(waker) = self.join.lock().unwrap().take() {
+                    waker.wake();
+                }
+            }
+        }
     }
 }
