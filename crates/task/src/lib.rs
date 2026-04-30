@@ -70,7 +70,7 @@ where
         self.state.status.load(Ordering::Acquire) == TaskStatus::Complete
     }
 
-    pub fn is_canstateed(&self) -> bool {
+    pub fn is_cancelled(&self) -> bool {
         self.state.aborted.load(Ordering::Acquire)
     }
 
