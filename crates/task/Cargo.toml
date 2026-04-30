@@ -17,6 +17,8 @@ workspace = true
 [dependencies]
 crossbeam = "0.8"
 futures = "0.3"
+tracing = "0.1"
 
 [dev-dependencies]
 tokio = { version = "1", features = ["rt", "macros"] }
+tracing-subscriber = { version = "0.3", features = ["env-filter", "fmt"] }

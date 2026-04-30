@@ -10,7 +10,7 @@ use std::{
 
 use futures::FutureExt;
 
-use crate::{AtomicTaskStatus, Job, PoolId, Task, TaskState, TaskStatus};
+use crate::{AtomicTaskStatus, Job, Task, TaskState, TaskStatus};
 
 pub(crate) enum Message {
     Stop,
@@ -18,7 +18,7 @@ pub(crate) enum Message {
 }
 
 pub struct Worker {
-    pool_id: PoolId,
+    pool: String,
     thread_id: Mutex<Option<ThreadId>>,
     next_id: AtomicU64,
     stopping: AtomicBool,
@@ -28,11 +28,11 @@ pub struct Worker {
 }
 
 impl Worker {
-    pub fn new(pool_id: PoolId) -> Self {
+    pub fn new(pool: impl Into<String>) -> Self {
         let (sender, receiver) = crossbeam::channel::unbounded();
 
         Self {
-            pool_id,
+            pool: pool.into(),
             thread_id: Mutex::new(None),
             next_id: AtomicU64::new(0),
             stopping: AtomicBool::new(false),
@@ -42,24 +42,43 @@ impl Worker {
         }
     }
 
-    pub fn start(&self, i: usize) {
-        let pool_id = self.pool_id;
+    pub fn start(&self) {
+        let pool = self.pool.clone();
         let receiver = self.receiver.clone();
         let handle = std::thread::Builder::new()
-            .name(format!("task::pool::{}::thread::{}", pool_id.as_usize(), i,))
+            .name(format!("task::pool::{}::thread", &pool,))
             .spawn(move || {
+                let thread_id = format!("{:?}", std::thread::current().id())
+                    .replace("ThreadId(", "")
+                    .replace(")", "")
+                    .trim()
+                    .to_string();
+
+                let span = tracing::debug_span!(target: "ayr::task::thread", "worker", thread_id = %thread_id);
+                let _enter = span.enter();
+                tracing::debug!(target: "ayr::task::thread", "starting");
+
                 loop {
                     match receiver.try_recv() {
-                        Err(crossbeam::channel::TryRecvError::Disconnected) => break,
-                        Err(crossbeam::channel::TryRecvError::Empty) => {
-                            std::thread::sleep(Duration::from_millis(200))
+                        Err(crossbeam::channel::TryRecvError::Disconnected) => {
+                            tracing::debug!(target: "ayr::task::thread", "disconnected");
+                            break;
                         }
-                        Ok(message) => match message {
-                            Message::Stop => break,
-                            Message::Job(job) => job.run(),
-                        },
+                        Err(crossbeam::channel::TryRecvError::Empty) => {
+                            std::thread::sleep(Duration::from_millis(200));
+                        }
+                        Ok(Message::Stop) => {
+                            tracing::debug!(target: "ayr::task::thread", "stopping");
+                            break;
+                        }
+                        Ok(Message::Job(job)) => {
+                            tracing::trace!(target: "ayr::task::thread", task_id = %job.task_id(), "running");
+                            job.run();
+                        }
                     }
                 }
+
+                tracing::debug!(target: "ayr::task::thread", "exiting");
             })
             .expect("failed to start task worker thread");
 
@@ -69,6 +88,7 @@ impl Worker {
 
     pub fn stop(&self) {
         if self.stopping.swap(true, Ordering::AcqRel) {
+            tracing::trace!(target: "ayr::task::thread", "stop already in progress");
             return;
         }
 
@@ -109,6 +129,8 @@ impl Worker {
 
 impl Drop for Worker {
     fn drop(&mut self) {
-        self.stop();
+        if !self.stopping.load(Ordering::Acquire) {
+            self.stop();
+        }
     }
 }

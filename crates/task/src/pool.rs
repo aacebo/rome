@@ -1,69 +1,51 @@
-use std::sync::atomic::{AtomicUsize, Ordering};
+use std::sync::{
+    Mutex,
+    atomic::{AtomicUsize, Ordering},
+};
 
 use crate::{Task, Worker};
 
-#[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct PoolId(u64);
-
-impl PoolId {
-    pub fn next(&self) -> Self {
-        Self(self.0 + 1)
-    }
-
-    pub fn as_u64(&self) -> u64 {
-        self.0
-    }
-
-    pub fn as_usize(&self) -> usize {
-        self.0 as usize
-    }
-}
-
-impl From<u64> for PoolId {
-    fn from(value: u64) -> Self {
-        Self(value)
-    }
-}
-
-impl From<usize> for PoolId {
-    fn from(value: usize) -> Self {
-        Self(value as u64)
-    }
-}
-
 pub struct TaskPool {
-    id: PoolId,
+    name: String,
+    capacity: usize,
     next: AtomicUsize,
-    workers: Vec<Worker>,
+    workers: Mutex<Vec<Worker>>,
 }
 
 impl TaskPool {
-    pub fn sizeof(id: PoolId, size: usize) -> Self {
-        let mut workers = vec![];
-
-        for _ in 0..size {
-            workers.push(Worker::new(id));
-        }
-
+    pub fn new(name: impl Into<String>, capacity: usize) -> Self {
         TaskPool {
-            id,
+            name: name.into(),
+            capacity,
             next: AtomicUsize::new(0),
-            workers,
+            workers: Mutex::new(vec![]),
         }
     }
 
-    pub fn id(&self) -> PoolId {
-        self.id
+    pub fn name(&self) -> &str {
+        &self.name
+    }
+
+    pub fn capacity(&self) -> usize {
+        self.capacity
     }
 
     pub fn start(&self) {
-        for (i, worker) in self.workers.iter().enumerate() {
-            worker.start(i);
+        let mut workers = vec![];
+
+        for _ in 0..self.capacity {
+            let worker = Worker::new(self.name.clone());
+            worker.start();
+            workers.push(worker);
         }
+
+        *self.workers.lock().unwrap() = workers;
     }
 
     pub fn stop(&self) {
-        for worker in &self.workers {
+        let mut workers = self.workers.lock().unwrap();
+
+        for worker in workers.drain(..) {
             worker.stop();
         }
     }
@@ -73,12 +55,13 @@ impl TaskPool {
         T: Send + 'static,
     {
         let index = self.next.fetch_add(1, Ordering::Acquire);
+        let workers = self.workers.lock().unwrap();
 
-        if index >= self.workers.len() - 1 {
+        if index >= workers.len() - 1 {
             self.next.store(0, Ordering::Release);
         }
 
-        self.workers.get(index).unwrap().spawn(future)
+        workers.get(index).unwrap().spawn(future)
     }
 }
 

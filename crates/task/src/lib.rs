@@ -33,6 +33,7 @@ use std::{
 // }
 
 trait Job: Send + Sync + 'static {
+    fn task_id(&self) -> TaskId;
     fn run(self: std::sync::Arc<Self>);
 }
 
@@ -48,6 +49,12 @@ impl TaskId {
 impl From<u64> for TaskId {
     fn from(value: u64) -> Self {
         Self(value)
+    }
+}
+
+impl std::fmt::Display for TaskId {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{}", &self.0)
     }
 }
 
@@ -115,9 +122,21 @@ mod tests {
 
     #[tokio::test]
     async fn should_have_value() {
-        let ex = Executor::sizeof(1);
+        use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
+
+        let _ = tracing_subscriber::fmt()
+            // .with_test_writer()
+            .with_env_filter(
+                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("trace")),
+            )
+            .with_span_events(FmtSpan::CLOSE)
+            .with_thread_names(true)
+            .try_init();
+
+        let ex = Executor::new();
+        ex.pool("main");
         ex.start();
-        let task = ex.spawn(async { 12 });
+        let task = ex.spawn("main", async { 12 });
         let out = task.await.unwrap();
         ex.stop();
         assert_eq!(out, 12)

@@ -1,45 +1,34 @@
-use std::sync::{
-    Mutex,
-    atomic::{AtomicUsize, Ordering},
-};
+use std::{collections::HashMap, sync::Mutex};
 
-use crate::{PoolId, Task, TaskPool};
+use crate::{Task, TaskPool};
 
 pub struct Executor {
-    next: AtomicUsize,
-    size: usize,
-    pools: Mutex<Vec<TaskPool>>,
+    pools: Mutex<HashMap<String, TaskPool>>,
 }
 
 impl Executor {
     pub fn new() -> Self {
-        Self::sizeof(1)
+        Self {
+            pools: Mutex::new(HashMap::new()),
+        }
     }
 
-    pub fn sizeof(size: usize) -> Self {
-        let mut pools = vec![];
+    pub fn pool(&self, name: impl Into<String>) {
+        let name = name.into();
         let max = std::thread::available_parallelism()
             .map(|n| n.get())
             .unwrap_or(1);
 
-        assert!(size <= max);
-        let pool_size = max / size;
+        let mut pools = self.pools.lock().unwrap();
+        let capacity = max / pools.len().max(1);
 
-        for i in 0..size {
-            pools.push(TaskPool::sizeof(PoolId::from(i), pool_size));
-        }
-
-        Self {
-            next: AtomicUsize::new(0),
-            size,
-            pools: Mutex::new(pools),
-        }
+        pools.insert(name.clone(), TaskPool::new(name, capacity));
     }
 
     pub fn start(&self) {
         let pools = self.pools.lock().unwrap();
 
-        for pool in pools.iter() {
+        for (_, pool) in pools.iter() {
             pool.start();
         }
     }
@@ -47,22 +36,21 @@ impl Executor {
     pub fn stop(&self) {
         let pools = self.pools.lock().unwrap();
 
-        for pool in pools.iter() {
+        for (_, pool) in pools.iter() {
             pool.stop();
         }
     }
 
-    pub fn spawn<T>(&self, future: impl Future<Output = T> + Send + 'static) -> Task<T>
+    pub fn spawn<T>(&self, pool: &str, future: impl Future<Output = T> + Send + 'static) -> Task<T>
     where
         T: Send + 'static,
     {
-        let index = self.next.fetch_add(1, Ordering::SeqCst);
+        let pools = self.pools.lock().unwrap();
 
-        if index >= self.size - 1 {
-            self.next.store(0, Ordering::Release);
+        match pools.get(pool) {
+            None => panic!("pool \"{}\" not found", pool),
+            Some(pool) => pool.spawn(future),
         }
-
-        self.pools.lock().unwrap().get(index).unwrap().spawn(future)
     }
 }
 
