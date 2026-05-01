@@ -7,16 +7,16 @@ use std::{
     time::Duration,
 };
 
-use crate::{Message, Task, TaskRun, Worker};
+use crate::{Task, internal};
 
 pub struct TaskPool {
     name: String,
     next_id: AtomicU64,
     size: AtomicUsize,
     capacity: usize,
-    workers: Mutex<Vec<Arc<Worker>>>,
-    sender: crossbeam::channel::Sender<Message>,
-    receiver: crossbeam::channel::Receiver<Message>,
+    workers: Mutex<Vec<Arc<internal::Worker>>>,
+    sender: crossbeam::channel::Sender<internal::Message>,
+    receiver: crossbeam::channel::Receiver<internal::Message>,
 }
 
 impl TaskPool {
@@ -46,7 +46,7 @@ impl TaskPool {
         let mut workers = vec![];
 
         for _ in 0..self.capacity {
-            let worker = Arc::new(Worker::new());
+            let worker = Arc::new(internal::Worker::new());
             worker.start(&self.name, self.receiver.clone());
             workers.push(worker);
             self.size.fetch_add(1, Ordering::Relaxed);
@@ -62,7 +62,7 @@ impl TaskPool {
         for _ in 0..size {
             let _ = self
                 .sender
-                .send_timeout(Message::Stop, Duration::from_millis(200))
+                .send_timeout(internal::Message::Stop, Duration::from_millis(200))
                 .unwrap();
         }
 
@@ -73,7 +73,7 @@ impl TaskPool {
     where
         T: Send + 'static,
     {
-        let run = Arc::new(TaskRun::new(
+        let run = Arc::new(internal::TaskRun::new(
             self.next_id.fetch_add(1, Ordering::SeqCst).into(),
             self.sender.clone(),
             future,

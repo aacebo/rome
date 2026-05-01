@@ -12,14 +12,14 @@ use futures::{
     task::{ArcWake, waker_ref},
 };
 
-use crate::{AtomicTaskStatus, Job, Message, TaskId, TaskStatus};
+use crate::{AtomicTaskStatus, Job, TaskId, TaskStatus, internal};
 
-pub struct TaskRun<T> {
+pub(crate) struct TaskRun<T> {
     id: TaskId,
     status: AtomicTaskStatus,
     aborted: AtomicBool,
     waker: Mutex<Option<Waker>>,
-    sender: crossbeam::channel::Sender<Message>,
+    sender: crossbeam::channel::Sender<internal::Message>,
     output: Mutex<Option<T>>,
     future: Mutex<Option<BoxFuture<'static, T>>>,
 }
@@ -30,7 +30,7 @@ where
 {
     pub fn new(
         id: TaskId,
-        sender: crossbeam::channel::Sender<Message>,
+        sender: crossbeam::channel::Sender<internal::Message>,
         future: impl Future<Output = T> + Send + 'static,
     ) -> Self {
         TaskRun {
@@ -62,6 +62,7 @@ where
 
     pub fn complete(&self, value: T) {
         *self.output.lock().unwrap() = Some(value);
+        self.status.store(TaskStatus::Complete, Ordering::Release);
     }
 
     pub fn cancel(&self) {
@@ -88,7 +89,7 @@ where
         // mark as queued, if previous status was not queued
         // then queue the task
         if self.status.swap(TaskStatus::Queued, Ordering::AcqRel) != TaskStatus::Queued {
-            let _ = self.sender.send(Message::Job(self.clone()));
+            let _ = self.sender.send(internal::Message::Job(self.clone()));
         }
     }
 }
@@ -145,8 +146,7 @@ where
             Poll::Ready(value) => {
                 tracing::debug!(target: "ayr::task", task_id = %self.id, "ready");
                 *slot = None;
-                *self.output.lock().unwrap() = Some(value);
-                self.status.store(TaskStatus::Complete, Ordering::Release);
+                self.complete(value);
 
                 if let Some(waker) = self.waker.lock().unwrap().take() {
                     waker.wake();

@@ -1,23 +1,15 @@
 mod cancel;
 mod error;
 mod execute;
+pub(crate) mod internal;
 mod pool;
-mod result;
-mod run;
-mod source;
 mod status;
-mod thread;
 
 pub use cancel::*;
 pub use error::*;
 pub use execute::*;
 pub use pool::*;
-pub use result::*;
-pub use run::*;
-#[allow(unused)]
-pub use source::*;
 pub use status::*;
-pub use thread::*;
 
 use std::{sync::Arc, task::Wake};
 
@@ -29,7 +21,7 @@ use std::{sync::Arc, task::Wake};
 //         .clone()
 // }
 
-pub trait Job: Send + Sync + 'static {
+trait Job: Send + Sync + 'static {
     fn run(self: std::sync::Arc<Self>);
 }
 
@@ -55,7 +47,7 @@ impl std::fmt::Display for TaskId {
 }
 
 pub struct Task<T> {
-    run: Arc<TaskRun<T>>,
+    run: Arc<internal::TaskRun<T>>,
 }
 
 impl<T> Task<T>

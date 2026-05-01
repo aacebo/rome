@@ -5,12 +5,12 @@ use std::sync::{
 
 use crate::Job;
 
-pub enum Message {
+pub(crate) enum Message {
     Stop,
     Job(Arc<dyn Job>),
 }
 
-pub struct Worker {
+pub(crate) struct Worker {
     stopping: AtomicBool,
     handle: Mutex<Option<std::thread::JoinHandle<()>>>,
 }
