@@ -12,7 +12,7 @@ use futures::{
     task::{ArcWake, waker_ref},
 };
 
-use crate::{AtomicTaskStatus, Command, Job, TaskEvent, TaskId, TaskStatus};
+use crate::{AtomicTaskStatus, Command, Job, TaskId, TaskPoolMetrics, TaskStatus};
 
 pub(crate) struct TaskRun<T> {
     id: TaskId,
@@ -21,6 +21,7 @@ pub(crate) struct TaskRun<T> {
     waker: Mutex<Option<Waker>>,
     output: Mutex<Option<T>>,
     future: Mutex<Option<BoxFuture<'static, T>>>,
+    metrics: Arc<TaskPoolMetrics>,
     commands: crossbeam::channel::Sender<Command>,
 }
 
@@ -30,6 +31,7 @@ where
 {
     pub fn new(
         id: TaskId,
+        metrics: Arc<TaskPoolMetrics>,
         commands: crossbeam::channel::Sender<Command>,
         future: impl Future<Output = T> + Send + 'static,
     ) -> Self {
@@ -40,6 +42,7 @@ where
             waker: Mutex::new(None),
             output: Mutex::new(None),
             future: Mutex::new(Some(future.boxed())),
+            metrics,
             commands,
         }
     }
@@ -62,17 +65,13 @@ where
 
     pub fn complete(&self, value: T) {
         *self.output.lock().unwrap() = Some(value);
+        self.metrics.record_completed();
         self.status.store(TaskStatus::Complete, Ordering::Release);
-        let _ = self
-            .commands
-            .send(Command::Emit(TaskEvent::Completed(self.id).into()));
     }
 
     pub fn cancel(&self) {
         self.aborted.store(true, Ordering::Release);
-        let _ = self
-            .commands
-            .send(Command::Emit(TaskEvent::Completed(self.id).into()));
+        self.metrics.record_completed();
     }
 }
 
@@ -95,9 +94,7 @@ where
         // mark as queued, if previous status was not queued
         // then queue the task
         if self.status.swap(TaskStatus::Queued, Ordering::AcqRel) != TaskStatus::Queued {
-            let _ = self
-                .commands
-                .send(Command::Emit(TaskEvent::Queued(self.id).into()));
+            self.metrics.record_queued();
             let _ = self.commands.send(Command::Run(self.clone()));
         }
     }

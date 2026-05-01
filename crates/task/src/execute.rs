@@ -24,6 +24,7 @@ impl Executor {
             .unwrap_or(1);
         let capacity = max / pools.len().max(1);
         let pool = Arc::new(TaskPool::new(name.clone(), capacity));
+        pool.start();
         pools.insert(name, pool.clone());
         pool
     }

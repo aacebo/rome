@@ -1,9 +1,8 @@
 use std::sync::Arc;
 
-use crate::{Event, Job};
+use crate::Job;
 
 pub enum Command {
     Stop,
     Run(Arc<dyn Job>),
-    Emit(Event),
 }

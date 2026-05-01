@@ -47,6 +47,28 @@ impl TaskPoolMetrics {
         self.total_latency_ns.load(Ordering::Acquire)
     }
 
+    pub fn record_queued(&self) {
+        self.tasks_queued.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_completed(&self) {
+        self.tasks_completed.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_spawned(&self) {
+        self.tasks_spawned.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_thread_spawned(&self) {
+        self.threads_idle.fetch_sub(1, Ordering::Relaxed);
+        self.threads_active.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_thread_stopped(&self) {
+        self.threads_idle.fetch_add(1, Ordering::Relaxed);
+        self.threads_active.fetch_sub(1, Ordering::Relaxed);
+    }
+
     pub fn reduce(&self, event: &Event) {
         match event {
             Event::Task(event) => match event {

@@ -9,10 +9,9 @@ pub use metrics::*;
 use std::{
     sync::{
         Arc, Mutex,
-        atomic::{AtomicU64, AtomicUsize, Ordering},
+        atomic::{AtomicBool, AtomicU64, Ordering},
     },
     task::Wake,
-    time::Duration,
 };
 
 use crate::{Task, internal};
@@ -20,8 +19,8 @@ use crate::{Task, internal};
 pub struct TaskPool {
     name: String,
     next_id: AtomicU64,
-    size: AtomicUsize,
     capacity: usize,
+    stopped: AtomicBool,
     metrics: Arc<TaskPoolMetrics>,
     workers: Mutex<Vec<Arc<internal::Worker>>>,
     commands: internal::Channel<Command>,
@@ -32,8 +31,8 @@ impl TaskPool {
         TaskPool {
             name: name.into(),
             next_id: AtomicU64::new(0),
-            size: AtomicUsize::new(0),
             capacity,
+            stopped: AtomicBool::new(false),
             metrics: Arc::new(TaskPoolMetrics::default()),
             workers: Mutex::new(vec![]),
             commands: internal::Channel::new(),
@@ -53,36 +52,33 @@ impl TaskPool {
     }
 
     pub fn start(&self) {
-        let mut workers = vec![];
+        let mut workers = self.workers.lock().unwrap();
+
+        if !workers.is_empty() {
+            return;
+        }
 
         for _ in 0..self.capacity {
             let worker = Arc::new(internal::Worker::new());
-
-            worker.start(
-                &self.name,
-                self.metrics.clone(),
-                self.commands.receiver().clone(),
-            );
-
+            worker.start(&self.name, self.commands.receiver().clone());
             workers.push(worker);
-            self.size.fetch_add(1, Ordering::Relaxed);
         }
-
-        *self.workers.lock().unwrap() = workers;
     }
 
     pub fn stop(&self) {
-        let mut workers = self.workers.lock().unwrap();
-        let size = self.size.load(Ordering::Acquire);
-
-        for _ in 0..size {
-            let _ = self
-                .commands
-                .sender()
-                .send_timeout(Command::Stop, Duration::from_millis(200));
+        if self.stopped.swap(true, Ordering::AcqRel) {
+            return;
         }
 
-        let _ = workers.drain(..).map(|w| w.stop());
+        let mut workers = self.workers.lock().unwrap();
+
+        for _ in 0..workers.len() {
+            let _ = self.commands.sender().send(Command::Stop);
+        }
+
+        for worker in workers.drain(..) {
+            worker.stop();
+        }
     }
 
     pub fn spawn<T>(&self, future: impl Future<Output = T> + Send + 'static) -> Task<T>
@@ -91,6 +87,7 @@ impl TaskPool {
     {
         let run = Arc::new(internal::TaskRun::new(
             self.next_id.fetch_add(1, Ordering::SeqCst).into(),
+            self.metrics.clone(),
             self.commands.sender().clone(),
             future,
         ));

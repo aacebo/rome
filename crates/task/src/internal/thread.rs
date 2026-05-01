@@ -1,9 +1,9 @@
 use std::sync::{
-    Arc, Mutex,
+    Mutex,
     atomic::{AtomicBool, Ordering},
 };
 
-use crate::{Command, TaskPoolMetrics};
+use crate::Command;
 
 pub(crate) struct Worker {
     stopping: AtomicBool,
@@ -18,12 +18,7 @@ impl Worker {
         }
     }
 
-    pub fn start(
-        &self,
-        pool: impl Into<String>,
-        metrics: Arc<TaskPoolMetrics>,
-        commands: crossbeam::channel::Receiver<Command>,
-    ) {
+    pub fn start(&self, pool: impl Into<String>, commands: crossbeam::channel::Receiver<Command>) {
         let pool = pool.into();
         let handle = std::thread::Builder::new()
             .name(format!("task::pool::{}::thread", &pool,))
@@ -42,7 +37,6 @@ impl Worker {
                     match commands.recv() {
                         Ok(Command::Stop) | Err(_) => break,
                         Ok(Command::Run(job)) => job.run(),
-                        Ok(Command::Emit(event)) => metrics.reduce(&event),
                     }
                 }
 
