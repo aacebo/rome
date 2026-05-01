@@ -42,9 +42,7 @@ impl Worker {
                     match commands.recv() {
                         Ok(Command::Stop) | Err(_) => break,
                         Ok(Command::Run(job)) => job.run(),
-                        Ok(Command::Emit(event)) => {
-                            metrics.reduce(&event);
-                        },
+                        Ok(Command::Emit(event)) => metrics.reduce(&event),
                     }
                 }
 

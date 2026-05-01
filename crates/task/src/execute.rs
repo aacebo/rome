@@ -1,9 +1,12 @@
-use std::{collections::HashMap, sync::Mutex};
+use std::{
+    collections::HashMap,
+    sync::{Arc, Mutex},
+};
 
 use crate::{Task, TaskPool};
 
 pub struct Executor {
-    pools: Mutex<HashMap<String, TaskPool>>,
+    pools: Mutex<HashMap<String, Arc<TaskPool>>>,
 }
 
 impl Executor {
@@ -13,16 +16,16 @@ impl Executor {
         }
     }
 
-    pub fn pool(&self, name: impl Into<String>) {
+    pub fn pool(&self, name: impl Into<String>) -> Arc<TaskPool> {
         let name = name.into();
+        let mut pools = self.pools.lock().unwrap();
         let max = std::thread::available_parallelism()
             .map(|n| n.get())
             .unwrap_or(1);
-
-        let mut pools = self.pools.lock().unwrap();
         let capacity = max / pools.len().max(1);
-
-        pools.insert(name.clone(), TaskPool::new(name, capacity));
+        let pool = Arc::new(TaskPool::new(name.clone(), capacity));
+        pools.insert(name, pool.clone());
+        pool
     }
 
     pub fn start(&self) {

@@ -79,3 +79,15 @@ impl Default for TaskPoolMetrics {
         Self::new()
     }
 }
+
+impl std::fmt::Debug for TaskPoolMetrics {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TaskPoolMetrics")
+            .field("tasks_queued", &self.tasks_queued())
+            .field("tasks_completed", &self.tasks_completed())
+            .field("tasks_spawned", &self.tasks_spawned())
+            .field("threads_idle", &self.threads_idle())
+            .field("threads_active", &self.threads_active())
+            .finish()
+    }
+}

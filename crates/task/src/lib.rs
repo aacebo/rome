@@ -119,10 +119,13 @@ mod tests {
             .try_init();
 
         let ex = Executor::new();
-        ex.pool("main");
-        ex.start();
+        let pool = ex.pool("main");
+
         let task = ex.spawn("main", async { 12 });
         let out = task.await.unwrap();
-        assert_eq!(out, 12)
+
+        assert_eq!(out, 12);
+        assert_eq!(pool.metrics().tasks_queued(), 1);
+        assert_eq!(pool.metrics().tasks_completed(), 1);
     }
 }

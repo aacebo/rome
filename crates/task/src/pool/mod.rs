@@ -24,7 +24,6 @@ pub struct TaskPool {
     capacity: usize,
     metrics: Arc<TaskPoolMetrics>,
     workers: Mutex<Vec<Arc<internal::Worker>>>,
-    events: internal::Channel<Event>,
     commands: internal::Channel<Command>,
 }
 
@@ -37,7 +36,6 @@ impl TaskPool {
             capacity,
             metrics: Arc::new(TaskPoolMetrics::default()),
             workers: Mutex::new(vec![]),
-            events: internal::Channel::new(),
             commands: internal::Channel::new(),
         }
     }
@@ -48,6 +46,10 @@ impl TaskPool {
 
     pub fn capacity(&self) -> usize {
         self.capacity
+    }
+
+    pub fn metrics(&self) -> &TaskPoolMetrics {
+        &self.metrics
     }
 
     pub fn start(&self) {
@@ -89,7 +91,6 @@ impl TaskPool {
     {
         let run = Arc::new(internal::TaskRun::new(
             self.next_id.fetch_add(1, Ordering::SeqCst).into(),
-            self.events.sender().clone(),
             self.commands.sender().clone(),
             future,
         ));
