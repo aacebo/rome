@@ -1,9 +1,6 @@
-use std::{
-    sync::{
-        Arc, Mutex,
-        atomic::{AtomicBool, Ordering},
-    },
-    time::Duration,
+use std::sync::{
+    Arc, Mutex,
+    atomic::{AtomicBool, Ordering},
 };
 
 use crate::Job;
@@ -42,22 +39,9 @@ impl Worker {
                 tracing::debug!(target: "ayr::task::thread", "starting");
 
                 loop {
-                    match receiver.try_recv() {
-                        Err(crossbeam::channel::TryRecvError::Disconnected) => {
-                            tracing::debug!(target: "ayr::task::thread", "disconnected");
-                            break;
-                        }
-                        Err(crossbeam::channel::TryRecvError::Empty) => {
-                            std::thread::sleep(Duration::from_millis(200));
-                        }
-                        Ok(Message::Stop) => {
-                            tracing::debug!(target: "ayr::task::thread", "stopping");
-                            break;
-                        }
-                        Ok(Message::Job(job)) => {
-                            tracing::trace!(target: "ayr::task::thread", task_id = %job.task_id(), "running");
-                            job.run();
-                        }
+                    match receiver.recv() {
+                        Ok(Message::Stop) | Err(_) => break,
+                        Ok(Message::Job(job)) => job.run(),
                     }
                 }
 
