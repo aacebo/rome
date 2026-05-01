@@ -1,7 +1,7 @@
 use std::{
     sync::{
         Arc, Mutex,
-        atomic::{AtomicBool, AtomicU64, Ordering},
+        atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
     },
     task::Wake,
     time::Duration,
@@ -13,8 +13,9 @@ use crate::{AtomicTaskStatus, Message, Task, TaskState, TaskStatus, Worker};
 
 pub struct TaskPool {
     name: String,
-    capacity: usize,
     next_id: AtomicU64,
+    size: AtomicUsize,
+    capacity: usize,
     workers: Mutex<Vec<Arc<Worker>>>,
     sender: crossbeam::channel::Sender<Message>,
     receiver: crossbeam::channel::Receiver<Message>,
@@ -26,8 +27,9 @@ impl TaskPool {
 
         TaskPool {
             name: name.into(),
-            capacity,
             next_id: AtomicU64::new(0),
+            size: AtomicUsize::new(0),
+            capacity,
             workers: Mutex::new(vec![]),
             sender,
             receiver,
@@ -49,6 +51,7 @@ impl TaskPool {
             let worker = Arc::new(Worker::new());
             worker.start(&self.name, self.receiver.clone());
             workers.push(worker);
+            self.size.fetch_add(1, Ordering::Relaxed);
         }
 
         *self.workers.lock().unwrap() = workers;
@@ -56,15 +59,16 @@ impl TaskPool {
 
     pub fn stop(&self) {
         let mut workers = self.workers.lock().unwrap();
+        let size = self.size.load(Ordering::Acquire);
 
-        for worker in workers.drain(..) {
+        for _ in 0..size {
             let _ = self
                 .sender
                 .send_timeout(Message::Stop, Duration::from_millis(200))
                 .unwrap();
-
-            worker.stop();
         }
+
+        let _ = workers.drain(..).map(|w| w.stop());
     }
 
     pub fn spawn<T>(&self, future: impl Future<Output = T> + Send + 'static) -> Task<T>
