@@ -4,6 +4,7 @@ mod cancel;
 mod error;
 mod execute;
 pub(crate) mod internal;
+pub mod metrics;
 mod pool;
 mod status;
 
