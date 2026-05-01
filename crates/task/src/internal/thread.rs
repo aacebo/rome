@@ -40,7 +40,11 @@ impl Worker {
                 metrics.threads().record_spawned();
 
                 loop {
-                    let status = match commands.recv() {
+                    let status = match commands.recv_timeout(std::time::Duration::from_millis(200)) {
+                        Err(crossbeam::channel::RecvTimeoutError::Timeout) => {
+                            metrics.threads().record_idle();
+                            continue;
+                        },
                         Ok(Command::Stop(_)) | Err(_) => break,
                         Ok(Command::Spawn(timestamp, job)) => {
                             metrics.tasks().record_spawned();
@@ -56,6 +60,8 @@ impl Worker {
                             job.run()
                         }
                     };
+
+                    metrics.threads().record_active();
 
                     if status == TaskStatus::Complete {
                         metrics.tasks().record_completed();

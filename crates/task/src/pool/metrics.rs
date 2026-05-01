@@ -28,15 +28,19 @@ impl TaskPoolMetrics {
     }
 }
 
-// impl TaskPoolMetrics {
-//     pub fn queue_depth_per_worker(&self) -> f64 {
-//         self.tasks_queued() as f64 / self.threads_active() as f64
-//     }
+impl TaskPoolMetrics {
+    pub fn queue_depth_per_worker(&self) -> f64 {
+        self.tasks().in_queue() as f64 / self.threads().active() as f64
+    }
 
-//     pub fn utilization(&self) -> f64 {
-//         self.threads_active() as f64 / (self.threads_active() + self.threads()) as f64
-//     }
-// }
+    pub fn utilization(&self) -> f64 {
+        let max_threads = std::thread::available_parallelism()
+            .map(|n| n.get())
+            .unwrap_or(1);
+
+        self.threads().active() as f64 / max_threads as f64
+    }
+}
 
 impl Default for TaskPoolMetrics {
     fn default() -> Self {
@@ -81,6 +85,10 @@ impl TaskMetrics {
         self._completed.load(Ordering::Acquire)
     }
 
+    pub fn in_queue(&self) -> u64 {
+        self.queued() - self.spawned()
+    }
+
     pub fn active(&self) -> u64 {
         self.spawned() - self.completed()
     }
@@ -111,6 +119,8 @@ impl std::fmt::Debug for TaskMetrics {
 pub struct ThreadMetrics {
     _spawned: AtomicU64,
     _dropped: AtomicU64,
+    _active: AtomicU64,
+    _idle: AtomicU64,
 }
 
 impl ThreadMetrics {
@@ -118,6 +128,8 @@ impl ThreadMetrics {
         Self {
             _spawned: AtomicU64::new(0),
             _dropped: AtomicU64::new(0),
+            _active: AtomicU64::new(0),
+            _idle: AtomicU64::new(0),
         }
     }
 
@@ -130,7 +142,11 @@ impl ThreadMetrics {
     }
 
     pub fn active(&self) -> u64 {
-        self.spawned() - self.dropped()
+        self._active.load(Ordering::Acquire)
+    }
+
+    pub fn idle(&self) -> u64 {
+        self._idle.load(Ordering::Acquire)
     }
 
     pub fn record_spawned(&self) {
@@ -140,6 +156,14 @@ impl ThreadMetrics {
     pub fn record_dropped(&self) {
         self._dropped.fetch_add(1, Ordering::Relaxed);
     }
+
+    pub fn record_active(&self) {
+        self._active.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_idle(&self) {
+        self._idle.fetch_add(1, Ordering::Relaxed);
+    }
 }
 
 impl std::fmt::Debug for ThreadMetrics {
@@ -147,6 +171,8 @@ impl std::fmt::Debug for ThreadMetrics {
         f.debug_struct("ThreadMetrics")
             .field("spawned", &self.spawned())
             .field("dropped", &self.dropped())
+            .field("active", &self.active())
+            .field("idle", &self.idle())
             .finish()
     }
 }
