@@ -7,23 +7,69 @@ use std::{
 };
 
 use futures::{
+    FutureExt,
     future::BoxFuture,
     task::{ArcWake, waker_ref},
 };
 
 use crate::{AtomicTaskStatus, Job, Message, TaskId, TaskStatus};
 
-pub struct TaskState<T> {
-    pub(crate) id: TaskId,
-    pub(crate) status: AtomicTaskStatus,
-    pub(crate) aborted: AtomicBool,
-    pub(crate) join: Mutex<Option<Waker>>,
-    pub(crate) sender: crossbeam::channel::Sender<Message>,
-    pub(crate) output: Mutex<Option<T>>,
-    pub(crate) future: Mutex<Option<BoxFuture<'static, T>>>,
+pub struct TaskRun<T> {
+    id: TaskId,
+    status: AtomicTaskStatus,
+    aborted: AtomicBool,
+    waker: Mutex<Option<Waker>>,
+    sender: crossbeam::channel::Sender<Message>,
+    output: Mutex<Option<T>>,
+    future: Mutex<Option<BoxFuture<'static, T>>>,
 }
 
-impl<T> Wake for TaskState<T>
+impl<T> TaskRun<T>
+where
+    T: Send + 'static,
+{
+    pub fn new(
+        id: TaskId,
+        sender: crossbeam::channel::Sender<Message>,
+        future: impl Future<Output = T> + Send + 'static,
+    ) -> Self {
+        TaskRun {
+            id,
+            status: AtomicTaskStatus::new(TaskStatus::default()),
+            aborted: AtomicBool::new(false),
+            waker: Mutex::new(None),
+            sender,
+            output: Mutex::new(None),
+            future: Mutex::new(Some(future.boxed())),
+        }
+    }
+
+    pub fn is_cancelled(&self) -> bool {
+        self.aborted.load(Ordering::Acquire)
+    }
+
+    pub fn status(&self) -> TaskStatus {
+        self.status.get()
+    }
+
+    pub fn output(&self) -> Option<T> {
+        self.output.lock().unwrap().take()
+    }
+
+    pub fn register(&self, waker: Waker) {
+        *self.waker.lock().unwrap() = Some(waker);
+    }
+
+    pub fn complete(&self, value: T) {
+        *self.output.lock().unwrap() = Some(value);
+    }
+
+    pub fn cancel(&self) {
+        self.aborted.store(true, Ordering::Release);
+    }
+}
+
+impl<T> Wake for TaskRun<T>
 where
     T: Send + 'static,
 {
@@ -35,7 +81,7 @@ where
         tracing::trace!(target: "ayr::task", task_id = %self.id, "wake");
 
         // if complete do nothing
-        if self.status.load(Ordering::Acquire) == TaskStatus::Complete {
+        if self.status() == TaskStatus::Complete {
             return;
         }
 
@@ -47,7 +93,7 @@ where
     }
 }
 
-impl<T> ArcWake for TaskState<T>
+impl<T> ArcWake for TaskRun<T>
 where
     T: Send + 'static,
 {
@@ -56,7 +102,7 @@ where
     }
 }
 
-impl<T> Job for TaskState<T>
+impl<T> Job for TaskRun<T>
 where
     T: Send + 'static,
 {
@@ -74,7 +120,7 @@ where
             *self.future.lock().unwrap() = None;
             self.status.store(TaskStatus::Complete, Ordering::Release);
 
-            if let Some(waker) = self.join.lock().unwrap().take() {
+            if let Some(waker) = self.waker.lock().unwrap().take() {
                 waker.wake();
             }
 
@@ -92,7 +138,7 @@ where
             Poll::Pending => {
                 tracing::trace!(target: "ayr::task", task_id = %self.id, "pending");
 
-                if let Some(waker) = self.join.lock().unwrap().as_ref() {
+                if let Some(waker) = self.waker.lock().unwrap().as_ref() {
                     waker.wake_by_ref();
                 }
             }
@@ -102,7 +148,7 @@ where
                 *self.output.lock().unwrap() = Some(value);
                 self.status.store(TaskStatus::Complete, Ordering::Release);
 
-                if let Some(waker) = self.join.lock().unwrap().take() {
+                if let Some(waker) = self.waker.lock().unwrap().take() {
                     waker.wake();
                 }
             }

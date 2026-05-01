@@ -1,15 +1,13 @@
 use std::{
     sync::{
         Arc, Mutex,
-        atomic::{AtomicBool, AtomicU64, AtomicUsize, Ordering},
+        atomic::{AtomicU64, AtomicUsize, Ordering},
     },
     task::Wake,
     time::Duration,
 };
 
-use futures::FutureExt;
-
-use crate::{AtomicTaskStatus, Message, Task, TaskState, TaskStatus, Worker};
+use crate::{Message, Task, TaskRun, Worker};
 
 pub struct TaskPool {
     name: String,
@@ -75,18 +73,14 @@ impl TaskPool {
     where
         T: Send + 'static,
     {
-        let state = Arc::new(TaskState {
-            id: self.next_id.fetch_add(1, Ordering::SeqCst).into(),
-            status: AtomicTaskStatus::new(TaskStatus::default()),
-            aborted: AtomicBool::new(false),
-            join: Mutex::new(None),
-            sender: self.sender.clone(),
-            output: Mutex::new(None),
-            future: Mutex::new(Some(future.boxed())),
-        });
+        let run = Arc::new(TaskRun::new(
+            self.next_id.fetch_add(1, Ordering::SeqCst).into(),
+            self.sender.clone(),
+            future,
+        ));
 
-        state.wake_by_ref();
-        Task { state }
+        run.wake_by_ref();
+        Task { run }
     }
 }
 

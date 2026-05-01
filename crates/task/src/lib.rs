@@ -3,8 +3,8 @@ mod error;
 mod execute;
 mod pool;
 mod result;
+mod run;
 mod source;
-mod state;
 mod status;
 mod thread;
 
@@ -13,16 +13,13 @@ pub use error::*;
 pub use execute::*;
 pub use pool::*;
 pub use result::*;
+pub use run::*;
 #[allow(unused)]
 pub use source::*;
-pub use state::*;
 pub use status::*;
 pub use thread::*;
 
-use std::{
-    sync::{Arc, atomic::Ordering},
-    task::Wake,
-};
+use std::{sync::Arc, task::Wake};
 
 // static GLOBAL: OnceLock<Arc<Executor>> = OnceLock::new();
 
@@ -58,7 +55,7 @@ impl std::fmt::Display for TaskId {
 }
 
 pub struct Task<T> {
-    state: Arc<TaskState<T>>,
+    run: Arc<TaskRun<T>>,
 }
 
 impl<T> Task<T>
@@ -66,16 +63,16 @@ where
     T: Send + 'static,
 {
     pub fn is_complete(&self) -> bool {
-        self.state.status.load(Ordering::Acquire) == TaskStatus::Complete
+        self.run.status() == TaskStatus::Complete
     }
 
     pub fn is_cancelled(&self) -> bool {
-        self.state.aborted.load(Ordering::Acquire)
+        self.run.is_cancelled()
     }
 
     pub fn cancel(&self) {
-        self.state.aborted.store(true, Ordering::Release);
-        self.state.wake_by_ref();
+        self.run.cancel();
+        self.run.wake_by_ref();
     }
 }
 
@@ -89,25 +86,22 @@ where
         self: std::pin::Pin<&mut Self>,
         cx: &mut std::task::Context<'_>,
     ) -> std::task::Poll<Self::Output> {
-        if self.state.status.load(Ordering::Acquire) == TaskStatus::Complete {
-            if self.state.aborted.load(Ordering::Acquire) {
+        if self.run.status() == TaskStatus::Complete {
+            if self.run.is_cancelled() {
                 return std::task::Poll::Ready(Err(TaskError::Cancelled));
             }
 
             let value = self
-                .state
-                .output
-                .lock()
-                .unwrap()
-                .take()
+                .run
+                .output()
                 .expect("attempted to join task after output was already consumed");
 
             return std::task::Poll::Ready(Ok(value));
         }
 
-        *self.state.join.lock().unwrap() = Some(cx.waker().clone());
+        self.run.register(cx.waker().clone());
 
-        if self.state.status.load(Ordering::Acquire) == TaskStatus::Complete {
+        if self.run.status() == TaskStatus::Complete {
             cx.waker().wake_by_ref();
         }
 
@@ -137,7 +131,6 @@ mod tests {
         ex.start();
         let task = ex.spawn("main", async { 12 });
         let out = task.await.unwrap();
-        ex.stop();
         assert_eq!(out, 12)
     }
 }
