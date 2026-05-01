@@ -13,6 +13,10 @@ pub use status::*;
 
 use std::{sync::Arc, task::Wake};
 
+pub trait Job: Send + Sync + 'static {
+    fn run(self: std::sync::Arc<Self>);
+}
+
 // static GLOBAL: OnceLock<Arc<Executor>> = OnceLock::new();
 
 // fn global_runner() -> Arc<Executor> {
@@ -20,10 +24,6 @@ use std::{sync::Arc, task::Wake};
 //         .get_or_init(|| Arc::new(Executor::start()))
 //         .clone()
 // }
-
-trait Job: Send + Sync + 'static {
-    fn run(self: std::sync::Arc<Self>);
-}
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TaskId(u64);

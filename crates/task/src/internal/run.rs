@@ -12,14 +12,14 @@ use futures::{
     task::{ArcWake, waker_ref},
 };
 
-use crate::{AtomicTaskStatus, Job, TaskId, TaskStatus, internal};
+use crate::{AtomicTaskStatus, Command, Job, TaskId, TaskStatus};
 
 pub(crate) struct TaskRun<T> {
     id: TaskId,
     status: AtomicTaskStatus,
     aborted: AtomicBool,
     waker: Mutex<Option<Waker>>,
-    sender: crossbeam::channel::Sender<internal::Message>,
+    sender: crossbeam::channel::Sender<Command>,
     output: Mutex<Option<T>>,
     future: Mutex<Option<BoxFuture<'static, T>>>,
 }
@@ -30,7 +30,7 @@ where
 {
     pub fn new(
         id: TaskId,
-        sender: crossbeam::channel::Sender<internal::Message>,
+        sender: crossbeam::channel::Sender<Command>,
         future: impl Future<Output = T> + Send + 'static,
     ) -> Self {
         TaskRun {
@@ -89,7 +89,7 @@ where
         // mark as queued, if previous status was not queued
         // then queue the task
         if self.status.swap(TaskStatus::Queued, Ordering::AcqRel) != TaskStatus::Queued {
-            let _ = self.sender.send(internal::Message::Job(self.clone()));
+            let _ = self.sender.send(Command::Run(self.clone()));
         }
     }
 }

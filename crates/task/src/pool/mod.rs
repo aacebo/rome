@@ -1,3 +1,11 @@
+mod command;
+mod event;
+mod metrics;
+
+pub use command::*;
+pub use event::*;
+pub use metrics::*;
+
 use std::{
     sync::{
         Arc, Mutex,
@@ -15,8 +23,8 @@ pub struct TaskPool {
     size: AtomicUsize,
     capacity: usize,
     workers: Mutex<Vec<Arc<internal::Worker>>>,
-    sender: crossbeam::channel::Sender<internal::Message>,
-    receiver: crossbeam::channel::Receiver<internal::Message>,
+    sender: crossbeam::channel::Sender<Command>,
+    receiver: crossbeam::channel::Receiver<Command>,
 }
 
 impl TaskPool {
@@ -62,7 +70,7 @@ impl TaskPool {
         for _ in 0..size {
             let _ = self
                 .sender
-                .send_timeout(internal::Message::Stop, Duration::from_millis(200))
+                .send_timeout(Command::Stop, Duration::from_millis(200))
                 .unwrap();
         }
 
