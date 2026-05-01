@@ -14,8 +14,7 @@ use futures::{
 use crate::{AtomicTaskStatus, Job, Message, TaskId, TaskStatus};
 
 pub struct TaskState<T> {
-    pub id: TaskId,
-
+    pub(crate) id: TaskId,
     pub(crate) status: AtomicTaskStatus,
     pub(crate) aborted: AtomicBool,
     pub(crate) join: Mutex<Option<Waker>>,
@@ -61,10 +60,6 @@ impl<T> Job for TaskState<T>
 where
     T: Send + 'static,
 {
-    fn task_id(&self) -> TaskId {
-        self.id
-    }
-
     fn run(self: std::sync::Arc<Self>) {
         let status = self.status.swap(TaskStatus::Running, Ordering::AcqRel);
 
