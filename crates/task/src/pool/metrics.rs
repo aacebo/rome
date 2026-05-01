@@ -47,6 +47,14 @@ impl TaskPoolMetrics {
         self.total_latency_ns.load(Ordering::Acquire)
     }
 
+    pub fn queue_depth_per_worker(&self) -> f64 {
+        self.tasks_queued() as f64 / self.threads_active() as f64
+    }
+
+    pub fn utilization(&self) -> f64 {
+        self.threads_active() as f64 / (self.threads_active() + self.threads_idle()) as f64
+    }
+
     pub fn record_queued(&self) {
         self.tasks_queued.fetch_add(1, Ordering::Relaxed);
     }
