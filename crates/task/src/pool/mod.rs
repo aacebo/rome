@@ -1,9 +1,7 @@
 mod command;
-mod event;
 mod metrics;
 
 pub use command::*;
-pub use event::*;
 pub use metrics::*;
 
 use std::{
@@ -60,7 +58,11 @@ impl TaskPool {
 
         for _ in 0..self.capacity {
             let worker = Arc::new(internal::Worker::new());
-            worker.start(&self.name, self.commands.receiver().clone());
+            worker.start(
+                &self.name,
+                self.metrics.clone(),
+                self.commands.receiver().clone(),
+            );
             workers.push(worker);
         }
     }

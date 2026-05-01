@@ -91,6 +91,11 @@ where
             return;
         }
 
+        // if parked, the task has never been queued/run
+        if self.status() == TaskStatus::Parked {
+            self.metrics.record_spawned();
+        }
+
         // mark as queued, if previous status was not queued
         // then queue the task
         if self.status.swap(TaskStatus::Queued, Ordering::AcqRel) != TaskStatus::Queued {

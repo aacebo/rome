@@ -123,9 +123,15 @@ mod tests {
 
         let task = ex.spawn("main", async { 12 });
         let out = task.await.unwrap();
+        pool.stop();
 
+        println!("{:#?}", pool.metrics());
         assert_eq!(out, 12);
+        assert_eq!(pool.metrics().tasks_spawned(), 1);
         assert_eq!(pool.metrics().tasks_queued(), 1);
         assert_eq!(pool.metrics().tasks_completed(), 1);
+        assert_eq!(pool.metrics().threads_spawned(), 20);
+        assert_eq!(pool.metrics().threads_dropped(), 20);
+        assert_eq!(pool.metrics().threads_active(), 0);
     }
 }
