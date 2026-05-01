@@ -12,16 +12,17 @@ use futures::{
     task::{ArcWake, waker_ref},
 };
 
-use crate::{AtomicTaskStatus, Command, Job, TaskId, TaskStatus};
+use crate::{AtomicTaskStatus, Command, Event, Job, TaskEvent, TaskId, TaskStatus};
 
 pub(crate) struct TaskRun<T> {
     id: TaskId,
     status: AtomicTaskStatus,
     aborted: AtomicBool,
     waker: Mutex<Option<Waker>>,
-    sender: crossbeam::channel::Sender<Command>,
     output: Mutex<Option<T>>,
     future: Mutex<Option<BoxFuture<'static, T>>>,
+    events: crossbeam::channel::Sender<Event>,
+    commands: crossbeam::channel::Sender<Command>,
 }
 
 impl<T> TaskRun<T>
@@ -30,7 +31,8 @@ where
 {
     pub fn new(
         id: TaskId,
-        sender: crossbeam::channel::Sender<Command>,
+        events: crossbeam::channel::Sender<Event>,
+        commands: crossbeam::channel::Sender<Command>,
         future: impl Future<Output = T> + Send + 'static,
     ) -> Self {
         TaskRun {
@@ -38,9 +40,10 @@ where
             status: AtomicTaskStatus::new(TaskStatus::default()),
             aborted: AtomicBool::new(false),
             waker: Mutex::new(None),
-            sender,
             output: Mutex::new(None),
             future: Mutex::new(Some(future.boxed())),
+            events,
+            commands,
         }
     }
 
@@ -63,10 +66,12 @@ where
     pub fn complete(&self, value: T) {
         *self.output.lock().unwrap() = Some(value);
         self.status.store(TaskStatus::Complete, Ordering::Release);
+        let _ = self.events.send(TaskEvent::Completed(self.id).into());
     }
 
     pub fn cancel(&self) {
         self.aborted.store(true, Ordering::Release);
+        let _ = self.events.send(TaskEvent::Completed(self.id).into());
     }
 }
 
@@ -89,7 +94,8 @@ where
         // mark as queued, if previous status was not queued
         // then queue the task
         if self.status.swap(TaskStatus::Queued, Ordering::AcqRel) != TaskStatus::Queued {
-            let _ = self.sender.send(Command::Run(self.clone()));
+            let _ = self.commands.send(Command::Run(self.clone()));
+            let _ = self.events.send(TaskEvent::Queued(self.id).into());
         }
     }
 }

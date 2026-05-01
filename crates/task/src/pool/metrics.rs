@@ -1,5 +1,7 @@
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
+use crate::{Event, TaskEvent, ThreadEvent};
+
 pub struct TaskPoolMetrics {
     tasks_queued: AtomicUsize,
     tasks_completed: AtomicU64,
@@ -43,6 +45,32 @@ impl TaskPoolMetrics {
 
     pub fn total_latency_ns(&self) -> u64 {
         self.total_latency_ns.load(Ordering::Acquire)
+    }
+
+    pub fn reduce(&self, event: &Event) {
+        match event {
+            Event::Task(event) => match event {
+                TaskEvent::Queued(_) => {
+                    self.tasks_queued.fetch_add(1, Ordering::Relaxed);
+                }
+                TaskEvent::Completed(_) => {
+                    self.tasks_completed.fetch_add(1, Ordering::Relaxed);
+                }
+                TaskEvent::Spawned(_) => {
+                    self.tasks_spawned.fetch_add(1, Ordering::Relaxed);
+                }
+            },
+            Event::Thread(event) => match event {
+                ThreadEvent::Stopped(_) => {
+                    self.threads_idle.fetch_add(1, Ordering::Relaxed);
+                    self.threads_active.fetch_sub(1, Ordering::Relaxed);
+                }
+                ThreadEvent::Spawned(_) => {
+                    self.threads_idle.fetch_sub(1, Ordering::Relaxed);
+                    self.threads_active.fetch_add(1, Ordering::Relaxed);
+                }
+            },
+        };
     }
 }
 

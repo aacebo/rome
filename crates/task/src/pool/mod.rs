@@ -22,23 +22,23 @@ pub struct TaskPool {
     next_id: AtomicU64,
     size: AtomicUsize,
     capacity: usize,
+    metrics: Arc<TaskPoolMetrics>,
     workers: Mutex<Vec<Arc<internal::Worker>>>,
-    sender: crossbeam::channel::Sender<Command>,
-    receiver: crossbeam::channel::Receiver<Command>,
+    events: internal::Channel<Event>,
+    commands: internal::Channel<Command>,
 }
 
 impl TaskPool {
     pub fn new(name: impl Into<String>, capacity: usize) -> Self {
-        let (sender, receiver) = crossbeam::channel::unbounded();
-
         TaskPool {
             name: name.into(),
             next_id: AtomicU64::new(0),
             size: AtomicUsize::new(0),
             capacity,
+            metrics: Arc::new(TaskPoolMetrics::default()),
             workers: Mutex::new(vec![]),
-            sender,
-            receiver,
+            events: internal::Channel::new(),
+            commands: internal::Channel::new(),
         }
     }
 
@@ -55,7 +55,13 @@ impl TaskPool {
 
         for _ in 0..self.capacity {
             let worker = Arc::new(internal::Worker::new());
-            worker.start(&self.name, self.receiver.clone());
+
+            worker.start(
+                &self.name,
+                self.metrics.clone(),
+                self.commands.receiver().clone(),
+            );
+
             workers.push(worker);
             self.size.fetch_add(1, Ordering::Relaxed);
         }
@@ -69,9 +75,9 @@ impl TaskPool {
 
         for _ in 0..size {
             let _ = self
-                .sender
-                .send_timeout(Command::Stop, Duration::from_millis(200))
-                .unwrap();
+                .commands
+                .sender()
+                .send_timeout(Command::Stop, Duration::from_millis(200));
         }
 
         let _ = workers.drain(..).map(|w| w.stop());
@@ -83,7 +89,8 @@ impl TaskPool {
     {
         let run = Arc::new(internal::TaskRun::new(
             self.next_id.fetch_add(1, Ordering::SeqCst).into(),
-            self.sender.clone(),
+            self.events.sender().clone(),
+            self.commands.sender().clone(),
             future,
         ));
 
