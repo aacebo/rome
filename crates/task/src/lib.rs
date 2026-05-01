@@ -6,7 +6,6 @@ mod execute;
 pub(crate) mod internal;
 mod pool;
 mod status;
-pub mod sync;
 
 pub use cancel::*;
 pub use error::*;
