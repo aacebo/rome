@@ -65,13 +65,13 @@ where
 
     pub fn complete(&self, value: T) {
         *self.output.lock().unwrap() = Some(value);
-        self.metrics.record_completed();
+        self.metrics.tasks().record_completed();
         self.status.store(TaskStatus::Complete, Ordering::Release);
     }
 
     pub fn cancel(&self) {
         self.aborted.store(true, Ordering::Release);
-        self.metrics.record_completed();
+        self.metrics.tasks().record_completed();
     }
 }
 
@@ -93,13 +93,13 @@ where
 
         // if parked, the task has never been queued/run
         if self.status() == TaskStatus::Parked {
-            self.metrics.record_spawned();
+            self.metrics.tasks().record_spawned();
         }
 
         // mark as queued, if previous status was not queued
         // then queue the task
         if self.status.swap(TaskStatus::Queued, Ordering::AcqRel) != TaskStatus::Queued {
-            self.metrics.record_queued();
+            self.metrics.tasks().record_queued();
             let _ = self.commands.send(Command::Run(self.clone()));
         }
     }

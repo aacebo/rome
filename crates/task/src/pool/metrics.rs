@@ -1,76 +1,26 @@
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
 
 pub struct TaskPoolMetrics {
-    tasks_spawned: AtomicU64,
-    tasks_queued: AtomicUsize,
-    tasks_completed: AtomicU64,
-    threads_spawned: AtomicU64,
-    threads_dropped: AtomicU64,
-    total_latency_ns: AtomicU64,
+    _tasks: TaskMetrics,
+    _threads: ThreadMetrics,
+    _total_latency_ns: AtomicU64,
 }
 
 impl TaskPoolMetrics {
     pub fn new() -> Self {
         Self {
-            tasks_spawned: AtomicU64::new(0),
-            tasks_queued: AtomicUsize::new(0),
-            tasks_completed: AtomicU64::new(0),
-            threads_spawned: AtomicU64::new(0),
-            threads_dropped: AtomicU64::new(0),
-            total_latency_ns: AtomicU64::new(0),
+            _tasks: TaskMetrics::new(),
+            _threads: ThreadMetrics::new(),
+            _total_latency_ns: AtomicU64::new(0),
         }
     }
 
-    pub fn tasks_spawned(&self) -> u64 {
-        self.tasks_spawned.load(Ordering::Acquire)
+    pub fn tasks(&self) -> &TaskMetrics {
+        &self._tasks
     }
 
-    pub fn tasks_queued(&self) -> usize {
-        self.tasks_queued.load(Ordering::Acquire)
-    }
-
-    pub fn tasks_completed(&self) -> u64 {
-        self.tasks_completed.load(Ordering::Acquire)
-    }
-
-    pub fn tasks_active(&self) -> u64 {
-        self.tasks_spawned() - self.tasks_completed()
-    }
-
-    pub fn threads_spawned(&self) -> u64 {
-        self.threads_spawned.load(Ordering::Acquire)
-    }
-
-    pub fn threads_dropped(&self) -> u64 {
-        self.threads_dropped.load(Ordering::Acquire)
-    }
-
-    pub fn threads_active(&self) -> u64 {
-        self.threads_spawned() - self.threads_dropped()
-    }
-
-    pub fn total_latency_ns(&self) -> u64 {
-        self.total_latency_ns.load(Ordering::Acquire)
-    }
-
-    pub fn record_queued(&self) {
-        self.tasks_queued.fetch_add(1, Ordering::Relaxed);
-    }
-
-    pub fn record_completed(&self) {
-        self.tasks_completed.fetch_add(1, Ordering::Relaxed);
-    }
-
-    pub fn record_spawned(&self) {
-        self.tasks_spawned.fetch_add(1, Ordering::Relaxed);
-    }
-
-    pub fn record_thread_spawned(&self) {
-        self.threads_spawned.fetch_add(1, Ordering::Relaxed);
-    }
-
-    pub fn record_thread_dropped(&self) {
-        self.threads_dropped.fetch_add(1, Ordering::Relaxed);
+    pub fn threads(&self) -> &ThreadMetrics {
+        &self._threads
     }
 }
 
@@ -93,12 +43,105 @@ impl Default for TaskPoolMetrics {
 impl std::fmt::Debug for TaskPoolMetrics {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TaskPoolMetrics")
-            .field("tasks_spawned", &self.tasks_spawned())
-            .field("tasks_queued", &self.tasks_queued())
-            .field("tasks_completed", &self.tasks_completed())
-            .field("threads_spawned", &self.threads_spawned())
-            .field("threads_dropped", &self.threads_dropped())
-            .field("threads_active", &self.threads_active())
+            .field("tasks", &self.tasks())
+            .field("threads", &self.threads())
+            .finish()
+    }
+}
+
+pub struct TaskMetrics {
+    _spawned: AtomicU64,
+    _queued: AtomicUsize,
+    _completed: AtomicU64,
+}
+
+impl TaskMetrics {
+    pub fn new() -> Self {
+        Self {
+            _spawned: AtomicU64::new(0),
+            _queued: AtomicUsize::new(0),
+            _completed: AtomicU64::new(0),
+        }
+    }
+
+    pub fn spawned(&self) -> u64 {
+        self._spawned.load(Ordering::Acquire)
+    }
+
+    pub fn queued(&self) -> usize {
+        self._queued.load(Ordering::Acquire)
+    }
+
+    pub fn completed(&self) -> u64 {
+        self._completed.load(Ordering::Acquire)
+    }
+
+    pub fn active(&self) -> u64 {
+        self.spawned() - self.completed()
+    }
+
+    pub fn record_spawned(&self) {
+        self._spawned.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_queued(&self) {
+        self._queued.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_completed(&self) {
+        self._completed.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+impl std::fmt::Debug for TaskMetrics {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("TaskMetrics")
+            .field("spawned", &self.spawned())
+            .field("queued", &self.queued())
+            .field("complete", &self.completed())
+            .finish()
+    }
+}
+
+pub struct ThreadMetrics {
+    _spawned: AtomicU64,
+    _dropped: AtomicU64,
+}
+
+impl ThreadMetrics {
+    pub fn new() -> Self {
+        Self {
+            _spawned: AtomicU64::new(0),
+            _dropped: AtomicU64::new(0),
+        }
+    }
+
+    pub fn spawned(&self) -> u64 {
+        self._spawned.load(Ordering::Acquire)
+    }
+
+    pub fn dropped(&self) -> u64 {
+        self._dropped.load(Ordering::Acquire)
+    }
+
+    pub fn active(&self) -> u64 {
+        self.spawned() - self.dropped()
+    }
+
+    pub fn record_spawned(&self) {
+        self._spawned.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_dropped(&self) {
+        self._dropped.fetch_add(1, Ordering::Relaxed);
+    }
+}
+
+impl std::fmt::Debug for ThreadMetrics {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("ThreadMetrics")
+            .field("spawned", &self.spawned())
+            .field("dropped", &self.dropped())
             .finish()
     }
 }

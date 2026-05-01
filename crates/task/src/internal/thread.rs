@@ -37,7 +37,7 @@ impl Worker {
                 let span = tracing::debug_span!(target: "ayr::task::thread", "worker", thread_id = %thread_id);
                 let _enter = span.enter();
                 tracing::debug!(target: "ayr::task::thread", "starting");
-                metrics.record_thread_spawned();
+                metrics.threads().record_spawned();
 
                 loop {
                     match commands.recv() {
@@ -47,7 +47,7 @@ impl Worker {
                 }
 
                 tracing::debug!(target: "ayr::task::thread", "exiting");
-                metrics.record_thread_dropped();
+                metrics.threads().record_dropped();
             })
             .expect("failed to start task worker thread");
 
