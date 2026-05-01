@@ -5,6 +5,12 @@ use std::sync::{
 
 use crate::{Command, TaskPoolMetrics, TaskStatus};
 
+#[derive(Debug, Copy, Clone, PartialEq, Eq)]
+enum ThreadStatus {
+    Idle,
+    Active,
+}
+
 pub(crate) struct Worker {
     stopping: AtomicBool,
     handle: Mutex<Option<std::thread::JoinHandle<()>>>,
@@ -34,15 +40,21 @@ impl Worker {
                     .trim()
                     .to_string();
 
+                let mut thread_status = ThreadStatus::Idle;
                 let span = tracing::debug_span!(target: "ayr::task::thread", "worker", thread_id = %thread_id);
                 let _enter = span.enter();
+
                 tracing::debug!(target: "ayr::task::thread", "starting");
                 metrics.threads().record_spawned();
 
                 loop {
                     let status = match commands.recv_timeout(std::time::Duration::from_millis(200)) {
                         Err(crossbeam::channel::RecvTimeoutError::Timeout) => {
-                            metrics.threads().record_idle();
+                            if thread_status == ThreadStatus::Active {
+                                thread_status = ThreadStatus::Idle;
+                                metrics.threads().record_idle();
+                            }
+
                             continue;
                         },
                         Ok(Command::Stop(_)) | Err(_) => break,
@@ -61,7 +73,10 @@ impl Worker {
                         }
                     };
 
-                    metrics.threads().record_active();
+                    if thread_status == ThreadStatus::Idle {
+                        thread_status = ThreadStatus::Active;
+                        metrics.threads().record_active();
+                    }
 
                     if status == TaskStatus::Complete {
                         metrics.tasks().record_completed();

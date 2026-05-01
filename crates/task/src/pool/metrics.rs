@@ -151,6 +151,7 @@ impl ThreadMetrics {
 
     pub fn record_spawned(&self) {
         self._spawned.fetch_add(1, Ordering::Relaxed);
+        self._idle.fetch_add(1, Ordering::Relaxed);
     }
 
     pub fn record_dropped(&self) {
@@ -158,10 +159,12 @@ impl ThreadMetrics {
     }
 
     pub fn record_active(&self) {
+        self._idle.fetch_sub(1, Ordering::Relaxed);
         self._active.fetch_add(1, Ordering::Relaxed);
     }
 
     pub fn record_idle(&self) {
+        self._active.fetch_sub(1, Ordering::Relaxed);
         self._idle.fetch_add(1, Ordering::Relaxed);
     }
 }
@@ -225,7 +228,6 @@ impl LatencyMetrics {
 impl std::fmt::Debug for LatencyMetrics {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("LatencyMetrics")
-            .field("spawn_time", &self.spawn_time())
             .field("avg_spawn_time", &self.avg_spawn_time())
             .finish()
     }
