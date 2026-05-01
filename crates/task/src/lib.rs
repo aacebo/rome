@@ -1,9 +1,12 @@
+#![feature(integer_atomics)]
+
 mod cancel;
 mod error;
 mod execute;
 pub(crate) mod internal;
 mod pool;
 mod status;
+pub mod sync;
 
 pub use cancel::*;
 pub use error::*;
@@ -14,7 +17,7 @@ pub use status::*;
 use std::{sync::Arc, task::Wake};
 
 pub trait Job: Send + Sync + 'static {
-    fn run(self: std::sync::Arc<Self>);
+    fn run(self: std::sync::Arc<Self>) -> TaskStatus;
 }
 
 // static GLOBAL: OnceLock<Arc<Executor>> = OnceLock::new();

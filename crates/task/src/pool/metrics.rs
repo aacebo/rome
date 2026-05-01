@@ -1,9 +1,9 @@
-use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
+use std::sync::atomic::{AtomicU64, Ordering};
 
 pub struct TaskPoolMetrics {
     _tasks: TaskMetrics,
     _threads: ThreadMetrics,
-    _total_latency_ns: AtomicU64,
+    _latency: LatencyMetrics,
 }
 
 impl TaskPoolMetrics {
@@ -11,7 +11,7 @@ impl TaskPoolMetrics {
         Self {
             _tasks: TaskMetrics::new(),
             _threads: ThreadMetrics::new(),
-            _total_latency_ns: AtomicU64::new(0),
+            _latency: LatencyMetrics::new(),
         }
     }
 
@@ -21,6 +21,10 @@ impl TaskPoolMetrics {
 
     pub fn threads(&self) -> &ThreadMetrics {
         &self._threads
+    }
+
+    pub fn latency(&self) -> &LatencyMetrics {
+        &self._latency
     }
 }
 
@@ -45,31 +49,32 @@ impl std::fmt::Debug for TaskPoolMetrics {
         f.debug_struct("TaskPoolMetrics")
             .field("tasks", &self.tasks())
             .field("threads", &self.threads())
+            .field("latency", &self.latency())
             .finish()
     }
 }
 
 pub struct TaskMetrics {
+    _queued: AtomicU64,
     _spawned: AtomicU64,
-    _queued: AtomicUsize,
     _completed: AtomicU64,
 }
 
 impl TaskMetrics {
     pub fn new() -> Self {
         Self {
+            _queued: AtomicU64::new(0),
             _spawned: AtomicU64::new(0),
-            _queued: AtomicUsize::new(0),
             _completed: AtomicU64::new(0),
         }
     }
 
-    pub fn spawned(&self) -> u64 {
-        self._spawned.load(Ordering::Acquire)
+    pub fn queued(&self) -> u64 {
+        self._queued.load(Ordering::Acquire)
     }
 
-    pub fn queued(&self) -> usize {
-        self._queued.load(Ordering::Acquire)
+    pub fn spawned(&self) -> u64 {
+        self._spawned.load(Ordering::Acquire)
     }
 
     pub fn completed(&self) -> u64 {
@@ -80,12 +85,12 @@ impl TaskMetrics {
         self.spawned() - self.completed()
     }
 
-    pub fn record_spawned(&self) {
-        self._spawned.fetch_add(1, Ordering::Relaxed);
-    }
-
     pub fn record_queued(&self) {
         self._queued.fetch_add(1, Ordering::Relaxed);
+    }
+
+    pub fn record_spawned(&self) {
+        self._spawned.fetch_add(1, Ordering::Relaxed);
     }
 
     pub fn record_completed(&self) {
@@ -96,8 +101,8 @@ impl TaskMetrics {
 impl std::fmt::Debug for TaskMetrics {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         f.debug_struct("TaskMetrics")
-            .field("spawned", &self.spawned())
             .field("queued", &self.queued())
+            .field("spawned", &self.spawned())
             .field("complete", &self.completed())
             .finish()
     }
@@ -142,6 +147,60 @@ impl std::fmt::Debug for ThreadMetrics {
         f.debug_struct("ThreadMetrics")
             .field("spawned", &self.spawned())
             .field("dropped", &self.dropped())
+            .finish()
+    }
+}
+
+pub struct LatencyMetrics {
+    _spawn_ns: AtomicU64,
+    _spawn_samples: AtomicU64,
+}
+
+impl LatencyMetrics {
+    pub fn new() -> Self {
+        Self {
+            _spawn_ns: AtomicU64::new(0),
+            _spawn_samples: AtomicU64::new(0),
+        }
+    }
+
+    pub fn spawn_time(&self) -> std::time::Duration {
+        std::time::Duration::from_nanos(self.spawn_ns())
+    }
+
+    pub fn spawn_ns(&self) -> u64 {
+        self._spawn_ns.load(Ordering::Acquire)
+    }
+
+    pub fn avg_spawn_time(&self) -> std::time::Duration {
+        std::time::Duration::from_nanos(self.avg_spawn_ns())
+    }
+
+    pub fn avg_spawn_ns(&self) -> u64 {
+        let total = self._spawn_ns.load(Ordering::Relaxed);
+        let samples = self._spawn_samples.load(Ordering::Relaxed);
+
+        if samples == 0 {
+            return 0;
+        }
+
+        total / samples
+    }
+
+    pub fn record_spawn_time(&self, value: std::time::Duration) {
+        self._spawn_samples.fetch_add(1, Ordering::Release);
+        self._spawn_ns.fetch_add(
+            value.as_nanos().min(u64::MAX as u128) as u64,
+            Ordering::Relaxed,
+        );
+    }
+}
+
+impl std::fmt::Debug for LatencyMetrics {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("LatencyMetrics")
+            .field("spawn_time", &self.spawn_time())
+            .field("avg_spawn_time", &self.avg_spawn_time())
             .finish()
     }
 }

@@ -3,7 +3,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
-use crate::{Command, TaskPoolMetrics};
+use crate::{Command, TaskPoolMetrics, TaskStatus};
 
 pub(crate) struct Worker {
     stopping: AtomicBool,
@@ -40,9 +40,25 @@ impl Worker {
                 metrics.threads().record_spawned();
 
                 loop {
-                    match commands.recv() {
-                        Ok(Command::Stop) | Err(_) => break,
-                        Ok(Command::Run(job)) => job.run(),
+                    let status = match commands.recv() {
+                        Ok(Command::Stop(_)) | Err(_) => break,
+                        Ok(Command::Spawn(timestamp, job)) => {
+                            metrics.tasks().record_spawned();
+                            metrics
+                                .latency()
+                                .record_spawn_time(std::time::Instant::now() - timestamp);
+                            job.run()
+                        },
+                        Ok(Command::Tick(timestamp, job)) => {
+                            metrics
+                                .latency()
+                                .record_spawn_time(std::time::Instant::now() - timestamp);
+                            job.run()
+                        }
+                    };
+
+                    if status == TaskStatus::Complete {
+                        metrics.tasks().record_completed();
                     }
                 }
 

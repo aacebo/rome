@@ -12,7 +12,7 @@ use futures::{
     task::{ArcWake, waker_ref},
 };
 
-use crate::{AtomicTaskStatus, Command, Job, TaskId, TaskPoolMetrics, TaskStatus};
+use crate::{AtomicTaskStatus, Command, Job, TaskId, TaskStatus};
 
 pub(crate) struct TaskRun<T> {
     id: TaskId,
@@ -21,7 +21,6 @@ pub(crate) struct TaskRun<T> {
     waker: Mutex<Option<Waker>>,
     output: Mutex<Option<T>>,
     future: Mutex<Option<BoxFuture<'static, T>>>,
-    metrics: Arc<TaskPoolMetrics>,
     commands: crossbeam::channel::Sender<Command>,
 }
 
@@ -31,7 +30,6 @@ where
 {
     pub fn new(
         id: TaskId,
-        metrics: Arc<TaskPoolMetrics>,
         commands: crossbeam::channel::Sender<Command>,
         future: impl Future<Output = T> + Send + 'static,
     ) -> Self {
@@ -42,7 +40,6 @@ where
             waker: Mutex::new(None),
             output: Mutex::new(None),
             future: Mutex::new(Some(future.boxed())),
-            metrics,
             commands,
         }
     }
@@ -65,13 +62,11 @@ where
 
     pub fn complete(&self, value: T) {
         *self.output.lock().unwrap() = Some(value);
-        self.metrics.tasks().record_completed();
         self.status.store(TaskStatus::Complete, Ordering::Release);
     }
 
     pub fn cancel(&self) {
         self.aborted.store(true, Ordering::Release);
-        self.metrics.tasks().record_completed();
     }
 }
 
@@ -91,16 +86,17 @@ where
             return;
         }
 
+        let status = self.status.swap(TaskStatus::Queued, Ordering::AcqRel);
+
         // if parked, the task has never been queued/run
-        if self.status() == TaskStatus::Parked {
-            self.metrics.tasks().record_spawned();
+        if status == TaskStatus::Parked {
+            let _ = self.commands.send(Command::spawn(self.clone()));
         }
 
         // mark as queued, if previous status was not queued
         // then queue the task
-        if self.status.swap(TaskStatus::Queued, Ordering::AcqRel) != TaskStatus::Queued {
-            self.metrics.tasks().record_queued();
-            let _ = self.commands.send(Command::Run(self.clone()));
+        if status != TaskStatus::Queued {
+            let _ = self.commands.send(Command::tick(self.clone()));
         }
     }
 }
@@ -118,13 +114,13 @@ impl<T> Job for TaskRun<T>
 where
     T: Send + 'static,
 {
-    fn run(self: std::sync::Arc<Self>) {
+    fn run(self: std::sync::Arc<Self>) -> TaskStatus {
         let status = self.status.swap(TaskStatus::Running, Ordering::AcqRel);
 
         // if complete do nothing
         if status == TaskStatus::Complete {
             self.status.store(TaskStatus::Complete, Ordering::Release);
-            return;
+            return TaskStatus::Complete;
         }
 
         if self.aborted.load(Ordering::Acquire) {
@@ -136,14 +132,14 @@ where
                 waker.wake();
             }
 
-            return;
+            return TaskStatus::Complete;
         }
 
         let waker = waker_ref(&self);
         let mut cx = Context::from_waker(&*waker);
         let mut slot = self.future.lock().unwrap();
         let Some(future) = slot.as_mut() else {
-            return;
+            return status;
         };
 
         match future.as_mut().poll(&mut cx) {
@@ -153,6 +149,8 @@ where
                 if let Some(waker) = self.waker.lock().unwrap().as_ref() {
                     waker.wake_by_ref();
                 }
+
+                status
             }
             Poll::Ready(value) => {
                 tracing::debug!(target: "ayr::task", task_id = %self.id, "ready");
@@ -162,6 +160,8 @@ where
                 if let Some(waker) = self.waker.lock().unwrap().take() {
                     waker.wake();
                 }
+
+                TaskStatus::Complete
             }
         }
     }

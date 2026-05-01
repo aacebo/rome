@@ -75,7 +75,7 @@ impl TaskPool {
         let mut workers = self.workers.lock().unwrap();
 
         for _ in 0..workers.len() {
-            let _ = self.commands.sender().send(Command::Stop);
+            let _ = self.commands.sender().send(Command::stop());
         }
 
         for worker in workers.drain(..) {
@@ -89,12 +89,12 @@ impl TaskPool {
     {
         let run = Arc::new(internal::TaskRun::new(
             self.next_id.fetch_add(1, Ordering::SeqCst).into(),
-            self.metrics.clone(),
             self.commands.sender().clone(),
             future,
         ));
 
         run.wake_by_ref();
+        self.metrics.tasks().record_queued();
         Task { run }
     }
 }
