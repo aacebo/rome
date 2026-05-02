@@ -1,8 +1,6 @@
 mod command;
-mod metrics;
 
 pub use command::*;
-pub use metrics::*;
 
 use std::{
     sync::{
@@ -12,14 +10,17 @@ use std::{
     task::Wake,
 };
 
-use crate::{Task, internal};
+use crate::{
+    Task, internal,
+    metrics::{PoolMetrics, PoolMetricsSnapshot},
+};
 
 pub struct TaskPool {
     name: String,
     next_id: AtomicU64,
     capacity: usize,
     stopped: AtomicBool,
-    metrics: Arc<TaskPoolMetrics>,
+    metrics: Arc<PoolMetrics>,
     workers: Mutex<Vec<Arc<internal::Worker>>>,
     commands: internal::Channel<Command>,
 }
@@ -31,7 +32,7 @@ impl TaskPool {
             next_id: AtomicU64::new(0),
             capacity,
             stopped: AtomicBool::new(false),
-            metrics: Arc::new(TaskPoolMetrics::default()),
+            metrics: Arc::new(PoolMetrics::default()),
             workers: Mutex::new(vec![]),
             commands: internal::Channel::new(),
         }
@@ -45,8 +46,8 @@ impl TaskPool {
         self.capacity
     }
 
-    pub fn metrics(&self) -> &TaskPoolMetrics {
-        &self.metrics
+    pub fn metrics(&self) -> PoolMetricsSnapshot {
+        self.metrics.snapshot()
     }
 
     pub fn start(&self) {
@@ -94,7 +95,7 @@ impl TaskPool {
         ));
 
         run.wake_by_ref();
-        self.metrics.tasks().record_queued();
+        self.metrics.tasks.queued.increment();
         Task { run }
     }
 }

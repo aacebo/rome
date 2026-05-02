@@ -3,7 +3,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
-use crate::{Command, TaskPoolMetrics, TaskStatus};
+use crate::{Command, TaskStatus, metrics::PoolMetrics};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 enum ThreadStatus {
@@ -27,7 +27,7 @@ impl Worker {
     pub fn start(
         &self,
         pool: impl Into<String>,
-        metrics: Arc<TaskPoolMetrics>,
+        metrics: Arc<PoolMetrics>,
         commands: crossbeam::channel::Receiver<Command>,
     ) {
         let pool = pool.into();
@@ -45,46 +45,48 @@ impl Worker {
                 let _enter = span.enter();
 
                 tracing::debug!(target: "ayr::task::thread", "starting");
-                metrics.threads().record_spawned();
+                metrics.threads.spawned.increment();
 
                 loop {
                     let status = match commands.recv_timeout(std::time::Duration::from_millis(200)) {
                         Err(crossbeam::channel::RecvTimeoutError::Timeout) => {
                             if thread_status == ThreadStatus::Active {
                                 thread_status = ThreadStatus::Idle;
-                                metrics.threads().record_idle();
+                                metrics.threads.idle.increment();
                             }
 
                             continue;
                         },
                         Ok(Command::Stop(_)) | Err(_) => break,
                         Ok(Command::Spawn(timestamp, job)) => {
-                            metrics.tasks().record_spawned();
+                            metrics.tasks.spawned.increment();
                             metrics
-                                .latency()
-                                .record_spawn_time(std::time::Instant::now() - timestamp);
+                                .tasks
+                                .spawn_latency_ns
+                                .add((std::time::Instant::now() - timestamp).as_nanos() as u64);
                             job.run()
                         },
                         Ok(Command::Tick(timestamp, job)) => {
                             metrics
-                                .latency()
-                                .record_spawn_time(std::time::Instant::now() - timestamp);
+                                .tasks
+                                .spawn_latency_ns
+                                .add((std::time::Instant::now() - timestamp).as_nanos() as u64);
                             job.run()
                         }
                     };
 
                     if thread_status == ThreadStatus::Idle {
                         thread_status = ThreadStatus::Active;
-                        metrics.threads().record_active();
+                        metrics.threads.active.increment();
                     }
 
                     if status == TaskStatus::Complete {
-                        metrics.tasks().record_completed();
+                        metrics.tasks.completed.increment();
                     }
                 }
 
                 tracing::debug!(target: "ayr::task::thread", "exiting");
-                metrics.threads().record_dropped();
+                metrics.threads.dropped.increment();
             })
             .expect("failed to start task worker thread");
 
