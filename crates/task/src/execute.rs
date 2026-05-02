@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::{Task, TaskPool};
+use crate::{PoolConfig, Task, TaskPool};
 
 pub struct Executor {
     pools: Mutex<HashMap<String, Arc<TaskPool>>>,
@@ -16,17 +16,17 @@ impl Executor {
         }
     }
 
-    pub fn pool(&self, name: impl Into<String>) -> Arc<TaskPool> {
-        let name = name.into();
+    pub fn pool(&self, config: PoolConfig) -> Arc<TaskPool> {
         let mut pools = self.pools.lock().unwrap();
-        let max = std::thread::available_parallelism()
-            .map(|n| n.get())
-            .unwrap_or(1);
-        let capacity = max / pools.len().max(1);
-        let pool = Arc::new(TaskPool::new(name.clone(), capacity));
-        pool.start();
-        pools.insert(name, pool.clone());
-        pool
+
+        pools
+            .entry(config.name.clone())
+            .or_insert_with(|| {
+                let p = TaskPool::new(config);
+                p.start();
+                Arc::new(p)
+            })
+            .clone()
     }
 
     pub fn start(&self) {

@@ -88,15 +88,17 @@ where
 
         let status = self.status.swap(TaskStatus::Queued, Ordering::AcqRel);
 
-        // if parked, the task has never been queued/run
-        if status == TaskStatus::Parked {
-            let _ = self.commands.send(Command::spawn(self.clone()));
-        }
-
-        // mark as queued, if previous status was not queued
-        // then queue the task
-        if status != TaskStatus::Queued {
-            let _ = self.commands.send(Command::tick(self.clone()));
+        match status {
+            // never queued/run yet — initial dispatch
+            TaskStatus::Parked => {
+                let _ = self.commands.send(Command::spawn(self.clone()));
+            }
+            // running task got re-woken (Pending → wake) — re-poll it
+            TaskStatus::Running => {
+                let _ = self.commands.send(Command::tick(self.clone()));
+            }
+            // already in the queue (Queued) or already done (Complete) — no-op
+            TaskStatus::Queued | TaskStatus::Complete => {}
         }
     }
 }

@@ -1,29 +1,14 @@
+mod latency;
 mod pool;
 mod task;
 mod thread;
 
+pub use latency::*;
 pub use pool::*;
 pub use task::*;
 pub use thread::*;
 
 use std::sync::atomic::{AtomicU64, AtomicUsize, Ordering};
-
-pub enum MetricInt {
-    USize(MetricUSize),
-    U64(MetricU64),
-}
-
-impl From<MetricUSize> for MetricInt {
-    fn from(value: MetricUSize) -> Self {
-        Self::USize(value)
-    }
-}
-
-impl From<MetricU64> for MetricInt {
-    fn from(value: MetricU64) -> Self {
-        Self::U64(value)
-    }
-}
 
 pub struct MetricU64(AtomicU64);
 
@@ -158,38 +143,5 @@ impl std::fmt::Display for MetricUSize {
 impl std::fmt::Debug for MetricUSize {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", self.get())
-    }
-}
-
-#[derive(Debug, Default)]
-pub struct MetricAvg {
-    inner: MetricU64,
-    samples: MetricU64,
-}
-
-impl MetricAvg {
-    pub fn get(&self) -> u64 {
-        let total = self.inner.get();
-        let samples = self.samples.get();
-
-        if samples == 0 {
-            return 0;
-        }
-
-        total / samples
-    }
-
-    pub fn add(&self, value: u64) {
-        self.inner.add(value);
-        self.samples.increment();
-    }
-}
-
-impl From<MetricU64> for MetricAvg {
-    fn from(inner: MetricU64) -> Self {
-        Self {
-            inner,
-            samples: MetricU64::default(),
-        }
     }
 }

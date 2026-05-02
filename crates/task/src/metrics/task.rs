@@ -1,11 +1,11 @@
-use super::{MetricAvg, MetricU64};
+use super::{MetricLatency, MetricU64};
 
 #[derive(Debug, Default)]
 pub struct TaskMetrics {
     pub queued: MetricU64,
     pub spawned: MetricU64,
     pub completed: MetricU64,
-    pub spawn_latency_ns: MetricAvg,
+    pub spawn_latency_ns: MetricLatency,
 }
 
 impl TaskMetrics {

@@ -122,8 +122,7 @@ mod tests {
             .try_init();
 
         let ex = Executor::new();
-        let pool = ex.pool("main");
-
+        let pool = ex.pool(PoolConfig::new("main"));
         let task = ex.spawn("main", async { 12 });
         let out = task.await.unwrap();
         pool.stop();

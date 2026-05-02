@@ -1,6 +1,8 @@
 mod command;
+mod config;
 
 pub use command::*;
+pub use config::*;
 
 use std::{
     sync::{
@@ -16,9 +18,8 @@ use crate::{
 };
 
 pub struct TaskPool {
-    name: String,
     next_id: AtomicU64,
-    capacity: usize,
+    config: PoolConfig,
     stopped: AtomicBool,
     metrics: Arc<PoolMetrics>,
     workers: Mutex<Vec<Arc<internal::Worker>>>,
@@ -26,11 +27,10 @@ pub struct TaskPool {
 }
 
 impl TaskPool {
-    pub fn new(name: impl Into<String>, capacity: usize) -> Self {
-        TaskPool {
-            name: name.into(),
+    pub fn new(config: PoolConfig) -> Self {
+        Self {
             next_id: AtomicU64::new(0),
-            capacity,
+            config,
             stopped: AtomicBool::new(false),
             metrics: Arc::new(PoolMetrics::default()),
             workers: Mutex::new(vec![]),
@@ -39,11 +39,7 @@ impl TaskPool {
     }
 
     pub fn name(&self) -> &str {
-        &self.name
-    }
-
-    pub fn capacity(&self) -> usize {
-        self.capacity
+        &self.config.name
     }
 
     pub fn metrics(&self) -> PoolMetricsSnapshot {
@@ -57,15 +53,15 @@ impl TaskPool {
             return;
         }
 
-        for _ in 0..self.capacity {
-            let worker = Arc::new(internal::Worker::new());
-            worker.start(
-                &self.name,
-                self.metrics.clone(),
-                self.commands.receiver().clone(),
-            );
-            workers.push(worker);
-        }
+        let worker = Arc::new(internal::Worker::new());
+
+        worker.start(
+            self.name(),
+            self.metrics.clone(),
+            self.commands.receiver().clone(),
+        );
+
+        workers.push(worker);
     }
 
     pub fn stop(&self) {
