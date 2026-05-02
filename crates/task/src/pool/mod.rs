@@ -84,6 +84,12 @@ impl TaskPool {
     where
         T: Send + 'static,
     {
+        if std::time::Duration::from_nanos(self.metrics.tasks.spawn_latency_ns.get())
+            >= self.config.scale_up_latency
+        {
+            self.spawn_thread();
+        }
+
         let run = Arc::new(internal::TaskRun::new(
             self.next_id.fetch_add(1, Ordering::SeqCst).into(),
             self.commands.sender().clone(),
@@ -93,6 +99,18 @@ impl TaskPool {
         run.wake_by_ref();
         self.metrics.tasks.queued.increment();
         Task { run }
+    }
+
+    fn spawn_thread(&self) {
+        let worker = Arc::new(internal::Worker::new());
+
+        worker.start(
+            self.name(),
+            self.metrics.clone(),
+            self.commands.receiver().clone(),
+        );
+
+        self.workers.lock().unwrap().push(worker);
     }
 }
 

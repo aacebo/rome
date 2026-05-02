@@ -43,11 +43,12 @@ impl Worker {
                 let mut thread_status = ThreadStatus::Idle;
                 let span = tracing::debug_span!(target: "ayr::task::thread", "worker", thread_id = %thread_id);
                 let _enter = span.enter();
+                let mut idle_ticks = 0_u32;
 
                 tracing::debug!(target: "ayr::task::thread", "starting");
                 metrics.threads.spawned.increment();
 
-                loop {
+                while idle_ticks < 10 {
                     let status = match commands.recv_timeout(std::time::Duration::from_millis(200)) {
                         Err(crossbeam::channel::RecvTimeoutError::Timeout) => {
                             if thread_status == ThreadStatus::Active {
@@ -55,6 +56,7 @@ impl Worker {
                                 metrics.threads.idle.increment();
                             }
 
+                            idle_ticks += 1;
                             continue;
                         },
                         Ok(Command::Stop(_)) | Err(_) => break,
@@ -78,6 +80,7 @@ impl Worker {
                     if thread_status == ThreadStatus::Idle {
                         thread_status = ThreadStatus::Active;
                         metrics.threads.active.increment();
+                        idle_ticks = 0;
                     }
 
                     if status == TaskStatus::Complete {
