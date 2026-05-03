@@ -15,4 +15,4 @@ doctest = false
 workspace = true
 
 [dependencies]
-crossbeam = "0.8"
+crossbeam = { workspace = true }

@@ -16,7 +16,8 @@ repository = "https://www.github.com/aacebo/ayr"
 type_complexity = "allow"
 
 [workspace.dependencies]
-serde = { version = "1", features = ["rc", "derive"] }
+crossbeam = { version = "0.8" }
+serde = { version = "1" }
 
 [package]
 name = "ayr"
