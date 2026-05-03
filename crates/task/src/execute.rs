@@ -63,3 +63,9 @@ impl Drop for Executor {
         self.stop();
     }
 }
+
+impl Default for Executor {
+    fn default() -> Self {
+        Self::new()
+    }
+}

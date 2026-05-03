@@ -56,12 +56,6 @@ impl From<u64> for MetricU64 {
     }
 }
 
-impl Into<u64> for MetricU64 {
-    fn into(self) -> u64 {
-        self.get()
-    }
-}
-
 impl std::ops::Deref for MetricU64 {
     type Target = AtomicU64;
 
@@ -117,12 +111,6 @@ impl Default for MetricUSize {
 impl From<usize> for MetricUSize {
     fn from(value: usize) -> Self {
         Self(AtomicUsize::new(value))
-    }
-}
-
-impl Into<usize> for MetricUSize {
-    fn into(self) -> usize {
-        self.get()
     }
 }
 

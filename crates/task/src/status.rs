@@ -41,7 +41,7 @@ impl AtomicTaskStatus {
     }
 
     pub fn get(&self) -> TaskStatus {
-        self.load(Ordering::Acquire).into()
+        self.load(Ordering::Acquire)
     }
 
     pub fn set(&self, value: TaskStatus) {

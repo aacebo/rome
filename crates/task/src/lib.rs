@@ -110,16 +110,16 @@ mod tests {
 
     #[tokio::test]
     async fn should_have_value() {
-        use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
+        // use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
 
-        let _ = tracing_subscriber::fmt()
-            // .with_test_writer()
-            .with_env_filter(
-                EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("trace")),
-            )
-            .with_span_events(FmtSpan::CLOSE)
-            .with_thread_names(true)
-            .try_init();
+        // let _ = tracing_subscriber::fmt()
+        //     // .with_test_writer()
+        //     .with_env_filter(
+        //         EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("trace")),
+        //     )
+        //     .with_span_events(FmtSpan::CLOSE)
+        //     .with_thread_names(true)
+        //     .try_init();
 
         let ex = Executor::new();
         let pool = ex.pool(PoolConfig::new("main"));

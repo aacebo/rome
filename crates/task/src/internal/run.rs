@@ -138,7 +138,7 @@ where
         }
 
         let waker = waker_ref(&self);
-        let mut cx = Context::from_waker(&*waker);
+        let mut cx = Context::from_waker(&waker);
         let mut slot = self.future.lock().unwrap();
         let Some(future) = slot.as_mut() else {
             return status;
