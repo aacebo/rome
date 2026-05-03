@@ -1,4 +1,4 @@
-use ayr_diagnostic::{Diagnostic, Diagnostics};
+use ayr_diagnostic::Diagnostic;
 use ayr_state::Store;
 use ayr_task::Cancellation;
 use ayr_time::Tick;
@@ -8,7 +8,7 @@ use crate::world::World;
 pub struct Context<'a> {
     tick: Tick,
     store: &'a Store<World>,
-    diagnostics: Diagnostics,
+    diagnostics: Vec<Diagnostic>,
     cancellation: &'a Cancellation,
 }
 
@@ -17,7 +17,7 @@ impl<'a> Context<'a> {
         Self {
             tick,
             store,
-            diagnostics: Diagnostics::new(),
+            diagnostics: Vec::new(),
             cancellation,
         }
     }
@@ -40,7 +40,7 @@ impl<'a> Context<'a> {
     }
 
     pub fn emit(&mut self, diagnostic: impl Into<Diagnostic>) -> &mut Self {
-        self.diagnostics.write(diagnostic.into());
+        self.diagnostics.push(diagnostic.into());
         self
     }
 }
