@@ -24,7 +24,7 @@ impl ayr_state::Action for SpawnEntity {
 
         world.set(Entity {
             id,
-            parent_id: self.parent_id.clone(),
+            parent_id: self.parent_id,
             meta: self.meta.clone(),
             name: self.name.clone(),
             transform: self.transform,

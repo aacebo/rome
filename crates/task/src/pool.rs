@@ -7,7 +7,9 @@ use std::{
 };
 
 use crate::{
-    Command, PoolConfig, Task, internal,
+    Command, Task,
+    config::PoolConfig,
+    internal,
     metrics::{PoolMetrics, PoolMetricsSnapshot},
 };
 

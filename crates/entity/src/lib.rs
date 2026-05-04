@@ -1,13 +1,14 @@
 pub mod actions;
-mod context;
-mod meta;
-mod world;
+pub mod context;
+pub mod meta;
+pub mod prelude;
+pub mod world;
 
 use std::sync::Arc;
 
-pub use context::*;
-pub use meta::*;
-pub use world::*;
+pub use context::Context;
+pub use meta::Meta;
+pub use world::World;
 
 use ayr_math as math;
 

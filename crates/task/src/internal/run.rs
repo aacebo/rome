@@ -12,7 +12,10 @@ use futures::{
     task::{ArcWake, waker_ref},
 };
 
-use crate::{Async, AtomicTaskStatus, Command, TaskId, TaskStatus};
+use crate::{
+    Async, Command, TaskId,
+    status::{AtomicTaskStatus, TaskStatus},
+};
 
 pub(crate) struct TaskRun<T> {
     id: TaskId,
@@ -113,10 +116,10 @@ where
     }
 
     fn cancel(&self) {
-        if !self.aborted.swap(true, Ordering::Release) {
-            if let Some(waker) = self.waker.lock().unwrap().as_ref() {
-                waker.wake_by_ref();
-            }
+        let aborted = self.aborted.swap(true, Ordering::Release);
+
+        if !aborted && let Some(waker) = self.waker.lock().unwrap().as_ref() {
+            waker.wake_by_ref();
         }
     }
 

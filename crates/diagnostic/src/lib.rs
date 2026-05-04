@@ -1,11 +1,11 @@
-mod builder;
-mod severity;
+pub mod builder;
+pub mod prelude;
+pub mod severity;
 
-pub use builder::*;
-pub use severity::*;
+pub use severity::Severity;
 
-pub fn new() -> DiagnosticBuilder {
-    DiagnosticBuilder::new()
+pub fn new() -> builder::DiagnosticBuilder {
+    builder::DiagnosticBuilder::new()
 }
 
 #[derive(

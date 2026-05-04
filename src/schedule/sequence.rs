@@ -1,4 +1,5 @@
-use crate::{Context, Layer, Scheduler};
+use super::Scheduler;
+use crate::prelude::{Context, Layer};
 
 pub struct Sequence;
 

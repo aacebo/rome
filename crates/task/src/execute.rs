@@ -3,7 +3,7 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use crate::{PoolConfig, Task, TaskPool};
+use crate::{Task, config::PoolConfig, pool::TaskPool};
 
 pub struct Executor {
     pools: Mutex<HashMap<String, Arc<TaskPool>>>,

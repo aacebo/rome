@@ -1,10 +1,11 @@
-mod fixed;
-mod rate;
-mod tick;
+pub mod fixed;
+pub mod prelude;
+pub mod rate;
+pub mod tick;
 
-pub use fixed::*;
-pub use rate::*;
-pub use tick::*;
+pub use fixed::Fixed;
+pub use rate::Rate;
+pub use tick::Tick;
 
 /// Drives simulation tick timing for the runtime.
 ///

@@ -1,24 +1,21 @@
 #![feature(integer_atomics)]
 
-mod cancel;
-mod command;
-mod config;
-mod error;
-mod execute;
+pub mod cancel;
+pub mod command;
+pub mod config;
+pub mod error;
+pub mod execute;
 pub(crate) mod internal;
 pub mod metrics;
-mod pool;
-mod status;
+pub mod pool;
+pub mod prelude;
+pub mod status;
 
-pub use cancel::*;
-pub use command::*;
-pub use config::*;
-pub use error::*;
-pub use execute::*;
-pub use pool::*;
-pub use status::*;
+pub use command::Command;
 
 use std::sync::Arc;
+
+use crate::{cancel::Cancellation, error::TaskError, status::TaskStatus};
 
 pub trait Async: Send + Sync + 'static {
     fn is_cancelled(&self) -> bool;
@@ -96,7 +93,7 @@ where
 
 #[cfg(test)]
 mod tests {
-    use super::*;
+    use crate::prelude::*;
 
     #[tokio::test]
     async fn should_have_value() {

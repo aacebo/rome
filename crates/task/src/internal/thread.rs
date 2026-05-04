@@ -3,7 +3,7 @@ use std::sync::{
     atomic::{AtomicBool, Ordering},
 };
 
-use crate::{Command, TaskStatus, metrics::PoolMetrics};
+use crate::{Command, metrics::PoolMetrics, status::TaskStatus};
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq)]
 enum ThreadStatus {

@@ -1,4 +1,4 @@
-use crate::{Action, Next};
+use crate::{Action, action::Next};
 
 pub trait Trigger<TAction: Action>: Send + Sync + 'static {
     fn execute(&self, state: &TAction::State, action: &TAction, next: &Next<TAction::State>);
