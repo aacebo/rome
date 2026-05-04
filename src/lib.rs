@@ -7,6 +7,7 @@ pub use schedule::Scheduler;
 pub use state::Store;
 pub use task::*;
 pub use time::{Clock, Tick, TickId};
+pub use diagnostic::Diagnostic;
 
 pub mod diagnostic {
     pub use ayr_diagnostic::*;
