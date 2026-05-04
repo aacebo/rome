@@ -30,6 +30,7 @@ dependencies = [
  "ayr-state",
  "ayr-task",
  "ayr-time",
+ "crossbeam",
  "serde",
 ]
 

@@ -15,7 +15,8 @@ doctest = false
 workspace = true
 
 [dependencies]
-serde = { workspace = true, features = ["derive"] }
+crossbeam = { workspace = true }
+serde = { workspace = true, features = ["derive", "rc"] }
 ayr-diagnostic.path = "../diagnostic"
 ayr-math.path = "../math"
 ayr-state.path = "../state"

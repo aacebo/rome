@@ -8,7 +8,7 @@ use crate::world::World;
 pub struct Context<'a> {
     tick: Tick,
     store: &'a Store<World>,
-    diagnostics: Vec<Diagnostic>,
+    diagnostics: crossbeam::queue::SegQueue<Diagnostic>,
     cancellation: &'a Cancellation,
 }
 
@@ -17,7 +17,7 @@ impl<'a> Context<'a> {
         Self {
             tick,
             store,
-            diagnostics: Vec::new(),
+            diagnostics: crossbeam::queue::SegQueue::new(),
             cancellation,
         }
     }
@@ -39,7 +39,7 @@ impl<'a> Context<'a> {
         self.cancellation.cancel();
     }
 
-    pub fn emit(&mut self, diagnostic: impl Into<Diagnostic>) -> &mut Self {
+    pub fn emit(&self, diagnostic: impl Into<Diagnostic>) -> &Self {
         self.diagnostics.push(diagnostic.into());
         self
     }

@@ -1,6 +1,9 @@
+pub mod actions;
 mod context;
 mod meta;
 mod world;
+
+use std::sync::Arc;
 
 pub use context::*;
 pub use meta::*;
@@ -15,9 +18,9 @@ use ayr_math as math;
 pub trait Layer: Send + Sync + 'static {
     fn name(&self) -> &str;
 
-    fn on_start(&mut self, _ctx: &mut Context) {}
-    fn on_tick(&mut self, _ctx: &mut Context) {}
-    fn on_stop(&mut self, _ctx: &mut Context) {}
+    fn on_start(&mut self, _ctx: &Context) {}
+    fn on_tick(&mut self, _ctx: &Context) {}
+    fn on_stop(&mut self, _ctx: &Context) {}
 }
 
 /// A Facet represents a single, focused aspect of an Entity's state and behavior.
@@ -35,9 +38,24 @@ pub trait Layer: Send + Sync + 'static {
 pub trait Facet: Send + Sync + 'static {
     fn name(&self) -> &str;
 
-    fn on_create(&mut self, _ctx: &mut Context, _entity: &mut Entity) {}
-    fn on_update(&mut self, _ctx: &mut Context, _entity: &mut Entity) {}
-    fn on_delete(&mut self, _ctx: &mut Context, _entity: &mut Entity) {}
+    fn on_create(&mut self, _ctx: &Context, _entity: &mut Entity) {}
+    fn on_update(&mut self, _ctx: &Context, _entity: &mut Entity) {}
+    fn on_delete(&mut self, _ctx: &Context, _entity: &mut Entity) {}
+}
+
+impl std::fmt::Debug for dyn Facet {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "{:#?}", self.name())
+    }
+}
+
+impl serde::Serialize for dyn Facet {
+    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.name().serialize(s)
+    }
 }
 
 #[derive(
@@ -80,31 +98,6 @@ pub struct Entity {
     pub meta: Meta,
     pub name: String,
     pub transform: math::Transform,
+    pub facets: Vec<Arc<dyn Facet>>,
     pub children: Vec<EntityId>,
-    pub facets: Vec<Box<dyn Facet>>,
-}
-
-#[derive(Debug, serde::Serialize)]
-pub struct EntityDraft {
-    pub parent_id: Option<EntityId>,
-    pub meta: Meta,
-    pub name: String,
-    pub transform: math::Transform,
-    pub children: Vec<EntityId>,
-    pub facets: Vec<Box<dyn Facet>>,
-}
-
-impl serde::Serialize for dyn Facet {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.name().serialize(s)
-    }
-}
-
-impl std::fmt::Debug for dyn Facet {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:#?}", self.name())
-    }
 }
