@@ -37,6 +37,10 @@ impl<'a> Context<'a> {
 impl<'a> Drop for Context<'a> {
     fn drop(&mut self) {
         self.world.flush();
+
+        while let Some(diagnostic) = self.diagnostics.pop() {
+            println!("{}", diagnostic);
+        }
     }
 }
 

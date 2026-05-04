@@ -43,3 +43,30 @@ pub struct Diagnostic {
     pub children: Vec<Self>,
     pub timestamp: std::time::SystemTime,
 }
+
+impl Diagnostic {
+    fn fmt_indent(&self, f: &mut std::fmt::Formatter<'_>, depth: usize) -> std::fmt::Result {
+        for _ in 0..depth {
+            f.write_str("  ")?;
+        }
+
+        write!(f, "[{}]", self.severity)?;
+
+        if let Some(msg) = &self.message {
+            write!(f, " {}", msg)?;
+        }
+
+        for child in &self.children {
+            f.write_str("\n")?;
+            child.fmt_indent(f, depth + 1)?;
+        }
+
+        Ok(())
+    }
+}
+
+impl std::fmt::Display for Diagnostic {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        self.fmt_indent(f, 0)
+    }
+}
