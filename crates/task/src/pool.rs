@@ -1,9 +1,3 @@
-mod command;
-mod config;
-
-pub use command::*;
-pub use config::*;
-
 use std::{
     sync::{
         Arc, Mutex,
@@ -13,7 +7,7 @@ use std::{
 };
 
 use crate::{
-    Task, internal,
+    Command, PoolConfig, Task, internal,
     metrics::{PoolMetrics, PoolMetricsSnapshot},
 };
 

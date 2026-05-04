@@ -1,6 +1,8 @@
 #![feature(integer_atomics)]
 
 mod cancel;
+mod command;
+mod config;
 mod error;
 mod execute;
 pub(crate) mod internal;
@@ -9,6 +11,8 @@ mod pool;
 mod status;
 
 pub use cancel::*;
+pub use command::*;
+pub use config::*;
 pub use error::*;
 pub use execute::*;
 pub use pool::*;
