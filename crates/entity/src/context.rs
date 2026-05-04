@@ -1,24 +1,21 @@
 use ayr_diagnostic::Diagnostic;
 use ayr_state::Store;
-use ayr_task::Cancellation;
 use ayr_time::Tick;
 
 use crate::world::World;
 
 pub struct Context<'a> {
     tick: Tick,
-    store: &'a Store<World>,
+    world: &'a Store<World>,
     diagnostics: crossbeam::queue::SegQueue<Diagnostic>,
-    cancellation: &'a Cancellation,
 }
 
 impl<'a> Context<'a> {
-    pub fn new(tick: Tick, store: &'a Store<World>, cancellation: &'a Cancellation) -> Self {
+    pub fn new(tick: Tick, world: &'a Store<World>) -> Self {
         Self {
             tick,
-            store,
+            world,
             diagnostics: crossbeam::queue::SegQueue::new(),
-            cancellation,
         }
     }
 
@@ -31,14 +28,6 @@ impl<'a> Context<'a> {
         self.tick
     }
 
-    pub fn is_cancelled(&self) -> bool {
-        self.cancellation.is_cancelled()
-    }
-
-    pub fn cancel(&self) {
-        self.cancellation.cancel();
-    }
-
     pub fn emit(&self, diagnostic: impl Into<Diagnostic>) -> &Self {
         self.diagnostics.push(diagnostic.into());
         self
@@ -47,7 +36,7 @@ impl<'a> Context<'a> {
 
 impl<'a> Drop for Context<'a> {
     fn drop(&mut self) {
-        self.store.flush();
+        self.world.flush();
     }
 }
 
@@ -55,6 +44,6 @@ impl<'a> std::ops::Deref for Context<'a> {
     type Target = Store<World>;
 
     fn deref(&self) -> &Self::Target {
-        self.store
+        self.world
     }
 }

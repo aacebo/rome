@@ -18,19 +18,14 @@ pub use execute::*;
 pub use pool::*;
 pub use status::*;
 
-use std::{sync::Arc, task::Wake};
+use std::sync::Arc;
 
-pub trait Job: Send + Sync + 'static {
+pub trait Async: Send + Sync + 'static {
+    fn is_cancelled(&self) -> bool;
+    fn status(&self) -> TaskStatus;
+    fn cancel(&self);
     fn run(self: std::sync::Arc<Self>) -> TaskStatus;
 }
-
-// static GLOBAL: OnceLock<Arc<Executor>> = OnceLock::new();
-
-// fn global_runner() -> Arc<Executor> {
-//     GLOBAL
-//         .get_or_init(|| Arc::new(Executor::start()))
-//         .clone()
-// }
 
 #[derive(Debug, Copy, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct TaskId(u64);
@@ -61,17 +56,8 @@ impl<T> Task<T>
 where
     T: Send + 'static,
 {
-    pub fn is_complete(&self) -> bool {
-        self.run.status() == TaskStatus::Complete
-    }
-
-    pub fn is_cancelled(&self) -> bool {
-        self.run.is_cancelled()
-    }
-
-    pub fn cancel(&self) {
-        self.run.cancel();
-        self.run.wake_by_ref();
+    pub fn cancellation(&self) -> Cancellation {
+        Cancellation::from(self.run.clone())
     }
 }
 
@@ -114,17 +100,6 @@ mod tests {
 
     #[tokio::test]
     async fn should_have_value() {
-        // use tracing_subscriber::{EnvFilter, fmt::format::FmtSpan};
-
-        // let _ = tracing_subscriber::fmt()
-        //     // .with_test_writer()
-        //     .with_env_filter(
-        //         EnvFilter::try_from_default_env().unwrap_or_else(|_| EnvFilter::new("trace")),
-        //     )
-        //     .with_span_events(FmtSpan::CLOSE)
-        //     .with_thread_names(true)
-        //     .try_init();
-
         let ex = Executor::new();
         let pool = ex.pool(PoolConfig::new("main"));
         let task = ex.spawn("main", async { 12 });

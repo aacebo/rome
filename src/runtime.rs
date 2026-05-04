@@ -1,11 +1,10 @@
-use crate::{Cancellation, Clock, Context, Layer, Scheduler, Store, entity::World, schedule, time};
+use crate::{Clock, Context, Layer, Scheduler, Store, entity::World, schedule, time};
 
 pub struct Runtime {
     world: Store<World>,
     clock: Box<dyn Clock>,
     layers: Vec<Box<dyn Layer>>,
     scheduler: Box<dyn Scheduler>,
-    cancellation: Option<Cancellation>,
 }
 
 impl Runtime {
@@ -17,28 +16,17 @@ impl Runtime {
         &self.world
     }
 
-    pub fn cancel(&self) {
-        if let Some(cancellation) = &self.cancellation {
-            cancellation.cancel();
-        }
-    }
-
-    /// Start the runtime which will continue
-    /// until cancelled.
-    pub fn run(&mut self) {
-        let cancellation = Cancellation::default();
-        self.cancellation = Some(cancellation.clone());
-
+    pub fn run(&mut self, duration: std::time::Duration) {
+        let start = std::time::Instant::now();
         let mut last = std::time::Instant::now();
         let mut ctx = Context::new(
             self.clock.advance_by(std::time::Duration::ZERO),
             &self.world,
-            &cancellation,
         );
 
-        self.scheduler.on_start(&mut ctx, &mut self.layers);
+        self.scheduler.on_start(&ctx, &mut self.layers);
 
-        while !cancellation.is_cancelled() {
+        while duration > std::time::Instant::now().duration_since(start) {
             let now = std::time::Instant::now();
             let delta = now - last;
             let tick = self.clock.advance_by(delta);
@@ -47,18 +35,12 @@ impl Runtime {
             last = now;
 
             for _ in 0..tick.steps {
-                self.scheduler.on_tick(&mut ctx, &mut self.layers);
-
-                if cancellation.is_cancelled() {
-                    break;
-                }
-
+                self.scheduler.on_tick(&ctx, &mut self.layers);
                 self.clock.wait();
             }
         }
 
-        self.scheduler.on_stop(&mut ctx, &mut self.layers);
-        self.cancellation = None;
+        self.scheduler.on_stop(&ctx, &mut self.layers);
     }
 }
 
@@ -98,7 +80,6 @@ impl RuntimeBuilder {
             clock: self.clock,
             layers: self.layers,
             scheduler: self.scheduler,
-            cancellation: None,
         }
     }
 }

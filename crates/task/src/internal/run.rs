@@ -12,7 +12,7 @@ use futures::{
     task::{ArcWake, waker_ref},
 };
 
-use crate::{AtomicTaskStatus, Command, Job, TaskId, TaskStatus};
+use crate::{Async, AtomicTaskStatus, Command, TaskId, TaskStatus};
 
 pub(crate) struct TaskRun<T> {
     id: TaskId,
@@ -44,14 +44,6 @@ where
         }
     }
 
-    pub fn is_cancelled(&self) -> bool {
-        self.aborted.load(Ordering::Acquire)
-    }
-
-    pub fn status(&self) -> TaskStatus {
-        self.status.get()
-    }
-
     pub fn output(&self) -> Option<T> {
         self.output.lock().unwrap().take()
     }
@@ -63,10 +55,6 @@ where
     pub fn complete(&self, value: T) {
         *self.output.lock().unwrap() = Some(value);
         self.status.store(TaskStatus::Complete, Ordering::Release);
-    }
-
-    pub fn cancel(&self) {
-        self.aborted.store(true, Ordering::Release);
     }
 }
 
@@ -112,10 +100,26 @@ where
     }
 }
 
-impl<T> Job for TaskRun<T>
+impl<T> Async for TaskRun<T>
 where
     T: Send + 'static,
 {
+    fn is_cancelled(&self) -> bool {
+        self.aborted.load(Ordering::Acquire)
+    }
+
+    fn status(&self) -> TaskStatus {
+        self.status.get()
+    }
+
+    fn cancel(&self) {
+        if !self.aborted.swap(true, Ordering::Release) {
+            if let Some(waker) = self.waker.lock().unwrap().as_ref() {
+                waker.wake_by_ref();
+            }
+        }
+    }
+
     fn run(self: std::sync::Arc<Self>) -> TaskStatus {
         let status = self.status.swap(TaskStatus::Running, Ordering::AcqRel);
 

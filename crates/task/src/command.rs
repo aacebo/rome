@@ -1,11 +1,11 @@
 use std::sync::Arc;
 
-use crate::Job;
+use crate::Async;
 
 pub enum Command {
     Stop(std::time::Instant),
-    Spawn(std::time::Instant, Arc<dyn Job>),
-    Tick(std::time::Instant, Arc<dyn Job>),
+    Spawn(std::time::Instant, Arc<dyn Async>),
+    Tick(std::time::Instant, Arc<dyn Async>),
 }
 
 impl Command {
@@ -13,11 +13,11 @@ impl Command {
         Self::Stop(std::time::Instant::now())
     }
 
-    pub fn spawn(job: Arc<dyn Job>) -> Self {
+    pub fn spawn(job: Arc<dyn Async>) -> Self {
         Self::Spawn(std::time::Instant::now(), job)
     }
 
-    pub fn tick(job: Arc<dyn Job>) -> Self {
+    pub fn tick(job: Arc<dyn Async>) -> Self {
         Self::Tick(std::time::Instant::now(), job)
     }
 }

@@ -288,6 +288,8 @@ mod tests {
         let t2 = pool.spawn(async { 2_u32 });
         with_timeout(t2).await.expect("task failed");
 
+        wait_for_threads(&pool, before + 1).await;
+
         assert!(
             pool.metrics().threads.spawned > before,
             "expected scale-up: before={}, after={}",
