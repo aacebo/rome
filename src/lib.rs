@@ -4,6 +4,10 @@ pub mod schedule;
 
 pub use runtime::Runtime;
 
+pub mod core {
+    pub use ayr_core::*;
+}
+
 pub mod diagnostic {
     pub use ayr_diagnostic::*;
 }
