@@ -1,18 +1,20 @@
 use std::{any::TypeId, collections::HashMap, sync::RwLock};
 
-use super::{Action, Selector, Trigger, action::Next, trigger};
+use crate::state::{Selector, State, select::Select};
+
+use super::{Action, Trigger, action::Next, trigger};
 
 /// Central coordinator that owns state and processes actions.
 pub struct Store<TState: 'static> {
-    state: RwLock<TState>,
+    state: State<TState>,
     buffer: Next<TState>,
     triggers: RwLock<HashMap<TypeId, Vec<Box<dyn trigger::ErasedTrigger<TState>>>>>,
 }
 
 impl<TState: 'static> Store<TState> {
-    pub fn new(value: TState) -> Self {
+    pub fn new(state: TState) -> Self {
         Self {
-            state: RwLock::new(value),
+            state: State::new(state),
             buffer: Next::with_capacity(1024),
             triggers: RwLock::new(HashMap::new()),
         }
@@ -23,12 +25,11 @@ impl<TState: 'static> Store<TState> {
         self
     }
 
-    pub fn select<T, F>(&self, project: F) -> Selector<'_, TState, T>
+    pub fn select<T>(&self) -> Select<'_, TState, T>
     where
-        F: Fn(&TState) -> T + Send + Sync + 'static,
-        T: 'static,
+        T: Selector<TState>,
     {
-        Selector::map(self.state.read().unwrap(), project)
+        Select::from(self.state.as_ref())
     }
 
     /// Queue an action for application on the next `flush`. Blocks if the
@@ -58,23 +59,23 @@ impl<TState: 'static> Store<TState> {
     ///
     /// Concurrent flushes serialize behind the `RwLock` write guard —
     /// correct but wasteful; callers should typically have a single flusher.
-    pub fn flush(&self) {
+    pub fn flush(&mut self) {
         if self.buffer.is_empty() {
             return;
         }
 
-        let mut state = self.state.write().unwrap();
         let triggers = self.triggers.read().unwrap();
+        let mut tx = self.state.transact();
 
         while let drained = self.buffer.drain()
             && !drained.is_empty()
         {
             for action in &drained {
-                action.reduce(&mut state);
+                action.reduce(tx.as_mut());
 
                 if let Some(bucket) = triggers.get(&action.type_id()) {
                     for trigger in bucket {
-                        trigger.execute_erased(&*state, action.as_ref(), &self.buffer);
+                        trigger.execute_erased(tx.as_mut(), action.as_ref(), &self.buffer);
                     }
                 }
             }

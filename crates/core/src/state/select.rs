@@ -1,63 +1,41 @@
-use std::{cell::OnceCell, sync::RwLockReadGuard};
-
-/// Borrowed projection over the `Store`'s state, returned by
-/// [`Store::select`].
-pub struct Selector<'a, TState, TOut> {
-    state: RwLockReadGuard<'a, TState>,
-    output: OnceCell<TOut>,
-    project: Box<dyn Fn(&TState) -> TOut>,
+/// Used to access/extract a slice of
+/// [`TState`] in a safe immutable way.
+pub trait Selector<TState> {
+    fn select(state: &TState) -> &Self;
 }
 
-impl<'a, TState, TOut> Selector<'a, TState, TOut> {
-    pub fn map(
-        state: RwLockReadGuard<'a, TState>,
-        project: impl Fn(&TState) -> TOut + 'static,
-    ) -> Self {
+pub struct Select<'a, TState, T>
+where
+    T: Selector<TState>,
+{
+    out: &'a T,
+
+    __marker__: std::marker::PhantomData<TState>,
+}
+
+impl<'a, TState, T> From<&'a TState> for Select<'a, TState, T>
+where
+    TState: 'static,
+    T: Selector<TState>,
+{
+    fn from(state: &'a TState) -> Self {
+        let out = T::select(state);
+
         Self {
-            state,
-            output: OnceCell::new(),
-            project: Box::new(project),
+            out,
+            __marker__: std::marker::PhantomData,
         }
     }
 }
 
-impl<'a, TState, TOut, TOther> PartialEq<TOther> for Selector<'a, TState, TOut>
+impl<'a, TState, T> std::ops::Deref for Select<'a, TState, T>
 where
-    TOut: PartialEq<TOther>,
+    TState: 'static,
+    T: Selector<TState>,
 {
-    fn eq(&self, other: &TOther) -> bool {
-        self.as_ref().eq(other)
-    }
-}
-
-impl<'a, TState, TOut> std::fmt::Debug for Selector<'a, TState, TOut>
-where
-    TOut: std::fmt::Debug,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.as_ref().fmt(f)
-    }
-}
-
-impl<'a, TState, TOut> std::fmt::Display for Selector<'a, TState, TOut>
-where
-    TOut: std::fmt::Display,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        self.as_ref().fmt(f)
-    }
-}
-
-impl<'a, TState, TOut> std::ops::Deref for Selector<'a, TState, TOut> {
-    type Target = TOut;
+    type Target = T;
 
     fn deref(&self) -> &Self::Target {
-        self.as_ref()
-    }
-}
-
-impl<'a, TState, TOut> AsRef<TOut> for Selector<'a, TState, TOut> {
-    fn as_ref(&self) -> &TOut {
-        self.output.get_or_init(|| (self.project)(&self.state))
+        self.out
     }
 }

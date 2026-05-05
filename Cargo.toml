@@ -40,7 +40,3 @@ ayr-core.path = "./crates/core"
 ayr-diagnostic.path = "./crates/diagnostic"
 ayr-task.path = "./crates/task"
 ayr-time.path = "./crates/time"
-
-[[bench]]
-name = "store_flush"
-path = "benches/store_flush.rs"

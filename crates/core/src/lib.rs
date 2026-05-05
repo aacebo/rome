@@ -24,7 +24,7 @@ pub trait Scene: Send + Sync + std::any::Any {
     fn on_enter(&mut self, _ctx: &Context) {}
 
     /// Called before rendering.
-    fn on_render(&mut self, _ctx: &Context) {}
+    fn on_tick(&mut self, _ctx: &Context) {}
 
     /// Called when the scene is exited/stopped.
     fn on_exit(&mut self, _ctx: &Context) {}

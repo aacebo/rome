@@ -5,12 +5,12 @@ use crate::{state::Store, world::World};
 
 pub struct Context<'a> {
     tick: Tick,
-    world: &'a Store<World>,
+    world: &'a mut Store<World>,
     diagnostics: crossbeam::queue::SegQueue<Diagnostic>,
 }
 
 impl<'a> Context<'a> {
-    pub fn new(tick: Tick, world: &'a Store<World>) -> Self {
+    pub fn new(tick: Tick, world: &'a mut Store<World>) -> Self {
         Self {
             tick,
             world,
@@ -33,20 +33,16 @@ impl<'a> Context<'a> {
     }
 }
 
-impl<'a> Drop for Context<'a> {
-    fn drop(&mut self) {
-        self.world.flush();
-
-        while let Some(diagnostic) = self.diagnostics.pop() {
-            println!("{}", diagnostic);
-        }
-    }
-}
-
 impl<'a> std::ops::Deref for Context<'a> {
     type Target = Store<World>;
 
     fn deref(&self) -> &Self::Target {
         self.world
+    }
+}
+
+impl<'a> std::ops::DerefMut for Context<'a> {
+    fn deref_mut(&mut self) -> &mut Self::Target {
+        &mut self.world
     }
 }

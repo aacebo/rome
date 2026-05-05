@@ -21,10 +21,10 @@ impl Runtime {
         let mut last = std::time::Instant::now();
         let mut ctx = Context::new(
             self.clock.advance_by(std::time::Duration::ZERO),
-            &self.world,
+            &mut self.world,
         );
 
-        self.scheduler.on_start(&ctx, &mut self.scenes);
+        self.scheduler.on_start(&mut ctx, &mut self.scenes);
 
         while duration > std::time::Instant::now().duration_since(start) {
             let now = std::time::Instant::now();
@@ -35,12 +35,12 @@ impl Runtime {
             last = now;
 
             for _ in 0..tick.steps {
-                self.scheduler.on_tick(&ctx, &mut self.scenes);
+                self.scheduler.on_tick(&mut ctx, &mut self.scenes);
                 self.clock.wait();
             }
         }
 
-        self.scheduler.on_stop(&ctx, &mut self.scenes);
+        self.scheduler.on_stop(&mut ctx, &mut self.scenes);
     }
 }
 
