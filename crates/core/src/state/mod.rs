@@ -1,17 +1,16 @@
 pub mod action;
-pub mod prelude;
 pub mod select;
 pub mod store;
 pub mod trigger;
 
-pub use action::Action;
+pub use action::{Action, Next};
 pub use select::Selector;
 pub use store::Store;
 pub use trigger::Trigger;
 
 #[cfg(test)]
 mod tests {
-    use crate::prelude::*;
+    use super::*;
 
     #[derive(Clone, Default, Debug, PartialEq)]
     struct UserState {

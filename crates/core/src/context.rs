@@ -1,8 +1,7 @@
 use ayr_diagnostic::Diagnostic;
-use ayr_state::Store;
 use ayr_time::Tick;
 
-use crate::world::World;
+use crate::{state::Store, world::World};
 
 pub struct Context<'a> {
     tick: Tick,

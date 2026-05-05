@@ -2,7 +2,7 @@ mod sequence;
 
 pub use sequence::*;
 
-use crate::prelude::{Context, Layer};
+use crate::prelude::{Context, Scene};
 
 /// Schedules world-layer execution for an engine.
 ///
@@ -15,7 +15,7 @@ use crate::prelude::{Context, Layer};
 /// a mutable [`context::Context`], which provides access to the active world
 /// and any engine-scoped services needed during a tick.
 pub trait Scheduler: Send + Sync + 'static {
-    fn on_start(&mut self, _ctx: &Context, _layers: &mut [Box<dyn Layer>]) {}
-    fn on_tick(&mut self, ctx: &Context, layers: &mut [Box<dyn Layer>]);
-    fn on_stop(&mut self, _ctx: &Context, _layers: &mut [Box<dyn Layer>]) {}
+    fn on_start(&mut self, _ctx: &Context, _scenes: &mut [Box<dyn Scene>]) {}
+    fn on_tick(&mut self, ctx: &Context, _scenes: &mut [Box<dyn Scene>]);
+    fn on_stop(&mut self, _ctx: &Context, _scenes: &mut [Box<dyn Scene>]) {}
 }

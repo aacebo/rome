@@ -15,4 +15,8 @@ doctest = false
 workspace = true
 
 [dependencies]
+crossbeam = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }
+ayr-diagnostic.path = "../diagnostic"
+ayr-task.path = "../task"
+ayr-time.path = "../time"

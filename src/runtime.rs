@@ -1,9 +1,9 @@
-use crate::{prelude::*, schedule, time};
+use crate::{Scene, prelude::*, schedule, state::Store, time};
 
 pub struct Runtime {
     world: Store<World>,
     clock: Box<dyn Clock>,
-    layers: Vec<Box<dyn Layer>>,
+    scenes: Vec<Box<dyn Scene>>,
     scheduler: Box<dyn Scheduler>,
 }
 
@@ -24,7 +24,7 @@ impl Runtime {
             &self.world,
         );
 
-        self.scheduler.on_start(&ctx, &mut self.layers);
+        self.scheduler.on_start(&ctx, &mut self.scenes);
 
         while duration > std::time::Instant::now().duration_since(start) {
             let now = std::time::Instant::now();
@@ -35,18 +35,18 @@ impl Runtime {
             last = now;
 
             for _ in 0..tick.steps {
-                self.scheduler.on_tick(&ctx, &mut self.layers);
+                self.scheduler.on_tick(&ctx, &mut self.scenes);
                 self.clock.wait();
             }
         }
 
-        self.scheduler.on_stop(&ctx, &mut self.layers);
+        self.scheduler.on_stop(&ctx, &mut self.scenes);
     }
 }
 
 pub struct RuntimeBuilder {
     clock: Box<dyn Clock>,
-    layers: Vec<Box<dyn Layer>>,
+    scenes: Vec<Box<dyn Scene>>,
     scheduler: Box<dyn Scheduler>,
 }
 
@@ -54,7 +54,7 @@ impl RuntimeBuilder {
     pub fn new() -> Self {
         Self {
             clock: Box::new(time::Fixed::new(60)),
-            layers: vec![],
+            scenes: vec![],
             scheduler: Box::new(schedule::Sequence),
         }
     }
@@ -69,8 +69,8 @@ impl RuntimeBuilder {
         self
     }
 
-    pub fn layer(mut self, layer: impl Layer) -> Self {
-        self.layers.push(Box::new(layer));
+    pub fn layer(mut self, scene: impl Scene) -> Self {
+        self.scenes.push(Box::new(scene));
         self
     }
 
@@ -78,7 +78,7 @@ impl RuntimeBuilder {
         Runtime {
             world: Store::new(World::new()),
             clock: self.clock,
-            layers: self.layers,
+            scenes: self.scenes,
             scheduler: self.scheduler,
         }
     }

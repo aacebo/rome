@@ -1,26 +1,26 @@
 use super::Scheduler;
-use crate::prelude::{Context, Layer};
+use crate::prelude::{Context, Scene};
 
 pub struct Sequence;
 
 impl Scheduler for Sequence {
-    fn on_start(&mut self, ctx: &Context, layers: &mut [Box<dyn Layer>]) {
-        for layer in layers {
-            layer.on_start(ctx);
+    fn on_start(&mut self, ctx: &Context, _scenes: &mut [Box<dyn Scene>]) {
+        for layer in _scenes {
+            layer.on_enter(ctx);
             ctx.flush();
         }
     }
 
-    fn on_tick(&mut self, ctx: &Context, layers: &mut [Box<dyn Layer>]) {
-        for layer in layers.iter_mut() {
-            layer.on_tick(ctx);
+    fn on_tick(&mut self, ctx: &Context, _scenes: &mut [Box<dyn Scene>]) {
+        for layer in _scenes.iter_mut() {
+            layer.on_render(ctx);
             ctx.flush();
         }
     }
 
-    fn on_stop(&mut self, ctx: &Context, layers: &mut [Box<dyn Layer>]) {
-        for layer in layers {
-            layer.on_stop(ctx);
+    fn on_stop(&mut self, ctx: &Context, _scenes: &mut [Box<dyn Scene>]) {
+        for layer in _scenes {
+            layer.on_exit(ctx);
             ctx.flush();
         }
     }

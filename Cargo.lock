@@ -8,9 +8,6 @@ version = "0.0.0"
 dependencies = [
  "ayr-core",
  "ayr-diagnostic",
- "ayr-entity",
- "ayr-math",
- "ayr-state",
  "ayr-task",
  "ayr-time",
 ]
@@ -19,6 +16,10 @@ dependencies = [
 name = "ayr-core"
 version = "0.0.0"
 dependencies = [
+ "ayr-diagnostic",
+ "ayr-task",
+ "ayr-time",
+ "crossbeam",
  "serde",
 ]
 
@@ -27,33 +28,6 @@ name = "ayr-diagnostic"
 version = "0.0.0"
 dependencies = [
  "serde",
-]
-
-[[package]]
-name = "ayr-entity"
-version = "0.0.0"
-dependencies = [
- "ayr-diagnostic",
- "ayr-math",
- "ayr-state",
- "ayr-task",
- "ayr-time",
- "crossbeam",
- "serde",
-]
-
-[[package]]
-name = "ayr-math"
-version = "0.0.0"
-dependencies = [
- "serde",
-]
-
-[[package]]
-name = "ayr-state"
-version = "0.0.0"
-dependencies = [
- "crossbeam",
 ]
 
 [[package]]

@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{Entity, EntityId};
+use crate::{Node, NodeId};
 
 #[derive(
     Debug,
@@ -27,8 +27,8 @@ impl WorldId {
 #[derive(Debug, Default, serde::Serialize)]
 pub struct World {
     id: WorldId,
-    entity_id: EntityId,
-    items: BTreeMap<EntityId, Entity>,
+    node_id: NodeId,
+    items: BTreeMap<NodeId, Node>,
 }
 
 impl World {
@@ -48,37 +48,37 @@ impl World {
         self.items.len()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &Entity> {
+    pub fn iter(&self) -> impl Iterator<Item = &Node> {
         self.items.values()
     }
 
-    pub fn has(&self, id: &EntityId) -> bool {
+    pub fn has(&self, id: &NodeId) -> bool {
         self.items.contains_key(id)
     }
 
-    pub fn get(&self, id: &EntityId) -> Option<&Entity> {
+    pub fn get(&self, id: &NodeId) -> Option<&Node> {
         self.items.get(id)
     }
 
-    pub fn get_mut(&mut self, id: &EntityId) -> Option<&mut Entity> {
+    pub fn get_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
         self.items.get_mut(id)
     }
 
-    pub fn set(&mut self, entity: Entity) {
-        self.items.insert(entity.id, entity);
+    pub fn set(&mut self, node: Node) {
+        self.items.insert(node.id, node);
     }
 
-    pub fn del(&mut self, id: &EntityId) {
+    pub fn del(&mut self, id: &NodeId) {
         self.items.remove(id);
     }
 
-    pub fn take(&mut self, id: &EntityId) -> Option<Entity> {
+    pub fn take(&mut self, id: &NodeId) -> Option<Node> {
         self.items.remove(id)
     }
 
-    pub fn next_id(&mut self) -> EntityId {
-        let id = self.entity_id;
-        self.entity_id = self.entity_id.next();
+    pub fn next_id(&mut self) -> NodeId {
+        let id = self.node_id;
+        self.node_id = self.node_id.next();
         id
     }
 }
