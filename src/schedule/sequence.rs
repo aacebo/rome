@@ -4,23 +4,23 @@ use crate::prelude::{Context, Scene};
 pub struct Sequence;
 
 impl Scheduler for Sequence {
-    fn on_start(&mut self, ctx: &mut Context, _scenes: &mut [Box<dyn Scene>]) {
-        for layer in _scenes {
-            layer.on_enter(ctx);
+    fn on_start(&mut self, ctx: &mut Context, scenes: &mut [Box<dyn Scene>]) {
+        for scene in scenes {
+            scene.on_enter(ctx);
             ctx.flush();
         }
     }
 
-    fn on_tick(&mut self, ctx: &mut Context, _scenes: &mut [Box<dyn Scene>]) {
-        for layer in _scenes.iter_mut() {
-            layer.on_tick(ctx);
+    fn on_tick(&mut self, ctx: &mut Context, scenes: &mut [Box<dyn Scene>]) {
+        for scene in scenes.iter_mut() {
+            scene.on_tick(ctx);
             ctx.flush();
         }
     }
 
-    fn on_stop(&mut self, ctx: &mut Context, _scenes: &mut [Box<dyn Scene>]) {
-        for layer in _scenes {
-            layer.on_exit(ctx);
+    fn on_stop(&mut self, ctx: &mut Context, scenes: &mut [Box<dyn Scene>]) {
+        for scene in scenes {
+            scene.on_exit(ctx);
             ctx.flush();
         }
     }
