@@ -35,8 +35,13 @@ doctest = false
 [lints]
 workspace = true
 
+[features]
+default = ["derive"]
+derive = ["ayr-derive"]
+
 [dependencies]
 ayr-core.path = "./crates/core"
 ayr-diagnostic.path = "./crates/diagnostic"
 ayr-task.path = "./crates/task"
 ayr-time.path = "./crates/time"
+ayr-derive = { path = "./crates/derive", optional = true }

@@ -5,6 +5,11 @@ pub mod schedule;
 pub use ayr_core::*;
 pub use runtime::Runtime;
 
+#[cfg(feature = "derive")]
+pub mod derive {
+    pub use ayr_derive::*;
+}
+
 pub mod diagnostic {
     pub use ayr_diagnostic::*;
 }

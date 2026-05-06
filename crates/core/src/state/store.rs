@@ -8,7 +8,7 @@ use super::{Action, Trigger, action::Next, trigger};
 pub struct Store<TState: 'static> {
     state: State<TState>,
     buffer: Next<TState>,
-    triggers: RwLock<HashMap<TypeId, Vec<Box<dyn trigger::ErasedTrigger<TState>>>>>,
+    triggers: RwLock<HashMap<TypeId, Vec<Box<dyn trigger::AnyTrigger<TState>>>>>,
 }
 
 impl<TState: 'static> Store<TState> {

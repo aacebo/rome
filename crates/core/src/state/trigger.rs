@@ -14,7 +14,7 @@ where
     }
 }
 
-pub(super) trait ErasedTrigger<TState>: Send + Sync + 'static {
+pub(super) trait AnyTrigger<TState>: Send + Sync + 'static {
     fn execute_erased(
         &self,
         state: &TState,
@@ -46,7 +46,7 @@ where
     }
 }
 
-impl<TAction, T> ErasedTrigger<TAction::State> for TriggerGuard<TAction, T>
+impl<TAction, T> AnyTrigger<TAction::State> for TriggerGuard<TAction, T>
 where
     TAction: Action,
     T: Trigger<TAction>,
