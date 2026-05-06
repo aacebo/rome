@@ -56,26 +56,22 @@ impl<TState: 'static> Store<TState> {
     }
 
     /// Drain queued actions and apply them in order to the current state.
-    ///
-    /// Concurrent flushes serialize behind the `RwLock` write guard —
-    /// correct but wasteful; callers should typically have a single flusher.
     pub fn flush(&mut self) {
         if self.buffer.is_empty() {
             return;
         }
 
         let triggers = self.triggers.read().unwrap();
-        let mut tx = self.state.transact();
 
         while let drained = self.buffer.drain()
             && !drained.is_empty()
         {
             for action in &drained {
-                action.reduce(tx.as_mut());
+                action.reduce(self.state.as_mut());
 
                 if let Some(bucket) = triggers.get(&action.type_id()) {
                     for trigger in bucket {
-                        trigger.execute_erased(tx.as_mut(), action.as_ref(), &self.buffer);
+                        trigger.execute_erased(self.state.as_mut(), action.as_ref(), &self.buffer);
                     }
                 }
             }

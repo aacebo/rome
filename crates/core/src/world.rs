@@ -1,6 +1,6 @@
 use std::collections::BTreeMap;
 
-use crate::{Node, NodeId};
+use crate::{Node, NodeId, state::State};
 
 #[derive(
     Debug,
@@ -28,7 +28,7 @@ impl WorldId {
 pub struct World {
     id: WorldId,
     node_id: NodeId,
-    items: BTreeMap<NodeId, Node>,
+    items: BTreeMap<NodeId, State<Node>>,
 }
 
 impl World {
@@ -49,34 +49,37 @@ impl World {
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &Node> {
-        self.items.values()
+        self.items.values().map(|v| v.as_ref())
     }
 
-    pub fn has(&self, id: &NodeId) -> bool {
+    pub fn exists(&self, id: &NodeId) -> bool {
         self.items.contains_key(id)
     }
 
     pub fn get(&self, id: &NodeId) -> Option<&Node> {
-        self.items.get(id)
+        match self.items.get(id) {
+            None => None,
+            Some(v) => Some(v.as_ref()),
+        }
     }
 
     pub fn get_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
-        self.items.get_mut(id)
+        match self.items.get_mut(id) {
+            None => None,
+            Some(v) => Some(v.as_mut()),
+        }
     }
 
-    pub fn set(&mut self, node: Node) {
-        self.items.insert(node.id, node);
+    pub fn spawn(&mut self, mut node: Node) {
+        node.id = self.next_id();
+        self.items.insert(node.id, node.into());
     }
 
-    pub fn del(&mut self, id: &NodeId) {
-        self.items.remove(id);
+    pub fn destroy(&mut self, id: &NodeId) -> Option<Node> {
+        self.items.remove(id).map(|v| v.take())
     }
 
-    pub fn take(&mut self, id: &NodeId) -> Option<Node> {
-        self.items.remove(id)
-    }
-
-    pub fn next_id(&mut self) -> NodeId {
+    fn next_id(&mut self) -> NodeId {
         let id = self.node_id;
         self.node_id = self.node_id.next();
         id

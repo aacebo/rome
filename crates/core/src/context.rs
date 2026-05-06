@@ -43,6 +43,6 @@ impl<'a> std::ops::Deref for Context<'a> {
 
 impl<'a> std::ops::DerefMut for Context<'a> {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.world
+        self.world
     }
 }

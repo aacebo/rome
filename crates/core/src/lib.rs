@@ -5,17 +5,10 @@ pub mod view;
 pub mod world;
 
 pub use context::Context;
+pub use view::Style;
 pub use world::World;
 
 use std::sync::Arc;
-
-// pub trait Surface: Send + Sync + std::any::Any {
-//     fn name(&self) -> &str;
-
-//     fn on_start(&mut self, _ctx: &Context) {}
-//     fn on_tick(&mut self, _ctx: &Context) {}
-//     fn on_stop(&mut self, _ctx: &Context) {}
-// }
 
 pub trait Scene: Send + Sync + std::any::Any {
     fn name(&self) -> &'static str;
@@ -28,60 +21,53 @@ pub trait Scene: Send + Sync + std::any::Any {
 
     /// Called when the scene is exited/stopped.
     fn on_exit(&mut self, _ctx: &Context) {}
-
-    /// Lookup a node in the scene.
-    fn get(&self, id: &NodeId) -> Option<&Node>;
-
-    /// Spawn/add a node to the scene.
-    fn spawn(&mut self, node: Node) -> NodeId;
-
-    /// Destroy/remove a node from the scene.
-    fn destroy(&mut self, id: &NodeId) -> Option<Node>;
 }
 
-pub trait Entity: Send + Sync + std::any::Any {
+pub trait Entity<TScene>: Send + Sync + std::any::Any
+where
+    TScene: Scene,
+{
     fn name(&self) -> &str;
 
-    fn on_spawn(&mut self, _ctx: &Context) {}
-    fn on_change(&mut self, _ctx: &Context) {}
-    fn on_destroy(&mut self, _ctx: &Context) {}
+    fn on_spawn(&mut self, _ctx: &Context, _scene: &mut TScene) {}
+    fn on_change(&mut self, _ctx: &Context, _scene: &mut TScene) {}
+    fn on_destroy(&mut self, _ctx: &Context, _scene: &mut TScene) {}
 }
 
-pub trait Attribute: Send + Sync + std::any::Any {
+pub trait AnyEntity: Send + Sync + std::any::Any {
     fn name(&self) -> &str;
 
-    fn on_spawn(&mut self, _ctx: &Context, _node: &mut Node) {}
-    fn on_change(&mut self, _ctx: &Context, _node: &mut Node) {}
-    fn on_destroy(&mut self, _ctx: &Context, _node: &mut Node) {}
+    fn on_spawn(&mut self, _ctx: &Context, _scene: &dyn Scene) {}
+    fn on_change(&mut self, _ctx: &Context, _scene: &dyn Scene) {}
+    fn on_destroy(&mut self, _ctx: &Context, _scene: &dyn Scene) {}
 }
 
-impl std::fmt::Debug for dyn Attribute {
+pub trait Attribute<TEntity>: Send + Sync + std::any::Any
+where
+    TEntity: AnyEntity,
+{
+    fn name(&self) -> &str;
+
+    fn on_spawn(&mut self, _ctx: &Context, _entity: &mut TEntity) {}
+    fn on_change(&mut self, _ctx: &Context, _entity: &mut TEntity) {}
+    fn on_destroy(&mut self, _ctx: &Context, _entity: &mut TEntity) {}
+}
+
+pub trait AnyAttribute: Send + Sync + std::any::Any {
+    fn name(&self) -> &str;
+
+    fn on_spawn(&mut self, _ctx: &Context, _entity: &dyn AnyEntity) {}
+    fn on_change(&mut self, _ctx: &Context, _entity: &dyn AnyEntity) {}
+    fn on_destroy(&mut self, _ctx: &Context, _entity: &dyn AnyEntity) {}
+}
+
+impl std::fmt::Debug for dyn AnyAttribute {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{:#?}", self.name())
     }
 }
 
-impl serde::Serialize for dyn Attribute {
-    fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
-    where
-        S: serde::Serializer,
-    {
-        self.name().serialize(s)
-    }
-}
-
-pub trait Style {
-    fn name(&self) -> &'static str;
-    fn apply(&self, node: &mut Node);
-}
-
-impl std::fmt::Debug for dyn Style {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{:#?}", self.name())
-    }
-}
-
-impl serde::Serialize for dyn Style {
+impl serde::Serialize for dyn AnyAttribute {
     fn serialize<S>(&self, s: S) -> Result<S::Ok, S::Error>
     where
         S: serde::Serializer,
@@ -115,9 +101,8 @@ impl NodeId {
 #[derive(Debug, Clone, serde::Serialize)]
 pub struct Node {
     pub id: NodeId,
-    pub version: u32,
     pub name: String,
     pub styles: Vec<Arc<dyn Style>>,
-    pub attributes: Vec<Arc<dyn Attribute>>,
+    pub attributes: Vec<Arc<dyn AnyAttribute>>,
     pub children: Vec<NodeId>,
 }
