@@ -71,7 +71,7 @@ impl<TState: 'static> Store<TState> {
 
                 if let Some(bucket) = triggers.get(&action.type_id()) {
                     for trigger in bucket {
-                        trigger.execute_erased(self.state.as_mut(), action.as_ref(), &self.buffer);
+                        trigger.execute(self.state.as_mut(), action.as_ref(), &self.buffer);
                     }
                 }
             }

@@ -1,6 +1,6 @@
-use std::collections::BTreeMap;
+use std::{collections::BTreeMap, sync::Arc};
 
-use crate::{Node, NodeId, state::State};
+use crate::{Entity, NodeId, state::State};
 
 #[derive(
     Debug,
@@ -28,7 +28,7 @@ impl WorldId {
 pub struct World {
     id: WorldId,
     node_id: NodeId,
-    nodes: BTreeMap<NodeId, State<Node>>,
+    nodes: BTreeMap<NodeId, State<Arc<dyn Entity>>>,
 }
 
 impl World {
@@ -48,34 +48,28 @@ impl World {
         self.nodes.len()
     }
 
-    pub fn iter(&self) -> impl Iterator<Item = &Node> {
-        self.nodes.values().map(|v| v.as_ref())
+    pub fn iter(&self) -> impl Iterator<Item = &dyn Entity> {
+        self.nodes.values().map(|v| v.as_ref().as_ref())
     }
 
     pub fn exists(&self, id: &NodeId) -> bool {
         self.nodes.contains_key(id)
     }
 
-    pub fn get(&self, id: &NodeId) -> Option<&Node> {
+    pub fn get(&self, id: &NodeId) -> Option<&dyn Entity> {
         match self.nodes.get(id) {
             None => None,
-            Some(v) => Some(v.as_ref()),
+            Some(v) => Some(v.as_ref().as_ref()),
         }
     }
 
-    pub fn get_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
-        match self.nodes.get_mut(id) {
-            None => None,
-            Some(v) => Some(v.as_mut()),
-        }
+    pub fn spawn<TEntity: Entity>(&mut self, entity: TEntity) -> NodeId {
+        let id = self.next_id();
+        self.nodes.insert(id, State::new(Arc::new(entity)));
+        id
     }
 
-    pub fn spawn(&mut self, mut node: Node) {
-        node.id = self.next_id();
-        self.nodes.insert(node.id, node.into());
-    }
-
-    pub fn destroy(&mut self, id: &NodeId) -> Option<Node> {
+    pub fn destroy(&mut self, id: &NodeId) -> Option<Arc<dyn Entity>> {
         self.nodes.remove(id).map(|v| v.take())
     }
 

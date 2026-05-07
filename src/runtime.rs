@@ -1,9 +1,9 @@
-use crate::{Scene, prelude::*, schedule, state::Store, time};
+use crate::{prelude::*, schedule, state::Store, time};
 
 pub struct Runtime {
     world: Store<World>,
     clock: Box<dyn Clock>,
-    scenes: Vec<Box<dyn Scene>>,
+    layers: Vec<Box<dyn Layer>>,
     scheduler: Box<dyn Scheduler>,
 }
 
@@ -24,7 +24,7 @@ impl Runtime {
             &mut self.world,
         );
 
-        self.scheduler.on_start(&mut ctx, &mut self.scenes);
+        self.scheduler.on_start(&mut ctx, &mut self.layers);
 
         while duration > std::time::Instant::now().duration_since(start) {
             let now = std::time::Instant::now();
@@ -35,18 +35,18 @@ impl Runtime {
             last = now;
 
             for _ in 0..tick.steps {
-                self.scheduler.on_tick(&mut ctx, &mut self.scenes);
+                self.scheduler.on_tick(&mut ctx, &mut self.layers);
                 self.clock.wait();
             }
         }
 
-        self.scheduler.on_stop(&mut ctx, &mut self.scenes);
+        self.scheduler.on_stop(&mut ctx, &mut self.layers);
     }
 }
 
 pub struct RuntimeBuilder {
     clock: Box<dyn Clock>,
-    scenes: Vec<Box<dyn Scene>>,
+    layers: Vec<Box<dyn Layer>>,
     scheduler: Box<dyn Scheduler>,
 }
 
@@ -54,7 +54,7 @@ impl RuntimeBuilder {
     pub fn new() -> Self {
         Self {
             clock: Box::new(time::Fixed::new(60)),
-            scenes: vec![],
+            layers: vec![],
             scheduler: Box::new(schedule::Sequence),
         }
     }
@@ -69,8 +69,8 @@ impl RuntimeBuilder {
         self
     }
 
-    pub fn layer(mut self, scene: impl Scene) -> Self {
-        self.scenes.push(Box::new(scene));
+    pub fn layer(mut self, scene: impl Layer) -> Self {
+        self.layers.push(Box::new(scene));
         self
     }
 
@@ -78,7 +78,7 @@ impl RuntimeBuilder {
         Runtime {
             world: Store::new(World::new()),
             clock: self.clock,
-            scenes: self.scenes,
+            layers: self.layers,
             scheduler: self.scheduler,
         }
     }

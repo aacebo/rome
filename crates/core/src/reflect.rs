@@ -1,5 +1,10 @@
 use std::{any::Any, collections::BTreeMap};
 
+pub struct Type {
+    pub id: std::any::TypeId,
+    pub name: &'static str,
+}
+
 #[derive(Debug, Clone, PartialEq, serde::Serialize, serde::Deserialize)]
 pub enum Value {
     Bool(bool),

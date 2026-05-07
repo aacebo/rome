@@ -15,12 +15,7 @@ where
 }
 
 pub(super) trait AnyTrigger<TState>: Send + Sync + 'static {
-    fn execute_erased(
-        &self,
-        state: &TState,
-        action: &dyn Action<State = TState>,
-        next: &Next<TState>,
-    );
+    fn execute(&self, state: &TState, action: &dyn Action<State = TState>, next: &Next<TState>);
 }
 
 pub(super) struct TriggerGuard<TAction, T>
@@ -51,7 +46,7 @@ where
     TAction: Action,
     T: Trigger<TAction>,
 {
-    fn execute_erased(
+    fn execute(
         &self,
         state: &TAction::State,
         action: &dyn Action<State = TAction::State>,

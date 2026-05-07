@@ -1,1 +1,1 @@
-pub use crate::{Attribute, Context, Entity, Node, NodeId, Scene, World, world::WorldId};
+pub use crate::{Attribute, Context, Entity, Layer, Node, NodeId, World, Zone, world::WorldId};
