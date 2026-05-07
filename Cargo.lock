@@ -9,6 +9,7 @@ dependencies = [
  "ayr-core",
  "ayr-derive",
  "ayr-diagnostic",
+ "ayr-reflect",
  "ayr-task",
  "ayr-time",
 ]
@@ -35,6 +36,23 @@ name = "ayr-diagnostic"
 version = "0.0.0"
 dependencies = [
  "serde",
+]
+
+[[package]]
+name = "ayr-reflect"
+version = "0.0.0"
+dependencies = [
+ "ayr-reflect-macros",
+ "serde",
+]
+
+[[package]]
+name = "ayr-reflect-macros"
+version = "0.0.0"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
 ]
 
 [[package]]

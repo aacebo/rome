@@ -38,10 +38,12 @@ workspace = true
 [features]
 default = ["derive"]
 derive = ["ayr-derive"]
+reflect = ["ayr-reflect", "ayr-reflect/macros", "ayr-reflect/serde"]
 
 [dependencies]
 ayr-core.path = "./crates/core"
 ayr-diagnostic.path = "./crates/diagnostic"
 ayr-task.path = "./crates/task"
 ayr-time.path = "./crates/time"
+ayr-reflect = { path = "./crates/reflect", optional = true }
 ayr-derive = { path = "./crates/derive", optional = true }

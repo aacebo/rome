@@ -10,6 +10,11 @@ pub mod derive {
     pub use ayr_derive::*;
 }
 
+#[cfg(feature = "reflect")]
+pub mod reflect {
+    pub use ayr_reflect::*;
+}
+
 pub mod diagnostic {
     pub use ayr_diagnostic::*;
 }

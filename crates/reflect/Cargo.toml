@@ -1,0 +1,23 @@
+[package]
+name = "ayr-reflect"
+version.workspace = true
+edition.workspace = true
+license.workspace = true
+readme.workspace = true
+documentation.workspace = true
+homepage.workspace = true
+repository.workspace = true
+
+[lib]
+doctest = false
+
+[lints]
+workspace = true
+
+[features]
+macros = ["ayr-reflect-macros"]
+serde = ["dep:serde"]
+
+[dependencies]
+serde = { workspace = true, features = ["derive", "rc"], optional = true }
+ayr-reflect-macros = { path = "./macros", optional = true }
