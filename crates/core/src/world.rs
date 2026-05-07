@@ -28,7 +28,7 @@ impl WorldId {
 pub struct World {
     id: WorldId,
     node_id: NodeId,
-    items: BTreeMap<NodeId, State<Node>>,
+    nodes: BTreeMap<NodeId, State<Node>>,
 }
 
 impl World {
@@ -41,30 +41,30 @@ impl World {
     }
 
     pub fn is_empty(&self) -> bool {
-        self.items.is_empty()
+        self.nodes.is_empty()
     }
 
     pub fn len(&self) -> usize {
-        self.items.len()
+        self.nodes.len()
     }
 
     pub fn iter(&self) -> impl Iterator<Item = &Node> {
-        self.items.values().map(|v| v.as_ref())
+        self.nodes.values().map(|v| v.as_ref())
     }
 
     pub fn exists(&self, id: &NodeId) -> bool {
-        self.items.contains_key(id)
+        self.nodes.contains_key(id)
     }
 
     pub fn get(&self, id: &NodeId) -> Option<&Node> {
-        match self.items.get(id) {
+        match self.nodes.get(id) {
             None => None,
             Some(v) => Some(v.as_ref()),
         }
     }
 
     pub fn get_mut(&mut self, id: &NodeId) -> Option<&mut Node> {
-        match self.items.get_mut(id) {
+        match self.nodes.get_mut(id) {
             None => None,
             Some(v) => Some(v.as_mut()),
         }
@@ -72,11 +72,11 @@ impl World {
 
     pub fn spawn(&mut self, mut node: Node) {
         node.id = self.next_id();
-        self.items.insert(node.id, node.into());
+        self.nodes.insert(node.id, node.into());
     }
 
     pub fn destroy(&mut self, id: &NodeId) -> Option<Node> {
-        self.items.remove(id).map(|v| v.take())
+        self.nodes.remove(id).map(|v| v.take())
     }
 
     fn next_id(&mut self) -> NodeId {

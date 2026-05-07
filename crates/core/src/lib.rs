@@ -1,14 +1,16 @@
 pub mod context;
+mod node;
 pub mod prelude;
+pub mod reflect;
 pub mod state;
 pub mod view;
 pub mod world;
 
 pub use context::Context;
+pub use node::*;
+pub use reflect::Value;
 pub use view::Style;
 pub use world::World;
-
-use std::sync::Arc;
 
 pub trait Scene: Send + Sync + std::any::Any {
     fn name(&self) -> &'static str;
@@ -34,6 +36,7 @@ where
     fn on_destroy(&mut self, _ctx: &Context, _scene: &mut TScene) {}
 }
 
+#[doc(hidden)]
 pub trait AnyEntity: Send + Sync + std::any::Any {
     fn name(&self) -> &str;
 
@@ -53,6 +56,7 @@ where
     fn on_destroy(&mut self, _ctx: &Context, _entity: &mut TEntity) {}
 }
 
+#[doc(hidden)]
 pub trait AnyAttribute: Send + Sync + std::any::Any {
     fn name(&self) -> &str;
 
@@ -74,35 +78,4 @@ impl serde::Serialize for dyn AnyAttribute {
     {
         self.name().serialize(s)
     }
-}
-
-#[derive(
-    Debug,
-    Default,
-    Copy,
-    Clone,
-    PartialEq,
-    Eq,
-    PartialOrd,
-    Ord,
-    Hash,
-    serde::Serialize,
-    serde::Deserialize,
-)]
-#[serde(transparent)]
-pub struct NodeId(u64);
-
-impl NodeId {
-    pub fn next(&self) -> Self {
-        Self(self.0 + 1)
-    }
-}
-
-#[derive(Debug, Clone, serde::Serialize)]
-pub struct Node {
-    pub id: NodeId,
-    pub name: String,
-    pub styles: Vec<Arc<dyn Style>>,
-    pub attributes: Vec<Arc<dyn AnyAttribute>>,
-    pub children: Vec<NodeId>,
 }
