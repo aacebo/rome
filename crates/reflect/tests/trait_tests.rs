@@ -27,3 +27,22 @@ pub fn should_reflect_trait() {
         &type_of!(String)
     );
 }
+
+#[reflect]
+trait Borrowing {
+    fn shared(&self, x: &i32) -> bool;
+    fn exclusive(&mut self, y: &mut i32);
+}
+
+#[test]
+pub fn should_reflect_reference_params() {
+    let ty = type_of!(dyn Borrowing).to_trait();
+
+    let shared_x = ty.get("shared").unwrap().param("x");
+    assert!(shared_x.ty().is_ref());
+    assert!(shared_x.ty().is_ref_of(type_of!(i32)));
+
+    let exclusive_y = ty.get("exclusive").unwrap().param("y");
+    assert!(exclusive_y.ty().is_ref());
+    assert!(exclusive_y.ty().is_ref_mut());
+}

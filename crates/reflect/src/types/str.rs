@@ -4,55 +4,55 @@ pub struct StrType;
 
 impl StrType {
     pub fn to_type(&self) -> crate::Type {
-        return crate::Type::Str(self.clone());
+        crate::Type::Str(*self)
     }
 
     pub fn id(&self) -> crate::TypeId {
-        return crate::TypeId::from_str("string");
+        crate::TypeId::from_str("string")
     }
 
     pub fn assignable_to(&self, ty: crate::Type) -> bool {
-        return self.id() == ty.id();
+        self.id() == ty.id()
     }
 
     pub fn convertable_to(&self, ty: crate::Type) -> bool {
-        return ty.is_str();
+        ty.is_str()
     }
 }
 
 impl std::fmt::Display for StrType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "{}", self.id());
+        write!(f, "{}", self.id())
     }
 }
 
 impl crate::ToType for StrType {
     fn to_type(&self) -> crate::Type {
-        return crate::Type::Str(self.clone());
+        crate::Type::Str(*self)
     }
 }
 
 impl crate::TypeOf for std::string::String {
     fn type_of() -> crate::Type {
-        return crate::Type::Str(StrType::default());
+        crate::Type::Str(StrType)
     }
 }
 
 impl crate::ToType for std::string::String {
     fn to_type(&self) -> crate::Type {
-        return crate::Type::Str(StrType::default());
+        crate::Type::Str(StrType)
     }
 }
 
 impl crate::TypeOf for str {
     fn type_of() -> crate::Type {
-        return crate::Type::Str(StrType::default());
+        crate::Type::Str(StrType)
     }
 }
 
 impl crate::ToType for str {
     fn to_type(&self) -> crate::Type {
-        return crate::Type::Str(StrType::default());
+        crate::Type::Str(StrType)
     }
 }
 

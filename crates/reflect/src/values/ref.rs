@@ -9,39 +9,39 @@ pub struct Ref {
 
 impl Ref {
     pub fn to_type(&self) -> crate::Type {
-        return self.ty.to_type();
+        self.ty.to_type()
     }
 
     pub fn ty(&self) -> &crate::Type {
-        return &self.ty.0;
+        &self.ty.0
     }
 
     pub fn value(&self) -> &crate::Value {
-        return &self.value;
+        &self.value
     }
 }
 
 impl crate::ToValue for Ref {
     fn to_value(self) -> crate::Value {
-        return crate::Value::Ref(self.clone());
+        crate::Value::Ref(self.clone())
     }
 }
 
 impl crate::AsValue for Ref {
     fn as_value(&self) -> crate::Value {
-        return crate::Value::Ref(self.clone());
+        crate::Value::Ref(self.clone())
     }
 }
 
 impl AsRef<crate::Value> for Ref {
     fn as_ref(&self) -> &crate::Value {
-        return &self.value;
+        &self.value
     }
 }
 
 impl AsMut<crate::Value> for Ref {
     fn as_mut(&mut self) -> &mut crate::Value {
-        return &mut self.value;
+        &mut self.value
     }
 }
 
@@ -49,25 +49,25 @@ impl std::ops::Deref for Ref {
     type Target = crate::Value;
 
     fn deref(&self) -> &Self::Target {
-        return &self.value;
+        &self.value
     }
 }
 
 impl std::ops::DerefMut for Ref {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        return &mut self.value;
+        &mut self.value
     }
 }
 
 impl std::fmt::Display for Ref {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "{}", &self.value);
+        write!(f, "{}", &self.value)
     }
 }
 
 impl PartialEq<crate::Value> for Ref {
     fn eq(&self, other: &crate::Value) -> bool {
-        return other.is_ref() && other.to_ref() == *self;
+        other.is_ref() && other.to_ref() == *self
     }
 }
 
@@ -76,10 +76,10 @@ where
     T: Clone + crate::ToValue + crate::ToType,
 {
     fn to_value(self) -> crate::Value {
-        return crate::Value::Ref(Ref {
+        crate::Value::Ref(Ref {
             ty: crate::RefType(Box::new(self.clone().to_type())),
             value: Box::new(self.clone().to_value()),
-        });
+        })
     }
 }
 
@@ -91,10 +91,10 @@ where
     fn as_value(&self) -> crate::Value {
         let value = self.clone().clone();
 
-        return crate::Value::Ref(Ref {
+        crate::Value::Ref(Ref {
             ty: crate::RefType(Box::new(value.to_type())),
             value: Box::new(value.as_value()),
-        });
+        })
     }
 }
 
@@ -103,10 +103,10 @@ where
     T: Clone + crate::ToValue + crate::ToType,
 {
     fn to_value(self) -> crate::Value {
-        return crate::Value::Ref(Ref {
+        crate::Value::Ref(Ref {
             ty: crate::RefType(Box::new(self.as_ref().to_type())),
             value: Box::new(self.as_ref().clone().to_value()),
-        });
+        })
     }
 }
 
@@ -115,10 +115,10 @@ where
     T: Clone + crate::AsValue + crate::ToType,
 {
     fn as_value(&self) -> crate::Value {
-        return crate::Value::Ref(Ref {
+        crate::Value::Ref(Ref {
             ty: crate::RefType(Box::new(self.as_ref().to_type())),
             value: Box::new(self.as_ref().clone().as_value()),
-        });
+        })
     }
 }
 
@@ -127,10 +127,10 @@ where
     T: Clone + crate::ToValue + crate::ToType,
 {
     fn from(value: &T) -> Self {
-        return Self::Ref(Ref {
+        Self::Ref(Ref {
             ty: crate::RefType(Box::new(value.to_type())),
             value: Box::new(value.clone().to_value()),
-        });
+        })
     }
 }
 

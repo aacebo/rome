@@ -1,28 +1,28 @@
 impl From<bool> for crate::Value {
     fn from(value: bool) -> Self {
-        return Self::Bool(value);
+        Self::Bool(value)
     }
 }
 
 impl crate::ToValue for bool {
     fn to_value(self) -> crate::Value {
-        return crate::Value::Bool(self);
+        crate::Value::Bool(self)
     }
 }
 
 impl crate::AsValue for bool {
     fn as_value(&self) -> crate::Value {
-        return crate::Value::Bool(*self);
+        crate::Value::Bool(*self)
     }
 }
 
 impl crate::Value {
     pub fn is_true(&self) -> bool {
-        return self.is_bool() && self.to_bool() == true;
+        self.is_bool() && self.to_bool()
     }
 
     pub fn is_false(&self) -> bool {
-        return self.is_bool() && self.to_bool() == false;
+        self.is_bool() && !self.to_bool()
     }
 }
 

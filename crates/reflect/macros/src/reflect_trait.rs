@@ -6,7 +6,7 @@ pub fn attr(meta: proc_macro2::TokenStream, item: &syn::ItemTrait) -> proc_macro
     let name = &item.ident;
     let ty = build(meta, item);
 
-    return quote! {
+    quote! {
         #item
 
         impl ::ayr_reflect::TypeOf for dyn #name {
@@ -20,7 +20,7 @@ pub fn attr(meta: proc_macro2::TokenStream, item: &syn::ItemTrait) -> proc_macro
                 return #ty;
             }
         }
-    };
+    }
 }
 
 pub fn build(meta: proc_macro2::TokenStream, item: &syn::ItemTrait) -> proc_macro2::TokenStream {
@@ -35,10 +35,7 @@ pub fn build(meta: proc_macro2::TokenStream, item: &syn::ItemTrait) -> proc_macr
             if let syn::TraitItem::Fn(func) = item {
                 let fn_name = &func.sig.ident;
                 let fn_meta = reflect_meta::build(&func.attrs);
-                let fn_is_async = match &func.sig.asyncness {
-                    None => false,
-                    Some(_) => true,
-                };
+                let fn_is_async = func.sig.asyncness.is_some();
 
                 let fn_return_type = match &func.sig.output {
                     syn::ReturnType::Default => quote!(::ayr_reflect::Type::Void),
@@ -55,7 +52,7 @@ pub fn build(meta: proc_macro2::TokenStream, item: &syn::ItemTrait) -> proc_macr
                                 ::ayr_reflect::ThisType.to_type()
                             };
 
-                            if let Some(_) = &recv.mutability {
+                            if recv.mutability.is_some() {
                                 param_ty = quote!(::ayr_reflect::MutType::new(&#param_ty).to_type());
                             }
 
@@ -76,14 +73,24 @@ pub fn build(meta: proc_macro2::TokenStream, item: &syn::ItemTrait) -> proc_macr
                                 let arg_ty = &typed.ty;
                                 let mut param_ty = quote!(::ayr_reflect::type_of!(#arg_ty));
 
-                                if let Some(_) = &ident.mutability {
+                                if ident.mutability.is_some() {
                                     param_ty =
                                         quote!(::ayr_reflect::MutType::new(&#param_ty).to_type());
                                 }
 
-                                if let syn::Type::Ptr(_) = typed.ty.as_ref() {
-                                    param_ty =
-                                        quote!(::ayr_reflect::RefType::new(&#param_ty).to_type());
+                                if let syn::Type::Reference(reference) = typed.ty.as_ref() {
+                                    let inner = &reference.elem;
+                                    let mut inner_ty = quote!(::ayr_reflect::type_of!(#inner));
+
+                                    if reference.mutability.is_some() {
+                                        inner_ty = quote!(
+                                            ::ayr_reflect::MutType::new(&#inner_ty).to_type()
+                                        );
+                                    }
+
+                                    param_ty = quote!(
+                                        ::ayr_reflect::RefType::new(&#inner_ty).to_type()
+                                    );
                                 }
 
                                 quote! {
@@ -114,7 +121,7 @@ pub fn build(meta: proc_macro2::TokenStream, item: &syn::ItemTrait) -> proc_macr
         })
         .collect::<Vec<_>>();
 
-    return quote! {
+    quote! {
         ::ayr_reflect::TraitType::new()
             .with_path(&(::ayr_reflect::Path::from(module_path!())))
             .with_name(stringify!(#name))
@@ -124,5 +131,5 @@ pub fn build(meta: proc_macro2::TokenStream, item: &syn::ItemTrait) -> proc_macr
             .with_methods(&[#(#methods,)*])
             .build()
             .to_type()
-    };
+    }
 }

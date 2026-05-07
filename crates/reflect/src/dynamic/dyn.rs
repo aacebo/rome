@@ -12,17 +12,17 @@ pub trait Dyn:
 impl dyn Dyn {
     pub fn downcast_ref<T: std::any::Any>(&self) -> Option<&T> {
         let value: &dyn std::any::Any = self;
-        return value.downcast_ref::<T>();
+        value.downcast_ref::<T>()
     }
 
     pub fn downcast_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
         let value: &mut dyn std::any::Any = self;
-        return value.downcast_mut::<T>();
+        value.downcast_mut::<T>()
     }
 
     pub fn is<T: std::any::Any>(&self) -> bool {
         let value: &dyn std::any::Any = self;
-        return value.is::<T>();
+        value.is::<T>()
     }
 }
 
@@ -32,13 +32,13 @@ impl serde::Serialize for dyn Dyn {
     where
         S: serde::Serializer,
     {
-        return self.as_value().serialize(serializer);
+        self.as_value().serialize(serializer)
     }
 }
 
 impl std::fmt::Display for dyn Dyn {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "{}", &self.as_value());
+        write!(f, "{}", &self.as_value())
     }
 }
 

@@ -25,5 +25,5 @@ pub fn meta_data_item(meta: syn::meta::ParseNestedMeta<'_>) -> proc_macro2::Toke
     };
 
     let key_lit = syn::LitStr::new(&key_str, key_ident.span());
-    return quote!((#key_lit, ::ayr_reflect::value_of!(#val)));
+    quote!((#key_lit, ::ayr_reflect::value_of!(#val)))
 }

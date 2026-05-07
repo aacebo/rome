@@ -7,28 +7,28 @@ pub struct TraitBound {
 
 impl TraitBound {
     pub fn new(path: &crate::Path, modifier: TraitBoundModifier) -> Self {
-        return Self {
+        Self {
             path: path.clone(),
             modifier,
-        };
+        }
     }
 
     pub fn to_bound(&self) -> crate::Bound {
-        return crate::Bound::Trait(self.clone());
+        crate::Bound::Trait(self.clone())
     }
 
     pub fn path(&self) -> &crate::Path {
-        return &self.path;
+        &self.path
     }
 
     pub fn modifier(&self) -> &TraitBoundModifier {
-        return &self.modifier;
+        &self.modifier
     }
 }
 
 impl std::fmt::Display for TraitBound {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "{}{}", &self.modifier, &self.path);
+        write!(f, "{}{}", &self.modifier, &self.path)
     }
 }
 
@@ -43,25 +43,19 @@ pub enum TraitBoundModifier {
 
 impl TraitBoundModifier {
     pub fn is_none(&self) -> bool {
-        return match self {
-            Self::None => true,
-            _ => false,
-        };
+        matches!(self, Self::None)
     }
 
     pub fn is_maybe(&self) -> bool {
-        return match self {
-            Self::Maybe => true,
-            _ => false,
-        };
+        matches!(self, Self::Maybe)
     }
 }
 
 impl std::fmt::Display for TraitBoundModifier {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        return match self {
+        match self {
             Self::None => Ok(()),
             Self::Maybe => write!(f, "?"),
-        };
+        }
     }
 }

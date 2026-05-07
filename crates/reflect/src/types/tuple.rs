@@ -32,6 +32,10 @@ macro_rules! tuple {
                 };
             }
 
+            pub fn is_empty(&self) -> bool {
+                return self.len() == 0;
+            }
+
             pub fn assignable_to(&self, ty: crate::Type) -> bool {
                 return match self {
                     $(Self::$name(v) => v.assignable_to(ty),)*
@@ -109,7 +113,7 @@ macro_rules! tuple {
                         value = format!("{}{}", &value, ty);
 
                         if i < self.len() - 1 {
-                            value = value + ", ";
+                            value += ", ";
                         }
                     }
 
@@ -118,6 +122,10 @@ macro_rules! tuple {
 
                 pub fn len(&self) -> usize {
                     return self.0.len();
+                }
+
+                pub fn is_empty(&self) -> bool {
+                    return self.0.is_empty();
                 }
 
                 pub fn assignable_to(&self, ty: crate::Type) -> bool {
@@ -172,7 +180,7 @@ where
     B: crate::TypeOf,
 {
     fn type_of() -> crate::Type {
-        return T2Type::new([Box::new(A::type_of()), Box::new(B::type_of())]).to_type();
+        T2Type::new([Box::new(A::type_of()), Box::new(B::type_of())]).to_type()
     }
 }
 
@@ -182,7 +190,7 @@ where
     B: Clone + crate::ToType + crate::ToValue + 'static,
 {
     fn to_type(&self) -> crate::Type {
-        return T2Type::new([Box::new(self.0.to_type()), Box::new(self.1.to_type())]).to_type();
+        T2Type::new([Box::new(self.0.to_type()), Box::new(self.1.to_type())]).to_type()
     }
 }
 
@@ -192,7 +200,7 @@ where
     B: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + crate::AsValue + 'static,
 {
     fn to_value(self) -> crate::Value {
-        return crate::Dynamic::from_object(self).to_value();
+        crate::Dynamic::from_object(self).to_value()
     }
 }
 
@@ -202,7 +210,7 @@ where
     B: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + crate::AsValue + 'static,
 {
     fn as_value(&self) -> crate::Value {
-        return crate::Dynamic::from_object(self.clone()).as_value();
+        crate::Dynamic::from_object(self.clone()).as_value()
     }
 }
 
@@ -219,11 +227,11 @@ where
     B: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + crate::AsValue + 'static,
 {
     fn field(&self, name: &crate::FieldName) -> crate::Value {
-        return match name.to_string().as_str() {
+        match name.to_string().as_str() {
             "0" => self.0.clone().to_value(),
             "1" => self.1.clone().to_value(),
             v => panic!("field '{}' not found on type '{}'", v, self.to_type()),
-        };
+        }
     }
 }
 
@@ -234,12 +242,12 @@ where
     C: crate::TypeOf,
 {
     fn type_of() -> crate::Type {
-        return T3Type::new([
+        T3Type::new([
             Box::new(A::type_of()),
             Box::new(B::type_of()),
             Box::new(C::type_of()),
         ])
-        .to_type();
+        .to_type()
     }
 }
 
@@ -250,12 +258,12 @@ where
     C: crate::TypeOf,
 {
     fn to_type(&self) -> crate::Type {
-        return T3Type::new([
+        T3Type::new([
             Box::new(A::type_of()),
             Box::new(B::type_of()),
             Box::new(C::type_of()),
         ])
-        .to_type();
+        .to_type()
     }
 }
 
@@ -267,13 +275,13 @@ where
     D: crate::TypeOf,
 {
     fn type_of() -> crate::Type {
-        return T4Type::new([
+        T4Type::new([
             Box::new(A::type_of()),
             Box::new(B::type_of()),
             Box::new(C::type_of()),
             Box::new(D::type_of()),
         ])
-        .to_type();
+        .to_type()
     }
 }
 
@@ -285,13 +293,13 @@ where
     D: crate::TypeOf,
 {
     fn to_type(&self) -> crate::Type {
-        return T4Type::new([
+        T4Type::new([
             Box::new(A::type_of()),
             Box::new(B::type_of()),
             Box::new(C::type_of()),
             Box::new(D::type_of()),
         ])
-        .to_type();
+        .to_type()
     }
 }
 
@@ -304,14 +312,14 @@ where
     E: crate::TypeOf,
 {
     fn type_of() -> crate::Type {
-        return T5Type::new([
+        T5Type::new([
             Box::new(A::type_of()),
             Box::new(B::type_of()),
             Box::new(C::type_of()),
             Box::new(D::type_of()),
             Box::new(E::type_of()),
         ])
-        .to_type();
+        .to_type()
     }
 }
 
@@ -324,14 +332,14 @@ where
     E: crate::TypeOf,
 {
     fn to_type(&self) -> crate::Type {
-        return T5Type::new([
+        T5Type::new([
             Box::new(A::type_of()),
             Box::new(B::type_of()),
             Box::new(C::type_of()),
             Box::new(D::type_of()),
             Box::new(E::type_of()),
         ])
-        .to_type();
+        .to_type()
     }
 }
 
@@ -345,7 +353,7 @@ where
     F: crate::TypeOf,
 {
     fn type_of() -> crate::Type {
-        return T6Type::new([
+        T6Type::new([
             Box::new(A::type_of()),
             Box::new(B::type_of()),
             Box::new(C::type_of()),
@@ -353,7 +361,7 @@ where
             Box::new(E::type_of()),
             Box::new(F::type_of()),
         ])
-        .to_type();
+        .to_type()
     }
 }
 
@@ -367,7 +375,7 @@ where
     F: crate::TypeOf,
 {
     fn to_type(&self) -> crate::Type {
-        return T6Type::new([
+        T6Type::new([
             Box::new(A::type_of()),
             Box::new(B::type_of()),
             Box::new(C::type_of()),
@@ -375,7 +383,7 @@ where
             Box::new(E::type_of()),
             Box::new(F::type_of()),
         ])
-        .to_type();
+        .to_type()
     }
 }
 
@@ -390,7 +398,7 @@ where
     G: crate::TypeOf,
 {
     fn type_of() -> crate::Type {
-        return T7Type::new([
+        T7Type::new([
             Box::new(A::type_of()),
             Box::new(B::type_of()),
             Box::new(C::type_of()),
@@ -399,7 +407,7 @@ where
             Box::new(F::type_of()),
             Box::new(G::type_of()),
         ])
-        .to_type();
+        .to_type()
     }
 }
 
@@ -414,7 +422,7 @@ where
     G: crate::TypeOf,
 {
     fn to_type(&self) -> crate::Type {
-        return T7Type::new([
+        T7Type::new([
             Box::new(A::type_of()),
             Box::new(B::type_of()),
             Box::new(C::type_of()),
@@ -423,7 +431,7 @@ where
             Box::new(F::type_of()),
             Box::new(G::type_of()),
         ])
-        .to_type();
+        .to_type()
     }
 }
 

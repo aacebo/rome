@@ -8,62 +8,67 @@ pub struct Fields {
 }
 
 impl Fields {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new() -> crate::FieldsBuilder {
-        return crate::FieldsBuilder::new();
+        crate::FieldsBuilder::new()
     }
 
     pub fn layout(&self) -> &crate::Layout {
-        return &self.layout;
+        &self.layout
     }
 
     pub fn len(&self) -> usize {
-        return self.fields.len();
+        self.fields.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.fields.is_empty()
     }
 
     pub fn iter(&self) -> std::slice::Iter<'_, Field> {
-        return self.fields.iter();
+        self.fields.iter()
     }
 
     pub fn has(&self, name: &FieldName) -> bool {
-        return self.fields.iter().any(|v| v.name() == name);
+        self.fields.iter().any(|v| v.name() == name)
     }
 
     pub fn get(&self, name: &FieldName) -> Option<&Field> {
-        return self.fields.iter().find(|v| v.name() == name);
+        self.fields.iter().find(|v| v.name() == name)
     }
 
     pub fn get_mut(&mut self, name: &FieldName) -> Option<&mut Field> {
-        return self.fields.iter_mut().find(|v| v.name() == name);
+        self.fields.iter_mut().find(|v| v.name() == name)
     }
 }
 
 impl From<&[crate::Field]> for Fields {
     fn from(value: &[crate::Field]) -> Self {
-        return Self::new().with_fields(value).build();
+        Self::new().with_fields(value).build()
     }
 }
 
 impl<const N: usize> From<&[crate::Field; N]> for Fields {
     fn from(value: &[crate::Field; N]) -> Self {
-        return Self::new().with_fields(value).build();
+        Self::new().with_fields(value).build()
     }
 }
 
 impl<const N: usize> From<[crate::Field; N]> for Fields {
     fn from(value: [crate::Field; N]) -> Self {
-        return Self::new().with_fields(&value).build();
+        Self::new().with_fields(&value).build()
     }
 }
 
 impl AsRef<Fields> for Fields {
     fn as_ref(&self) -> &Self {
-        return self;
+        self
     }
 }
 
 impl AsMut<Fields> for Fields {
     fn as_mut(&mut self) -> &mut Self {
-        return self;
+        self
     }
 }
 
@@ -71,13 +76,13 @@ impl std::ops::Index<usize> for Fields {
     type Output = Field;
 
     fn index(&self, index: usize) -> &Self::Output {
-        return self.get(&FieldName::from(index)).unwrap();
+        self.get(&FieldName::from(index)).unwrap()
     }
 }
 
 impl std::ops::IndexMut<usize> for Fields {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        return self.get_mut(&FieldName::from(index)).unwrap();
+        self.get_mut(&FieldName::from(index)).unwrap()
     }
 }
 
@@ -85,13 +90,13 @@ impl std::ops::Index<&str> for Fields {
     type Output = Field;
 
     fn index(&self, index: &str) -> &Self::Output {
-        return self.get(&FieldName::from(index)).unwrap();
+        self.get(&FieldName::from(index)).unwrap()
     }
 }
 
 impl std::ops::IndexMut<&str> for Fields {
     fn index_mut(&mut self, index: &str) -> &mut Self::Output {
-        return self.get_mut(&FieldName::from(index)).unwrap();
+        self.get_mut(&FieldName::from(index)).unwrap()
     }
 }
 
@@ -104,8 +109,8 @@ impl std::fmt::Display for Fields {
                 write!(f, "\n\t{},", field)?;
             }
 
-            if self.fields.len() > 0 {
-                write!(f, "\n")?;
+            if !self.fields.is_empty() {
+                writeln!(f)?;
             }
 
             return write!(f, "}}");
@@ -129,7 +134,7 @@ impl std::fmt::Display for Fields {
             return write!(f, ")");
         }
 
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -139,33 +144,39 @@ impl std::fmt::Display for Fields {
 #[derive(Debug, Clone)]
 pub struct FieldsBuilder(crate::Fields);
 
+impl Default for FieldsBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FieldsBuilder {
     pub fn new() -> Self {
-        return Self(crate::Fields {
+        Self(crate::Fields {
             layout: crate::Layout::Unit,
             fields: vec![],
-        });
+        })
     }
 
     pub fn with_layout(&self, layout: crate::Layout) -> Self {
         let mut next = self.clone();
         next.0.layout = layout;
-        return next;
+        next
     }
 
     pub fn with_fields(&self, fields: &[crate::Field]) -> Self {
         let mut next = self.clone();
         next.0.fields.append(&mut fields.to_vec());
-        return next;
+        next
     }
 
     pub fn with_field(&self, field: &crate::Field) -> Self {
         let mut next = self.clone();
         next.0.fields.push(field.clone());
-        return next;
+        next
     }
 
     pub fn build(&self) -> crate::Fields {
-        return self.0.clone();
+        self.0.clone()
     }
 }

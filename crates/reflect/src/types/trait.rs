@@ -10,88 +10,93 @@ pub struct TraitType {
 }
 
 impl TraitType {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new() -> crate::TraitTypeBuilder {
-        return crate::TraitTypeBuilder::new();
+        crate::TraitTypeBuilder::new()
     }
 
     pub fn to_type(&self) -> crate::Type {
-        return crate::Type::Trait(self.clone());
+        crate::Type::Trait(self.clone())
     }
 
     pub fn id(&self) -> crate::TypeId {
-        return crate::TypeId::from_string(format!("{}::{}", &self.path, &self.name));
+        crate::TypeId::from_string(format!("{}::{}", &self.path, &self.name))
     }
 
     pub fn assignable_to(&self, ty: crate::Type) -> bool {
-        return self.id() == ty.id();
+        self.id() == ty.id()
     }
 
     pub fn convertable_to(&self, ty: crate::Type) -> bool {
-        return ty.is_trait();
+        ty.is_trait()
     }
 }
 
 impl TraitType {
     pub fn path(&self) -> &crate::Path {
-        return &self.path;
+        &self.path
     }
 
     pub fn meta(&self) -> &crate::MetaData {
-        return &self.meta;
+        &self.meta
     }
 
     pub fn vis(&self) -> &crate::Visibility {
-        return &self.vis;
+        &self.vis
     }
 
     pub fn name(&self) -> &str {
-        return &self.name;
+        &self.name
     }
 
     pub fn generics(&self) -> &crate::Generics {
-        return &self.generics;
+        &self.generics
     }
 
     pub fn methods(&self) -> &[crate::Method] {
-        return &self.methods;
+        &self.methods
     }
 
     pub fn iter(&self) -> std::slice::Iter<'_, crate::Method> {
-        return self.methods.iter();
+        self.methods.iter()
     }
 
     pub fn len(&self) -> usize {
-        return self.methods.len();
+        self.methods.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.methods.is_empty()
     }
 
     pub fn has(&self, name: &str) -> bool {
-        return self.methods.iter().any(|v| v.name() == name);
+        self.methods.iter().any(|v| v.name() == name)
     }
 
     pub fn get(&self, name: &str) -> Option<&crate::Method> {
-        return self.methods.iter().find(|v| v.name() == name);
+        self.methods.iter().find(|v| v.name() == name)
     }
 
     pub fn get_mut(&mut self, name: &str) -> Option<&mut crate::Method> {
-        return self.methods.iter_mut().find(|v| v.name() == name);
+        self.methods.iter_mut().find(|v| v.name() == name)
     }
 }
 
 impl crate::ToType for TraitType {
     fn to_type(&self) -> crate::Type {
-        return crate::Type::Trait(self.clone());
+        crate::Type::Trait(self.clone())
     }
 }
 
 impl AsRef<TraitType> for TraitType {
     fn as_ref(&self) -> &Self {
-        return self;
+        self
     }
 }
 
 impl AsMut<TraitType> for TraitType {
     fn as_mut(&mut self) -> &mut Self {
-        return self;
+        self
     }
 }
 
@@ -99,13 +104,13 @@ impl std::ops::Index<usize> for TraitType {
     type Output = crate::Method;
 
     fn index(&self, index: usize) -> &Self::Output {
-        return self.methods.index(index);
+        self.methods.index(index)
     }
 }
 
 impl std::ops::IndexMut<usize> for TraitType {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        return self.methods.index_mut(index);
+        self.methods.index_mut(index)
     }
 }
 
@@ -113,13 +118,13 @@ impl std::ops::Index<&str> for TraitType {
     type Output = crate::Method;
 
     fn index(&self, index: &str) -> &Self::Output {
-        return self.get(index).unwrap();
+        self.get(index).unwrap()
     }
 }
 
 impl std::ops::IndexMut<&str> for TraitType {
     fn index_mut(&mut self, index: &str) -> &mut Self::Output {
-        return self.get_mut(index).unwrap();
+        self.get_mut(index).unwrap()
     }
 }
 
@@ -135,11 +140,11 @@ impl std::fmt::Display for TraitType {
             write!(f, "\n\t{}", method)?;
         }
 
-        if self.methods.len() > 0 {
-            write!(f, "\n")?;
+        if !self.methods.is_empty() {
+            writeln!(f)?;
         }
 
-        return write!(f, "}}");
+        write!(f, "}}")
     }
 }
 
@@ -149,61 +154,67 @@ impl std::fmt::Display for TraitType {
 #[derive(Debug, Clone)]
 pub struct TraitTypeBuilder(crate::TraitType);
 
+impl Default for TraitTypeBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TraitTypeBuilder {
     pub fn new() -> Self {
-        return Self(crate::TraitType {
+        Self(crate::TraitType {
             path: crate::Path::new(),
             meta: crate::MetaData::new(),
             vis: crate::Visibility::Private,
             name: String::from(""),
             generics: crate::Generics::new(),
             methods: vec![],
-        });
+        })
     }
 
     pub fn with_path(&self, path: &crate::Path) -> Self {
         let mut next = self.clone();
         next.0.path = path.clone();
-        return next;
+        next
     }
 
     pub fn with_name(&self, name: &str) -> Self {
         let mut next = self.clone();
         next.0.name = name.to_string();
-        return next;
+        next
     }
 
     pub fn with_meta(&self, meta: &crate::MetaData) -> Self {
         let mut next = self.clone();
         next.0.meta = meta.clone();
-        return next;
+        next
     }
 
     pub fn with_visibility(&self, vis: crate::Visibility) -> Self {
         let mut next = self.clone();
         next.0.vis = vis;
-        return next;
+        next
     }
 
     pub fn with_generics(&self, generics: &crate::Generics) -> Self {
         let mut next = self.clone();
         next.0.generics = generics.clone();
-        return next;
+        next
     }
 
     pub fn with_methods(&self, methods: &[crate::Method]) -> Self {
         let mut next = self.clone();
         next.0.methods.append(&mut methods.to_vec());
-        return next;
+        next
     }
 
     pub fn with_method(&self, method: &crate::Method) -> Self {
         let mut next = self.clone();
         next.0.methods.push(method.clone());
-        return next;
+        next
     }
 
     pub fn build(&self) -> crate::TraitType {
-        return self.0.clone();
+        self.0.clone()
     }
 }

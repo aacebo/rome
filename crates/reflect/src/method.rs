@@ -13,48 +13,49 @@ pub struct Method {
 }
 
 impl Method {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new() -> crate::MethodBuilder {
-        return crate::MethodBuilder::new();
+        crate::MethodBuilder::new()
     }
 
     pub fn meta(&self) -> &crate::MetaData {
-        return &self.meta;
+        &self.meta
     }
 
     pub fn is_async(&self) -> bool {
-        return self.is_async;
+        self.is_async
     }
 
     pub fn vis(&self) -> Visibility {
-        return self.vis.clone();
+        self.vis.clone()
     }
 
     pub fn name(&self) -> &str {
-        return &self.name;
+        &self.name
     }
 
     pub fn generics(&self) -> &crate::Generics {
-        return &self.generics;
+        &self.generics
     }
 
     pub fn params(&self) -> &[Param] {
-        return &self.params;
+        &self.params
     }
 
     pub fn has_param(&self, name: &str) -> bool {
-        return self.params.iter().any(|v| v.name() == name);
+        self.params.iter().any(|v| v.name() == name)
     }
 
     pub fn param(&self, name: &str) -> &Param {
-        return self.params.iter().find(|v| v.name() == name).unwrap();
+        self.params.iter().find(|v| v.name() == name).unwrap()
     }
 
     pub fn param_mut(&mut self, name: &str) -> &mut Param {
-        return self.params.iter_mut().find(|v| v.name() == name).unwrap();
+        self.params.iter_mut().find(|v| v.name() == name).unwrap()
     }
 
     pub fn return_type(&self) -> &crate::Type {
-        return &self.return_type;
+        &self.return_type
     }
 }
 
@@ -84,7 +85,7 @@ impl std::fmt::Display for Method {
             write!(f, " -> {}", &self.return_type)?;
         }
 
-        return write!(f, ";");
+        write!(f, ";")
     }
 }
 
@@ -94,9 +95,15 @@ impl std::fmt::Display for Method {
 #[derive(Debug, Clone)]
 pub struct MethodBuilder(crate::Method);
 
+impl Default for MethodBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl MethodBuilder {
     pub fn new() -> Self {
-        return Self(crate::Method {
+        Self(crate::Method {
             meta: crate::MetaData::new(),
             is_async: false,
             vis: crate::Visibility::Private,
@@ -104,58 +111,58 @@ impl MethodBuilder {
             generics: crate::Generics::new(),
             params: vec![],
             return_type: Box::new(crate::Type::Void),
-        });
+        })
     }
 
     pub fn with_name(&self, name: &str) -> Self {
         let mut next = self.clone();
         next.0.name = name.to_string();
-        return next;
+        next
     }
 
     pub fn with_meta(&self, meta: &crate::MetaData) -> Self {
         let mut next = self.clone();
         next.0.meta = meta.clone();
-        return next;
+        next
     }
 
     pub fn with_is_async(&self, is_async: bool) -> Self {
         let mut next = self.clone();
         next.0.is_async = is_async;
-        return next;
+        next
     }
 
     pub fn with_visibility(&self, vis: crate::Visibility) -> Self {
         let mut next = self.clone();
         next.0.vis = vis;
-        return next;
+        next
     }
 
     pub fn with_generics(&self, generics: &crate::Generics) -> Self {
         let mut next = self.clone();
         next.0.generics = generics.clone();
-        return next;
+        next
     }
 
     pub fn with_params(&self, params: &[crate::Param]) -> Self {
         let mut next = self.clone();
         next.0.params.append(&mut params.to_vec());
-        return next;
+        next
     }
 
     pub fn with_param(&self, param: &crate::Param) -> Self {
         let mut next = self.clone();
         next.0.params.push(param.clone());
-        return next;
+        next
     }
 
     pub fn with_return_type(&self, ty: &crate::Type) -> Self {
         let mut next = self.clone();
         next.0.return_type = Box::new(ty.clone());
-        return next;
+        next
     }
 
     pub fn build(&self) -> crate::Method {
-        return self.0.clone();
+        self.0.clone()
     }
 }

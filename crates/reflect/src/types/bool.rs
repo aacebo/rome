@@ -6,49 +6,49 @@ pub struct BoolType;
 
 impl BoolType {
     pub fn to_type(&self) -> crate::Type {
-        return bool::type_of();
+        bool::type_of()
     }
 
     pub fn id(&self) -> crate::TypeId {
-        return crate::TypeId::from_str("bool");
+        crate::TypeId::from_str("bool")
     }
 
     pub fn assignable_to(&self, ty: crate::Type) -> bool {
-        return self.id() == ty.id();
+        self.id() == ty.id()
     }
 
     pub fn convertable_to(&self, ty: crate::Type) -> bool {
-        return ty.is_bool();
+        ty.is_bool()
     }
 }
 
 impl std::fmt::Display for BoolType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "{}", self.id());
+        write!(f, "{}", self.id())
     }
 }
 
 impl crate::ToType for BoolType {
     fn to_type(&self) -> crate::Type {
-        return crate::Type::Bool(self.clone());
+        crate::Type::Bool(*self)
     }
 }
 
 impl PartialEq<crate::Type> for BoolType {
     fn eq(&self, other: &crate::Type) -> bool {
-        return other.is_bool() && other.as_bool() == self;
+        other.is_bool() && other.as_bool() == self
     }
 }
 
 impl crate::TypeOf for bool {
     fn type_of() -> crate::Type {
-        return crate::Type::Bool(BoolType::default());
+        crate::Type::Bool(BoolType)
     }
 }
 
 impl crate::ToType for bool {
     fn to_type(&self) -> crate::Type {
-        return Self::type_of();
+        Self::type_of()
     }
 }
 #[cfg(test)]

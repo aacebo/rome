@@ -16,7 +16,7 @@ pub fn build(attributes: &[syn::Attribute]) -> proc_macro2::TokenStream {
         return quote!(::ayr_reflect::MetaData::new());
     }
 
-    return quote! {
+    quote! {
         ::ayr_reflect::MetaData::from([#(#pairs,)*])
-    };
+    }
 }

@@ -16,7 +16,7 @@ pub fn attr(meta: proc_macro2::TokenStream, item: &mut syn::ItemMod) -> proc_mac
             }));
     }
 
-    return quote!(#item);
+    quote!(#item)
 }
 
 pub fn build(meta: proc_macro2::TokenStream, item: &mut syn::ItemMod) -> proc_macro2::TokenStream {
@@ -33,7 +33,7 @@ pub fn build(meta: proc_macro2::TokenStream, item: &mut syn::ItemMod) -> proc_ma
         }
     }
 
-    return quote! {
+    quote! {
         ::ayr_reflect::ModType::new()
             .with_path(&(::ayr_reflect::Path::from(module_path!())))
             .with_meta(&#meta.merge(&#inner_meta))
@@ -41,5 +41,5 @@ pub fn build(meta: proc_macro2::TokenStream, item: &mut syn::ItemMod) -> proc_ma
             .with_items(&[#(#children,)*])
             .build()
             .to_type()
-    };
+    }
 }

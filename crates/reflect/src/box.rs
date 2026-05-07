@@ -7,6 +7,6 @@ where
     T: Clone,
 {
     fn to_box(&self) -> Box<T> {
-        return Box::new(self.clone());
+        Box::new(self.clone())
     }
 }

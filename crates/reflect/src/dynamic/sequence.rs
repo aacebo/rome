@@ -9,6 +9,9 @@ use crate::TypeOf;
 /// of their individual index's in a sequence
 pub trait Sequence: crate::Dyn {
     fn len(&self) -> usize;
+    fn is_empty(&self) -> bool {
+        self.len() == 0
+    }
     fn index(&self, i: usize) -> crate::Value;
     fn index_ref(&self, _: usize) -> &crate::Value {
         unimplemented!()
@@ -18,17 +21,17 @@ pub trait Sequence: crate::Dyn {
 impl dyn Sequence {
     pub fn downcast_ref<T: std::any::Any>(&self) -> Option<&T> {
         let value: &dyn std::any::Any = self;
-        return value.downcast_ref::<T>();
+        value.downcast_ref::<T>()
     }
 
     pub fn downcast_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
         let value: &mut dyn std::any::Any = self;
-        return value.downcast_mut::<T>();
+        value.downcast_mut::<T>()
     }
 
     pub fn is<T: std::any::Any>(&self) -> bool {
         let value: &dyn std::any::Any = self;
-        return value.is::<T>();
+        value.is::<T>()
     }
 }
 
@@ -47,7 +50,7 @@ impl serde::Serialize for dyn Sequence {
             ser.serialize_element(&self.index(i))?;
         }
 
-        return ser.end();
+        ser.end()
     }
 }
 
@@ -59,23 +62,23 @@ impl std::fmt::Display for dyn Sequence {
             write!(f, "\n\t{}", self.index(i))?;
         }
 
-        return write!(f, "\n]");
+        write!(f, "\n]")
     }
 }
 
 impl<T: Clone + Sequence> Sequence for Arc<T> {
     fn len(&self) -> usize {
-        return self.as_ref().len();
+        self.as_ref().len()
     }
 
     fn index(&self, i: usize) -> crate::Value {
-        return self.as_ref().index(i);
+        self.as_ref().index(i)
     }
 }
 
 impl<T> crate::TypeOf for Vec<T> {
     fn type_of() -> crate::Type {
-        return crate::StructType::new()
+        crate::StructType::new()
             .with_path(&crate::Path::from("std::vec"))
             .with_name("Vec")
             .with_visibility(crate::Visibility::Public(crate::Public::Full))
@@ -84,13 +87,13 @@ impl<T> crate::TypeOf for Vec<T> {
                 .build()
                 .to_generic()]))
             .build()
-            .to_type();
+            .to_type()
     }
 }
 
 impl<T> crate::ToType for Vec<T> {
     fn to_type(&self) -> crate::Type {
-        return Vec::<T>::type_of();
+        Vec::<T>::type_of()
     }
 }
 
@@ -99,13 +102,13 @@ where
     T: Clone + crate::TypeOf + crate::AsValue,
 {
     fn to_value(self) -> crate::Value {
-        return crate::Value::Slice(crate::Slice {
+        crate::Value::Slice(crate::Slice {
             ty: crate::SliceType {
                 ty: Box::new(T::type_of()),
                 capacity: None,
             },
             value: self.iter().map(|v| v.as_value()).collect::<Vec<_>>(),
-        });
+        })
     }
 }
 
@@ -114,13 +117,13 @@ where
     T: Clone + crate::TypeOf + crate::AsValue,
 {
     fn as_value(&self) -> crate::Value {
-        return crate::Value::Slice(crate::Slice {
+        crate::Value::Slice(crate::Slice {
             ty: crate::SliceType {
                 ty: Box::new(T::type_of()),
                 capacity: None,
             },
             value: self.iter().map(|v| v.as_value()).collect::<Vec<_>>(),
-        });
+        })
     }
 }
 
@@ -129,13 +132,26 @@ where
     T: Clone + std::fmt::Debug + crate::TypeOf + crate::AsValue + 'static,
 {
     fn len(&self) -> usize {
-        return self.len();
+        self.len()
     }
 
     fn index(&self, i: usize) -> crate::Value {
-        return match self.get(i) {
+        match self.get(i) {
             None => crate::Value::Null,
-            Some(v) => v.as_value().index(i),
-        };
+            Some(v) => v.as_value(),
+        }
+    }
+}
+
+#[cfg(test)]
+mod test {
+    use crate::Dynamic;
+
+    #[test]
+    pub fn vec_sequence_index_returns_element() {
+        let dynamic = Dynamic::from_sequence(vec![10_i32, 20, 30]);
+
+        assert_eq!(dynamic.len(), 3);
+        assert_eq!(dynamic.as_sequence().index(1).to_i32(), 20);
     }
 }

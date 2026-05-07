@@ -7,27 +7,28 @@ pub struct TypeParam {
 }
 
 impl TypeParam {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new() -> crate::TypeParamBuilder {
-        return crate::TypeParamBuilder::new();
+        crate::TypeParamBuilder::new()
     }
 
     pub fn to_generic(&self) -> crate::Generic {
-        return crate::Generic::Type(self.clone());
+        crate::Generic::Type(self.clone())
     }
 
     pub fn name(&self) -> &str {
-        return &self.name;
+        &self.name
     }
 
     pub fn bounds(&self) -> &[crate::Bound] {
-        return &self.bounds;
+        &self.bounds
     }
 
     pub fn default(&self) -> Option<&crate::Type> {
-        return match &self.default {
+        match &self.default {
             None => None,
             Some(v) => Some(v),
-        };
+        }
     }
 }
 
@@ -35,7 +36,7 @@ impl std::fmt::Display for TypeParam {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{}", &self.name)?;
 
-        if self.bounds.len() > 0 {
+        if !self.bounds.is_empty() {
             write!(f, ": ")?;
         }
 
@@ -51,7 +52,7 @@ impl std::fmt::Display for TypeParam {
             write!(f, " = {}", default)?;
         }
 
-        return Ok(());
+        Ok(())
     }
 }
 
@@ -61,40 +62,46 @@ impl std::fmt::Display for TypeParam {
 #[derive(Debug, Clone)]
 pub struct TypeParamBuilder(crate::TypeParam);
 
+impl Default for TypeParamBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl TypeParamBuilder {
     pub fn new() -> Self {
-        return Self(crate::TypeParam {
+        Self(crate::TypeParam {
             name: String::from(""),
             default: None,
             bounds: vec![],
-        });
+        })
     }
 
     pub fn with_name(&self, name: &str) -> Self {
         let mut next = self.clone();
         next.0.name = name.to_string();
-        return next;
+        next
     }
 
     pub fn with_default(&self, default: &crate::Type) -> Self {
         let mut next = self.clone();
         next.0.default = Some(default.clone());
-        return next;
+        next
     }
 
     pub fn with_bounds(&self, bounds: &[crate::Bound]) -> Self {
         let mut next = self.clone();
         next.0.bounds.append(&mut bounds.to_vec());
-        return next;
+        next
     }
 
     pub fn with_bound(&self, bound: &crate::Bound) -> Self {
         let mut next = self.clone();
         next.0.bounds.push(bound.clone());
-        return next;
+        next
     }
 
     pub fn build(&self) -> crate::TypeParam {
-        return self.0.clone();
+        self.0.clone()
     }
 }

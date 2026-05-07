@@ -50,11 +50,11 @@ macro_rules! int {
                 }
             }
 
-            impl Into<$type> for crate::Value {
-                fn into(self) -> $type {
-                    return match self {
-                        Self::Number(v) => v.to_int().$to_type(),
-                        v => panic!("called 'Into<{}>::into' on type '{}'", stringify!($type), v.to_type()),
+            impl From<crate::Value> for $type {
+                fn from(value: crate::Value) -> Self {
+                    return match value {
+                        crate::Value::Number(v) => v.to_int().$to_type(),
+                        v => panic!("called 'From<Value>::from' on type '{}'", v.to_type()),
                     };
                 }
             }
@@ -107,11 +107,11 @@ macro_rules! int {
                 }
             }
 
-            impl Into<$type> for crate::Number {
-                fn into(self) -> $type {
-                    return match self {
-                        Self::Int(v) => v.$to_type(),
-                        v => panic!("called 'Into<{}>::into' on '{}'", stringify!($type), v.to_type()),
+            impl From<crate::Number> for $type {
+                fn from(value: crate::Number) -> Self {
+                    return match value {
+                        crate::Number::Int(v) => v.$to_type(),
+                        v => panic!("called 'From<Number>::from' on '{}'", v.to_type()),
                     };
                 }
             }
@@ -197,9 +197,9 @@ macro_rules! int {
                 }
             }
 
-            impl Into<$type> for crate::Int {
-                fn into(self) -> $type {
-                    return self.$to_type();
+            impl From<crate::Int> for $type {
+                fn from(value: crate::Int) -> Self {
+                    return value.$to_type();
                 }
             }
 

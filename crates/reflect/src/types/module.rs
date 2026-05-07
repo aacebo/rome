@@ -8,50 +8,55 @@ pub struct ModType {
 }
 
 impl ModType {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new() -> crate::ModTypeBuilder {
-        return crate::ModTypeBuilder::new();
+        crate::ModTypeBuilder::new()
     }
 
     pub fn to_type(&self) -> crate::Type {
-        return crate::Type::Mod(self.clone());
+        crate::Type::Mod(self.clone())
     }
 
     pub fn id(&self) -> crate::TypeId {
-        return crate::TypeId::from_string(self.path.to_string());
+        crate::TypeId::from_string(self.path.to_string())
     }
 
     pub fn len(&self) -> usize {
-        return self.items.len();
+        self.items.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.items.is_empty()
     }
 
     pub fn path(&self) -> &crate::Path {
-        return &self.path;
+        &self.path
     }
 
     pub fn meta(&self) -> &crate::MetaData {
-        return &self.meta;
+        &self.meta
     }
 
     pub fn vis(&self) -> &crate::Visibility {
-        return &self.vis;
+        &self.vis
     }
 
     pub fn items(&self) -> &[crate::Item] {
-        return &self.items;
+        &self.items
     }
 
     pub fn assignable_to(&self, ty: crate::Type) -> bool {
-        return self.id() == ty.id();
+        self.id() == ty.id()
     }
 
     pub fn convertable_to(&self, ty: crate::Type) -> bool {
-        return ty.is_mod();
+        ty.is_mod()
     }
 }
 
 impl crate::ToType for ModType {
     fn to_type(&self) -> crate::Type {
-        return crate::Type::Mod(self.clone());
+        crate::Type::Mod(self.clone())
     }
 }
 
@@ -59,13 +64,13 @@ impl std::ops::Index<usize> for ModType {
     type Output = crate::Item;
 
     fn index(&self, index: usize) -> &Self::Output {
-        return self.items.index(index);
+        self.items.index(index)
     }
 }
 
 impl std::ops::IndexMut<usize> for ModType {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        return self.items.index_mut(index);
+        self.items.index_mut(index)
     }
 }
 
@@ -81,11 +86,11 @@ impl std::fmt::Display for ModType {
             write!(f, "\n\t{}", item)?;
         }
 
-        if self.items.len() > 0 {
-            write!(f, "\n")?;
+        if !self.items.is_empty() {
+            writeln!(f)?;
         }
 
-        return write!(f, "}}");
+        write!(f, "}}")
     }
 }
 
@@ -95,41 +100,47 @@ impl std::fmt::Display for ModType {
 #[derive(Debug, Clone)]
 pub struct ModTypeBuilder(crate::ModType);
 
+impl Default for ModTypeBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl ModTypeBuilder {
     pub fn new() -> Self {
-        return Self(crate::ModType {
+        Self(crate::ModType {
             path: crate::Path::new(),
             meta: crate::MetaData::new(),
             vis: crate::Visibility::Private,
             items: vec![],
-        });
+        })
     }
 
     pub fn with_path(&self, path: &crate::Path) -> Self {
         let mut next = self.clone();
         next.0.path = path.clone();
-        return next;
+        next
     }
 
     pub fn with_meta(&self, meta: &crate::MetaData) -> Self {
         let mut next = self.clone();
         next.0.meta = meta.clone();
-        return next;
+        next
     }
 
     pub fn with_visibility(&self, vis: crate::Visibility) -> Self {
         let mut next = self.clone();
         next.0.vis = vis;
-        return next;
+        next
     }
 
     pub fn with_items(&self, items: &[crate::Item]) -> Self {
         let mut next = self.clone();
         next.0.items.append(&mut items.to_vec());
-        return next;
+        next
     }
 
     pub fn build(&self) -> crate::ModType {
-        return self.0.clone();
+        self.0.clone()
     }
 }

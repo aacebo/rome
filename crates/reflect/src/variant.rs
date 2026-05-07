@@ -7,30 +7,35 @@ pub struct Variant {
 }
 
 impl Variant {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new() -> crate::VariantBuilder {
-        return crate::VariantBuilder::new();
+        crate::VariantBuilder::new()
     }
 
     pub fn meta(&self) -> &crate::MetaData {
-        return &self.meta;
+        &self.meta
     }
 
     pub fn name(&self) -> &str {
-        return &self.name;
+        &self.name
     }
 
     pub fn fields(&self) -> &crate::Fields {
-        return &self.fields;
+        &self.fields
     }
 
     pub fn len(&self) -> usize {
-        return self.fields.len();
+        self.fields.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.fields.is_empty()
     }
 }
 
 impl std::fmt::Display for Variant {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "{}{}", &self.name, &self.fields);
+        write!(f, "{}{}", &self.name, &self.fields)
     }
 }
 
@@ -40,34 +45,40 @@ impl std::fmt::Display for Variant {
 #[derive(Debug, Clone)]
 pub struct VariantBuilder(crate::Variant);
 
+impl Default for VariantBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl VariantBuilder {
     pub fn new() -> Self {
-        return Self(crate::Variant {
+        Self(crate::Variant {
             meta: crate::MetaData::new(),
             name: String::from(""),
             fields: crate::FieldsBuilder::new().build(),
-        });
+        })
     }
 
     pub fn with_name(&self, name: &str) -> Self {
         let mut next = self.clone();
         next.0.name = name.to_string();
-        return next;
+        next
     }
 
     pub fn with_meta(&self, meta: &crate::MetaData) -> Self {
         let mut next = self.clone();
         next.0.meta = meta.clone();
-        return next;
+        next
     }
 
     pub fn with_fields(&self, fields: &crate::Fields) -> Self {
         let mut next = self.clone();
         next.0.fields = fields.clone();
-        return next;
+        next
     }
 
     pub fn build(&self) -> crate::Variant {
-        return self.0.clone();
+        self.0.clone()
     }
 }

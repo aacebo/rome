@@ -7,33 +7,37 @@ pub struct Slice {
 
 impl Slice {
     pub fn to_type(&self) -> crate::Type {
-        return crate::Type::Slice(self.ty.clone());
+        crate::Type::Slice(self.ty.clone())
     }
 
     pub fn len(&self) -> usize {
-        return self.value.len();
+        self.value.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.value.is_empty()
     }
 
     pub fn iter(&self) -> std::slice::Iter<'_, crate::Value> {
-        return self.value.iter();
+        self.value.iter()
     }
 }
 
 impl PartialEq<crate::Value> for Slice {
     fn eq(&self, other: &crate::Value) -> bool {
-        return other.is_slice() && other.as_slice() == self;
+        other.is_slice() && other.as_slice() == self
     }
 }
 
 impl From<&[crate::Value]> for Slice {
     fn from(value: &[crate::Value]) -> Self {
-        return Self {
+        Self {
             ty: crate::SliceType {
                 ty: Box::new(value.first().unwrap().to_type()),
                 capacity: None,
             },
             value: value.to_vec(),
-        };
+        }
     }
 }
 
@@ -49,25 +53,25 @@ impl std::fmt::Display for Slice {
             }
         }
 
-        return write!(f, "]");
+        write!(f, "]")
     }
 }
 
 impl crate::ToType for Slice {
     fn to_type(&self) -> crate::Type {
-        return crate::Type::Slice(self.ty.clone());
+        crate::Type::Slice(self.ty.clone())
     }
 }
 
 impl crate::ToValue for Slice {
     fn to_value(self) -> crate::Value {
-        return crate::Value::Slice(self.clone());
+        crate::Value::Slice(self.clone())
     }
 }
 
 impl crate::AsValue for Slice {
     fn as_value(&self) -> crate::Value {
-        return crate::Value::Slice(self.clone());
+        crate::Value::Slice(self.clone())
     }
 }
 
@@ -76,13 +80,13 @@ where
     T: Clone + crate::TypeOf + crate::ToValue,
 {
     fn to_value(self) -> crate::Value {
-        return crate::Value::Slice(Slice {
+        crate::Value::Slice(Slice {
             ty: crate::SliceType {
                 ty: Box::new(T::type_of()),
                 capacity: None,
             },
             value: self.iter().map(|v| v.clone().to_value()).collect(),
-        });
+        })
     }
 }
 
@@ -91,13 +95,13 @@ where
     T: Clone + crate::TypeOf + crate::AsValue,
 {
     fn as_value(&self) -> crate::Value {
-        return crate::Value::Slice(Slice {
+        crate::Value::Slice(Slice {
             ty: crate::SliceType {
                 ty: Box::new(T::type_of()),
                 capacity: None,
             },
             value: self.iter().map(|v| v.clone().as_value()).collect(),
-        });
+        })
     }
 }
 
@@ -106,13 +110,13 @@ where
     T: Clone + crate::TypeOf + crate::ToValue,
 {
     fn to_value(self) -> crate::Value {
-        return crate::Value::Slice(Slice {
+        crate::Value::Slice(Slice {
             ty: crate::SliceType {
                 ty: Box::new(T::type_of()),
                 capacity: Some(N),
             },
             value: self.iter().map(|v| v.clone().to_value()).collect(),
-        });
+        })
     }
 }
 
@@ -121,25 +125,25 @@ where
     T: Clone + crate::TypeOf + crate::AsValue,
 {
     fn as_value(&self) -> crate::Value {
-        return crate::Value::Slice(Slice {
+        crate::Value::Slice(Slice {
             ty: crate::SliceType {
                 ty: Box::new(T::type_of()),
                 capacity: Some(N),
             },
             value: self.iter().map(|v| v.clone().as_value()).collect(),
-        });
+        })
     }
 }
 
 impl AsRef<[crate::Value]> for Slice {
     fn as_ref(&self) -> &[crate::Value] {
-        return self.value.as_slice();
+        self.value.as_slice()
     }
 }
 
 impl AsMut<[crate::Value]> for Slice {
     fn as_mut(&mut self) -> &mut [crate::Value] {
-        return self.value.as_mut_slice();
+        self.value.as_mut_slice()
     }
 }
 
@@ -147,13 +151,13 @@ impl std::ops::Deref for Slice {
     type Target = [crate::Value];
 
     fn deref(&self) -> &Self::Target {
-        return self.value.as_slice();
+        self.value.as_slice()
     }
 }
 
 impl std::ops::DerefMut for Slice {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        return self.value.as_mut_slice();
+        self.value.as_mut_slice()
     }
 }
 
@@ -161,13 +165,13 @@ impl std::ops::Index<usize> for Slice {
     type Output = crate::Value;
 
     fn index(&self, index: usize) -> &Self::Output {
-        return self.value.index(index);
+        self.value.index(index)
     }
 }
 
 impl std::ops::IndexMut<usize> for Slice {
     fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        return self.value.index_mut(index);
+        self.value.index_mut(index)
     }
 }
 

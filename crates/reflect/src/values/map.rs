@@ -53,46 +53,50 @@ pub struct Map {
 
 impl Map {
     pub fn new(ty: &crate::MapType) -> Self {
-        return Self {
+        Self {
             ty: ty.clone(),
             data: std::collections::BTreeMap::new(),
-        };
+        }
     }
 
     pub fn to_type(&self) -> crate::Type {
-        return crate::Type::Map(self.ty.clone());
+        crate::Type::Map(self.ty.clone())
     }
 
     pub fn iter(&self) -> std::collections::btree_map::Iter<'_, crate::Value, crate::Value> {
-        return self.data.iter();
+        self.data.iter()
     }
 
     pub fn keys(&self) -> Vec<crate::Value> {
-        return self.data.clone().into_keys().collect::<Vec<_>>();
+        self.data.clone().into_keys().collect::<Vec<_>>()
     }
 
     pub fn values(&self) -> Vec<crate::Value> {
-        return self.data.clone().into_values().collect::<Vec<_>>();
+        self.data.clone().into_values().collect::<Vec<_>>()
     }
 
     pub fn len(&self) -> usize {
-        return self.data.len();
+        self.data.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.data.is_empty()
     }
 
     pub fn data(&self) -> &std::collections::BTreeMap<crate::Value, crate::Value> {
-        return &self.data;
+        &self.data
     }
 
     pub fn has(&self, key: &crate::Value) -> bool {
-        return self.data.contains_key(key);
+        self.data.contains_key(key)
     }
 
     pub fn get(&self, key: &crate::Value) -> Option<&crate::Value> {
-        return self.data.get(key);
+        self.data.get(key)
     }
 
     pub fn get_mut(&mut self, key: &crate::Value) -> Option<&mut crate::Value> {
-        return self.data.get_mut(key);
+        self.data.get_mut(key)
     }
 
     pub fn set(&mut self, value: crate::Value) {
@@ -106,19 +110,19 @@ impl Map {
 
 impl crate::ToType for Map {
     fn to_type(&self) -> crate::Type {
-        return crate::Type::Map(self.ty.clone());
+        crate::Type::Map(self.ty.clone())
     }
 }
 
 impl crate::ToValue for Map {
     fn to_value(self) -> crate::Value {
-        return crate::Value::Map(self.clone());
+        crate::Value::Map(self.clone())
     }
 }
 
 impl crate::AsValue for Map {
     fn as_value(&self) -> crate::Value {
-        return crate::Value::Map(self.clone());
+        crate::Value::Map(self.clone())
     }
 }
 
@@ -126,13 +130,13 @@ impl std::ops::Index<&crate::Value> for Map {
     type Output = crate::Value;
 
     fn index(&self, index: &crate::Value) -> &Self::Output {
-        return self.data.index(index);
+        self.data.index(index)
     }
 }
 
 impl std::ops::IndexMut<&crate::Value> for Map {
     fn index_mut(&mut self, index: &crate::Value) -> &mut Self::Output {
-        return self.data.get_mut(index).unwrap();
+        self.data.get_mut(index).unwrap()
     }
 }
 
@@ -144,11 +148,11 @@ impl std::fmt::Display for Map {
             write!(f, "\n\t{}: {}", key, value)?;
         }
 
-        if self.data.len() > 0 {
-            write!(f, "\n")?;
+        if !self.data.is_empty() {
+            writeln!(f)?;
         }
 
-        return write!(f, "}}");
+        write!(f, "}}")
     }
 }
 
@@ -165,7 +169,7 @@ where
             value.set_key_value(k.to_value(), v.to_value());
         }
 
-        return value.to_value();
+        value.to_value()
     }
 }
 
@@ -182,7 +186,7 @@ where
             value.set_key_value(k.as_value(), v.as_value());
         }
 
-        return value.as_value();
+        value.as_value()
     }
 }
 
@@ -199,7 +203,7 @@ where
             value.set_key_value(k.to_value(), v.to_value());
         }
 
-        return value.to_value();
+        value.to_value()
     }
 }
 
@@ -216,7 +220,7 @@ where
             value.set_key_value(k.as_value(), v.as_value());
         }
 
-        return value.as_value();
+        value.as_value()
     }
 }
 

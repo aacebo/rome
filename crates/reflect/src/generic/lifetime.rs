@@ -7,22 +7,22 @@ pub struct LifetimeParam {
 
 impl LifetimeParam {
     pub fn new(name: &str, bounds: &[crate::LifetimeBound]) -> Self {
-        return Self {
+        Self {
             name: name.to_string(),
             bounds: bounds.to_vec(),
-        };
+        }
     }
 
     pub fn to_generic(&self) -> crate::Generic {
-        return crate::Generic::Lifetime(self.clone());
+        crate::Generic::Lifetime(self.clone())
     }
 
     pub fn name(&self) -> &str {
-        return &self.name;
+        &self.name
     }
 
     pub fn bounds(&self) -> &[crate::LifetimeBound] {
-        return &self.bounds;
+        &self.bounds
     }
 }
 
@@ -30,7 +30,7 @@ impl std::fmt::Display for LifetimeParam {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "'{}", &self.name)?;
 
-        if self.bounds.len() > 0 {
+        if !self.bounds.is_empty() {
             write!(f, ": ")?;
 
             for (i, bound) in self.bounds.iter().enumerate() {
@@ -42,6 +42,6 @@ impl std::fmt::Display for LifetimeParam {
             }
         }
 
-        return Ok(());
+        Ok(())
     }
 }

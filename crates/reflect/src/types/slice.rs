@@ -7,55 +7,59 @@ pub struct SliceType {
 
 impl SliceType {
     pub fn to_type(&self) -> crate::Type {
-        return crate::Type::Slice(self.clone());
+        crate::Type::Slice(self.clone())
     }
 
     pub fn id(&self) -> crate::TypeId {
-        return match self.capacity {
+        match self.capacity {
             None => crate::TypeId::from_string(format!("[{}]", &self.ty.id())),
             Some(capacity) => {
                 crate::TypeId::from_string(format!("[{}; {}]", &self.ty.id(), capacity))
             }
-        };
+        }
     }
 
     pub fn len(&self) -> usize {
-        return match self.capacity {
+        match self.capacity {
             None => panic!("called 'len' on unbound slice type"),
             Some(capacity) => capacity,
-        };
+        }
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.capacity == Some(0)
     }
 
     pub fn elem(&self) -> &crate::Type {
-        return &self.ty;
+        &self.ty
     }
 
     pub fn capacity(&self) -> Option<usize> {
-        return self.capacity;
+        self.capacity
     }
 
     pub fn is_slice_of(&self, ty: crate::Type) -> bool {
-        return ty.eq(&self.ty);
+        ty.eq(&self.ty)
     }
 
     pub fn assignable_to(&self, ty: crate::Type) -> bool {
-        return self.id() == ty.id();
+        self.id() == ty.id()
     }
 
     pub fn convertable_to(&self, ty: crate::Type) -> bool {
-        return ty.is_slice_of(*self.ty.clone());
+        ty.is_slice_of(*self.ty.clone())
     }
 }
 
 impl std::fmt::Display for SliceType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "{}", self.id());
+        write!(f, "{}", self.id())
     }
 }
 
 impl crate::ToType for SliceType {
     fn to_type(&self) -> crate::Type {
-        return crate::Type::Slice(self.clone());
+        crate::Type::Slice(self.clone())
     }
 }
 
@@ -66,10 +70,10 @@ where
     fn type_of() -> crate::Type {
         let ty = T::type_of();
 
-        return crate::Type::Slice(SliceType {
+        crate::Type::Slice(SliceType {
             ty: Box::new(ty),
             capacity: Some(N),
-        });
+        })
     }
 }
 
@@ -80,10 +84,10 @@ where
     fn type_of() -> crate::Type {
         let ty = T::type_of();
 
-        return crate::Type::Slice(SliceType {
+        crate::Type::Slice(SliceType {
             ty: Box::new(ty),
             capacity: None,
-        });
+        })
     }
 }
 
@@ -94,10 +98,10 @@ where
     fn to_type(&self) -> crate::Type {
         let ty = T::type_of();
 
-        return crate::Type::Slice(SliceType {
+        crate::Type::Slice(SliceType {
             ty: Box::new(ty),
             capacity: Some(N),
-        });
+        })
     }
 }
 
@@ -108,10 +112,10 @@ where
     fn to_type(&self) -> crate::Type {
         let ty = T::type_of();
 
-        return crate::Type::Slice(SliceType {
+        crate::Type::Slice(SliceType {
             ty: Box::new(ty),
             capacity: None,
-        });
+        })
     }
 }
 

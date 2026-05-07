@@ -37,6 +37,11 @@ mod models {
 
     #[derive(Debug, Clone, Reflect)]
     pub struct Position(pub f64, pub f64);
+
+    #[derive(Debug, Clone, Reflect)]
+    pub(crate) struct Restricted {
+        pub x: i32,
+    }
 }
 
 #[test]
@@ -119,6 +124,15 @@ pub fn should_reflect_tuple_struct() {
 }
 
 #[test]
+pub fn should_reflect_restricted_visibility() {
+    let r = models::Restricted { x: 7 };
+
+    assert!(r.to_type().is_struct());
+    assert_eq!(r.to_type().to_struct().name(), "Restricted");
+    assert!(r.to_type().to_struct().vis().is_public());
+}
+
+#[test]
 pub fn should_reflect_path() {
     let user = models::User {
         kind: models::Kind::Basic,
@@ -136,7 +150,7 @@ pub fn should_reflect_mod() {
     assert!(ty.is_mod());
     assert_eq!(ty.to_mod().path().name(), "models");
     assert!(ty.to_mod().vis().is_private());
-    assert_eq!(ty.to_mod().items().len(), 4);
+    assert_eq!(ty.to_mod().items().len(), 5);
 
     let module = ty.to_mod();
 

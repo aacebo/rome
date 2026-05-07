@@ -9,8 +9,8 @@ pub fn derive(input: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::To
         variants: data.variants.clone(),
         generics: input.generics.clone(),
         ident: input.ident.clone(),
-        brace_token: data.brace_token.clone(),
-        enum_token: data.enum_token.clone(),
+        brace_token: data.brace_token,
+        enum_token: data.enum_token,
         vis: input.vis.clone(),
     });
 
@@ -60,7 +60,7 @@ pub fn derive(input: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::To
         })
         .collect::<Vec<_>>();
 
-    return quote! {
+    quote! {
         impl ::ayr_reflect::TypeOf for #name {
             fn type_of() -> ::ayr_reflect::Type {
                 return #ty;
@@ -90,7 +90,7 @@ pub fn derive(input: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::To
                 };
             }
         }
-    };
+    }
 }
 
 pub fn attr(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
@@ -142,7 +142,7 @@ pub fn attr(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
         })
         .collect::<Vec<_>>();
 
-    return quote! {
+    quote! {
         impl ::ayr_reflect::TypeOf for #name {
             fn type_of() -> ::ayr_reflect::Type {
                 return #ty;
@@ -172,7 +172,7 @@ pub fn attr(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
                 };
             }
         }
-    };
+    }
 }
 
 pub fn build(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
@@ -241,7 +241,7 @@ pub fn build(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
         })
         .collect::<Vec<_>>();
 
-    return quote! {
+    quote! {
         ::ayr_reflect::EnumType::new()
             .with_path(&(::ayr_reflect::Path::from(module_path!())))
             .with_name(stringify!(#name))
@@ -251,5 +251,5 @@ pub fn build(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
             .with_variants(&[#(#variants,)*])
             .build()
             .to_type()
-    };
+    }
 }

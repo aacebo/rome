@@ -10,58 +10,63 @@ pub struct StructType {
 }
 
 impl StructType {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new() -> crate::StructTypeBuilder {
-        return crate::StructTypeBuilder::new();
+        crate::StructTypeBuilder::new()
     }
 
     pub fn to_type(&self) -> crate::Type {
-        return crate::Type::Struct(self.clone());
+        crate::Type::Struct(self.clone())
     }
 
     pub fn id(&self) -> crate::TypeId {
-        return crate::TypeId::from_string(format!("{}::{}", &self.path, &self.name));
+        crate::TypeId::from_string(format!("{}::{}", &self.path, &self.name))
     }
 
     pub fn len(&self) -> usize {
-        return self.fields.len();
+        self.fields.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.fields.is_empty()
     }
 
     pub fn path(&self) -> &crate::Path {
-        return &self.path;
+        &self.path
     }
 
     pub fn meta(&self) -> &crate::MetaData {
-        return &self.meta;
+        &self.meta
     }
 
     pub fn vis(&self) -> &crate::Visibility {
-        return &self.vis;
+        &self.vis
     }
 
     pub fn name(&self) -> &str {
-        return &self.name;
+        &self.name
     }
 
     pub fn generics(&self) -> &crate::Generics {
-        return &self.generics;
+        &self.generics
     }
 
     pub fn fields(&self) -> &crate::Fields {
-        return &self.fields;
+        &self.fields
     }
 
     pub fn assignable_to(&self, ty: crate::Type) -> bool {
-        return self.id() == ty.id();
+        self.id() == ty.id()
     }
 
     pub fn convertable_to(&self, ty: crate::Type) -> bool {
-        return ty.is_struct();
+        ty.is_struct()
     }
 }
 
 impl crate::ToType for StructType {
     fn to_type(&self) -> crate::Type {
-        return crate::Type::Struct(self.clone());
+        crate::Type::Struct(self.clone())
     }
 }
 
@@ -71,7 +76,7 @@ impl std::fmt::Display for StructType {
             write!(f, "{} ", &self.vis)?;
         }
 
-        return write!(f, "struct {}{}{}", &self.name, &self.generics, &self.fields);
+        write!(f, "struct {}{}{}", &self.name, &self.generics, &self.fields)
     }
 }
 
@@ -81,55 +86,61 @@ impl std::fmt::Display for StructType {
 #[derive(Debug, Clone)]
 pub struct StructTypeBuilder(crate::StructType);
 
+impl Default for StructTypeBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl StructTypeBuilder {
     pub fn new() -> Self {
-        return Self(crate::StructType {
+        Self(crate::StructType {
             path: crate::Path::new(),
             meta: crate::MetaData::new(),
             vis: crate::Visibility::Private,
             name: String::from(""),
             generics: crate::Generics::new(),
             fields: crate::FieldsBuilder::new().build(),
-        });
+        })
     }
 
     pub fn with_path(&self, path: &crate::Path) -> Self {
         let mut next = self.clone();
         next.0.path = path.clone();
-        return next;
+        next
     }
 
     pub fn with_name(&self, name: &str) -> Self {
         let mut next = self.clone();
         next.0.name = name.to_string();
-        return next;
+        next
     }
 
     pub fn with_meta(&self, meta: &crate::MetaData) -> Self {
         let mut next = self.clone();
         next.0.meta = meta.clone();
-        return next;
+        next
     }
 
     pub fn with_visibility(&self, vis: crate::Visibility) -> Self {
         let mut next = self.clone();
         next.0.vis = vis;
-        return next;
+        next
     }
 
     pub fn with_generics(&self, generics: &crate::Generics) -> Self {
         let mut next = self.clone();
         next.0.generics = generics.clone();
-        return next;
+        next
     }
 
     pub fn with_fields(&self, fields: &crate::Fields) -> Self {
         let mut next = self.clone();
         next.0.fields = fields.clone();
-        return next;
+        next
     }
 
     pub fn build(&self) -> crate::StructType {
-        return self.0.clone();
+        self.0.clone()
     }
 }

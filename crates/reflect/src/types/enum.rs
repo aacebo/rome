@@ -10,70 +10,75 @@ pub struct EnumType {
 }
 
 impl EnumType {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new() -> EnumTypeBuilder {
-        return EnumTypeBuilder::new();
+        EnumTypeBuilder::new()
     }
 
     pub fn to_type(&self) -> crate::Type {
-        return crate::Type::Enum(self.clone());
+        crate::Type::Enum(self.clone())
     }
 
     pub fn id(&self) -> crate::TypeId {
-        return crate::TypeId::from_string(format!("{}::{}", &self.path, &self.name));
+        crate::TypeId::from_string(format!("{}::{}", &self.path, &self.name))
     }
 
     pub fn len(&self) -> usize {
-        return self.variants.len();
+        self.variants.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.variants.is_empty()
     }
 
     pub fn path(&self) -> &crate::Path {
-        return &self.path;
+        &self.path
     }
 
     pub fn meta(&self) -> &crate::MetaData {
-        return &self.meta;
+        &self.meta
     }
 
     pub fn vis(&self) -> &crate::Visibility {
-        return &self.vis;
+        &self.vis
     }
 
     pub fn name(&self) -> &str {
-        return &self.name;
+        &self.name
     }
 
     pub fn generics(&self) -> &crate::Generics {
-        return &self.generics;
+        &self.generics
     }
 
     pub fn assignable_to(&self, ty: crate::Type) -> bool {
-        return self.id() == ty.id();
+        self.id() == ty.id()
     }
 
     pub fn convertable_to(&self, ty: crate::Type) -> bool {
-        return ty.is_enum();
+        ty.is_enum()
     }
 
     pub fn iter(&self) -> std::slice::Iter<'_, crate::Variant> {
-        return self.variants.iter();
+        self.variants.iter()
     }
 
     pub fn has_variant(&self, name: &str) -> bool {
-        return self.variants.iter().any(|v| v.name() == name);
+        self.variants.iter().any(|v| v.name() == name)
     }
 
     pub fn variant(&self, name: &str) -> &crate::Variant {
-        return self.variants.iter().find(|v| v.name() == name).unwrap();
+        self.variants.iter().find(|v| v.name() == name).unwrap()
     }
 
     pub fn variant_mut(&mut self, name: &str) -> &mut crate::Variant {
-        return self.variants.iter_mut().find(|v| v.name() == name).unwrap();
+        self.variants.iter_mut().find(|v| v.name() == name).unwrap()
     }
 }
 
 impl crate::ToType for EnumType {
     fn to_type(&self) -> crate::Type {
-        return crate::Type::Enum(self.clone());
+        crate::Type::Enum(self.clone())
     }
 }
 
@@ -89,11 +94,11 @@ impl std::fmt::Display for EnumType {
             write!(f, "\n\t{},", variant)?;
         }
 
-        if self.variants.len() > 0 {
-            write!(f, "\n")?;
+        if !self.variants.is_empty() {
+            writeln!(f)?;
         }
 
-        return write!(f, "}}");
+        write!(f, "}}")
     }
 }
 
@@ -103,61 +108,67 @@ impl std::fmt::Display for EnumType {
 #[derive(Debug, Clone)]
 pub struct EnumTypeBuilder(crate::EnumType);
 
+impl Default for EnumTypeBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl EnumTypeBuilder {
     pub fn new() -> Self {
-        return Self(crate::EnumType {
+        Self(crate::EnumType {
             path: crate::Path::new(),
             meta: crate::MetaData::new(),
             vis: crate::Visibility::Private,
             name: String::new(),
             generics: crate::Generics::new(),
             variants: vec![],
-        });
+        })
     }
 
     pub fn with_path(&self, path: &crate::Path) -> Self {
         let mut next = self.clone();
         next.0.path = path.clone();
-        return next;
+        next
     }
 
     pub fn with_name(&self, name: &str) -> Self {
         let mut next = self.clone();
         next.0.name = name.to_string();
-        return next;
+        next
     }
 
     pub fn with_meta(&self, meta: &crate::MetaData) -> Self {
         let mut next = self.clone();
         next.0.meta = meta.clone();
-        return next;
+        next
     }
 
     pub fn with_visibility(&self, vis: crate::Visibility) -> Self {
         let mut next = self.clone();
         next.0.vis = vis;
-        return next;
+        next
     }
 
     pub fn with_generics(&self, generics: &crate::Generics) -> Self {
         let mut next = self.clone();
         next.0.generics = generics.clone();
-        return next;
+        next
     }
 
     pub fn with_variants(&self, variants: &[crate::Variant]) -> Self {
         let mut next = self.clone();
         next.0.variants.append(&mut variants.to_vec());
-        return next;
+        next
     }
 
     pub fn with_variant(&self, variant: &crate::Variant) -> Self {
         let mut next = self.clone();
         next.0.variants.push(variant.clone());
-        return next;
+        next
     }
 
     pub fn build(&self) -> crate::EnumType {
-        return self.0.clone();
+        self.0.clone()
     }
 }

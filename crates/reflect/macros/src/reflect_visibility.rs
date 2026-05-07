@@ -1,7 +1,7 @@
 use quote::{ToTokens, quote};
 
 pub fn build(vis: &syn::Visibility) -> proc_macro2::TokenStream {
-    return match vis {
+    match vis {
         syn::Visibility::Inherited => quote!(::ayr_reflect::Visibility::Private),
         syn::Visibility::Public(_) => quote! {
             ::ayr_reflect::Visibility::Public(
@@ -18,21 +18,21 @@ pub fn build(vis: &syn::Visibility) -> proc_macro2::TokenStream {
                     )
                 },
                 "crate" => quote! {
-                    ::ayr_reflect::Visiblity::Public(
+                    ::ayr_reflect::Visibility::Public(
                         ::ayr_reflect::Public::Crate
                     )
                 },
                 "super" => quote! {
-                    ::ayr_reflect::Visiblity::Public(
+                    ::ayr_reflect::Visibility::Public(
                         ::ayr_reflect::Public::Super
                     )
                 },
                 other => quote! {
-                    ::ayr_reflect::Visiblity::Public(
+                    ::ayr_reflect::Visibility::Public(
                         ::ayr_reflect::Public::Mod(#other.to_string())
                     )
                 },
             }
         }
-    };
+    }
 }

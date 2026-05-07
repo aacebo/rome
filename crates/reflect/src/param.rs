@@ -7,26 +7,26 @@ pub struct Param {
 
 impl Param {
     pub fn new(name: &str, ty: &crate::Type) -> Self {
-        return Self {
+        Self {
             name: name.to_string(),
             ty: Box::new(ty.clone()),
-        };
+        }
     }
 
     pub fn is_selfish(&self) -> bool {
-        return self.name == "self"
+        self.name == "self"
             && (self.ty.is_self()
                 || self.ty.is_mut_self()
                 || self.ty.is_ref_self()
-                || self.ty.is_ref_mut_self());
+                || self.ty.is_ref_mut_self())
     }
 
     pub fn name(&self) -> &str {
-        return &self.name;
+        &self.name
     }
 
     pub fn ty(&self) -> &crate::Type {
-        return &self.ty;
+        &self.ty
     }
 }
 
@@ -37,6 +37,6 @@ impl std::fmt::Display for Param {
             return write!(f, "{}self", &ty[0..ty.len() - 4]);
         }
 
-        return write!(f, "{}: {}", &self.name, &self.ty);
+        write!(f, "{}: {}", &self.name, &self.ty)
     }
 }

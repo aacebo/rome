@@ -6,12 +6,9 @@ pub fn build(item: &syn::ItemImpl) -> proc_macro2::TokenStream {
     let impl_for = &item.self_ty;
     let impl_meta = reflect_meta::build(&item.attrs);
     let impl_generics = reflect_generics::build(&item.generics);
-    let impl_trait = match &item.trait_ {
-        None => None,
-        Some((_, path, _)) => Some(quote!(#path)),
-    };
+    let impl_trait = item.trait_.as_ref().map(|(_, path, _)| quote!(#path));
 
-    return match &impl_trait {
+    match &impl_trait {
         None => quote! {
             ::ayr_reflect::Impl::new()
                 .with_path(&(::ayr_reflect::Path::from(module_path!())))
@@ -29,5 +26,5 @@ pub fn build(item: &syn::ItemImpl) -> proc_macro2::TokenStream {
                 .with_of(&(::ayr_reflect::Path::from(stringify!(#of))))
                 .build()
         },
-    };
+    }
 }

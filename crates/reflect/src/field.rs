@@ -8,24 +8,25 @@ pub struct Field {
 }
 
 impl Field {
+    #[allow(clippy::new_ret_no_self)]
     pub fn new() -> crate::FieldBuilder {
-        return crate::FieldBuilder::new();
+        crate::FieldBuilder::new()
     }
 
     pub fn meta(&self) -> &crate::MetaData {
-        return &self.meta;
+        &self.meta
     }
 
     pub fn vis(&self) -> &crate::Visibility {
-        return &self.vis;
+        &self.vis
     }
 
     pub fn name(&self) -> &FieldName {
-        return &self.name;
+        &self.name
     }
 
     pub fn ty(&self) -> &crate::Type {
-        return &self.ty;
+        &self.ty
     }
 }
 
@@ -35,11 +36,11 @@ impl std::fmt::Display for Field {
             write!(f, "{} ", &self.vis)?;
         }
 
-        return write!(f, "{}: {},", &self.name, &self.ty);
+        write!(f, "{}: {},", &self.name, &self.ty)
     }
 }
 
-#[derive(Debug, Clone, PartialEq, PartialOrd)]
+#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub enum FieldName {
     Key(String),
@@ -48,108 +49,100 @@ pub enum FieldName {
 
 impl FieldName {
     pub fn is_key(&self) -> bool {
-        return match self {
-            Self::Key(_) => true,
-            _ => false,
-        };
+        matches!(self, Self::Key(_))
     }
 
     pub fn is_index(&self) -> bool {
-        return match self {
-            Self::Index(_) => true,
-            _ => false,
-        };
+        matches!(self, Self::Index(_))
     }
 
     pub fn as_str(&self) -> &str {
-        return match self {
-            Self::Key(v) => &v,
+        match self {
+            Self::Key(v) => v,
             _ => panic!("called 'as_str' on 'FieldName::Index'"),
-        };
+        }
     }
 
     pub fn as_index(&self) -> &usize {
-        return match self {
+        match self {
             Self::Index(v) => v,
             _ => panic!("called 'as_index' on 'FieldName::Key'"),
-        };
+        }
     }
 }
 
 impl AsRef<Self> for FieldName {
     fn as_ref(&self) -> &Self {
-        return self;
+        self
     }
 }
 
 impl AsMut<Self> for FieldName {
     fn as_mut(&mut self) -> &mut Self {
-        return self;
+        self
     }
 }
 
 impl From<&FieldName> for FieldName {
     fn from(value: &FieldName) -> Self {
-        return value.clone();
+        value.clone()
     }
 }
 
 impl From<&str> for FieldName {
     fn from(value: &str) -> Self {
-        return Self::Key(value.to_string());
+        Self::Key(value.to_string())
     }
 }
 
 impl From<String> for FieldName {
     fn from(value: String) -> Self {
-        return Self::Key(value);
+        Self::Key(value)
     }
 }
 
 impl From<&usize> for FieldName {
     fn from(value: &usize) -> Self {
-        return Self::Index(value.clone());
+        Self::Index(*value)
     }
 }
 
 impl From<usize> for FieldName {
     fn from(value: usize) -> Self {
-        return Self::Index(value);
-    }
-}
-
-impl Eq for FieldName {}
-
-impl Ord for FieldName {
-    fn cmp(&self, other: &Self) -> std::cmp::Ordering {
-        return other.partial_cmp(self).unwrap();
+        Self::Index(value)
     }
 }
 
 impl PartialEq<str> for FieldName {
     fn eq(&self, other: &str) -> bool {
-        return self.to_string() == other;
+        match self {
+            Self::Key(v) => v == other,
+            Self::Index(_) => false,
+        }
     }
 }
 
 impl PartialEq<String> for FieldName {
     fn eq(&self, other: &String) -> bool {
-        return self.to_string() == other.as_str();
+        match self {
+            Self::Key(v) => v == other,
+            Self::Index(_) => false,
+        }
     }
 }
 
 impl PartialEq<usize> for FieldName {
     fn eq(&self, other: &usize) -> bool {
-        return self.as_index() == other;
+        self.as_index() == other
     }
 }
 
 impl std::fmt::Display for FieldName {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        return match self {
+        match self {
             Self::Key(v) => write!(f, "{}", v),
             Self::Index(v) => write!(f, "{}", v),
-        };
+        }
     }
 }
 
@@ -159,41 +152,47 @@ impl std::fmt::Display for FieldName {
 #[derive(Debug, Clone)]
 pub struct FieldBuilder(crate::Field);
 
+impl Default for FieldBuilder {
+    fn default() -> Self {
+        Self::new()
+    }
+}
+
 impl FieldBuilder {
     pub fn new() -> Self {
-        return Self(crate::Field {
+        Self(crate::Field {
             meta: crate::MetaData::new(),
             vis: crate::Visibility::Private,
             name: crate::FieldName::from(""),
             ty: Box::new(crate::Type::Any),
-        });
+        })
     }
 
     pub fn with_name(&self, name: &crate::FieldName) -> Self {
         let mut next = self.clone();
         next.0.name = name.clone();
-        return next;
+        next
     }
 
     pub fn with_type(&self, ty: &crate::Type) -> Self {
         let mut next = self.clone();
         next.0.ty = Box::new(ty.clone());
-        return next;
+        next
     }
 
     pub fn with_meta(&self, meta: &crate::MetaData) -> Self {
         let mut next = self.clone();
         next.0.meta = meta.clone();
-        return next;
+        next
     }
 
     pub fn with_visibility(&self, vis: crate::Visibility) -> Self {
         let mut next = self.clone();
         next.0.vis = vis;
-        return next;
+        next
     }
 
     pub fn build(&self) -> crate::Field {
-        return self.0.clone();
+        self.0.clone()
     }
 }

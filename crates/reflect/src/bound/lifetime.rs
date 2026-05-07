@@ -6,22 +6,22 @@ pub struct LifetimeBound {
 
 impl LifetimeBound {
     pub fn new(name: &str) -> Self {
-        return Self {
+        Self {
             name: name.to_string(),
-        };
+        }
     }
 
     pub fn to_bound(&self) -> crate::Bound {
-        return crate::Bound::Lifetime(self.clone());
+        crate::Bound::Lifetime(self.clone())
     }
 
     pub fn name(&self) -> &str {
-        return &self.name;
+        &self.name
     }
 }
 
 impl std::fmt::Display for LifetimeBound {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "'{}", &self.name);
+        write!(f, "'{}", &self.name)
     }
 }

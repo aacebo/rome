@@ -9,8 +9,8 @@ pub fn derive(input: &syn::DeriveInput, data: &syn::DataStruct) -> proc_macro2::
         fields: data.fields.clone(),
         generics: input.generics.clone(),
         ident: input.ident.clone(),
-        semi_token: data.semi_token.clone(),
-        struct_token: data.struct_token.clone(),
+        semi_token: data.semi_token,
+        struct_token: data.struct_token,
         vis: input.vis.clone(),
     });
 
@@ -39,7 +39,7 @@ pub fn derive(input: &syn::DeriveInput, data: &syn::DataStruct) -> proc_macro2::
         syn::Fields::Unit => vec![],
     };
 
-    return quote! {
+    quote! {
         impl ::ayr_reflect::TypeOf for #name {
             fn type_of() -> ::ayr_reflect::Type {
                 return #ty;
@@ -77,7 +77,7 @@ pub fn derive(input: &syn::DeriveInput, data: &syn::DataStruct) -> proc_macro2::
                 return ::ayr_reflect::Value::Null;
             }
         }
-    };
+    }
 }
 
 pub fn attr(item: &syn::ItemStruct) -> proc_macro2::TokenStream {
@@ -108,7 +108,7 @@ pub fn attr(item: &syn::ItemStruct) -> proc_macro2::TokenStream {
         syn::Fields::Unit => vec![],
     };
 
-    return quote! {
+    quote! {
         impl ::ayr_reflect::TypeOf for #name {
             fn type_of() -> ::ayr_reflect::Type {
                 return #ty;
@@ -146,7 +146,7 @@ pub fn attr(item: &syn::ItemStruct) -> proc_macro2::TokenStream {
                 return ::ayr_reflect::Value::Null;
             }
         }
-    };
+    }
 }
 
 pub fn build(item: &syn::ItemStruct) -> proc_macro2::TokenStream {
@@ -176,7 +176,7 @@ pub fn build(item: &syn::ItemStruct) -> proc_macro2::TokenStream {
         syn::Fields::Unit => vec![],
     };
 
-    return quote! {
+    quote! {
         ::ayr_reflect::StructType::new()
             .with_path(&(::ayr_reflect::Path::from(module_path!())))
             .with_name(stringify!(#name))
@@ -192,5 +192,5 @@ pub fn build(item: &syn::ItemStruct) -> proc_macro2::TokenStream {
             )
             .build()
             .to_type()
-    };
+    }
 }

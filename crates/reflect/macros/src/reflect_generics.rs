@@ -15,9 +15,9 @@ pub fn build(generics: &syn::Generics) -> proc_macro2::TokenStream {
         return quote!(::ayr_reflect::Generics::new());
     }
 
-    return quote! {
+    quote! {
         ::ayr_reflect::Generics::from([#(#params.to_generic(),)*])
-    };
+    }
 }
 
 pub fn build_lifetime(param: &syn::LifetimeParam) -> proc_macro2::TokenStream {
@@ -32,12 +32,12 @@ pub fn build_lifetime(param: &syn::LifetimeParam) -> proc_macro2::TokenStream {
         });
     }
 
-    return quote! {
+    quote! {
         ::ayr_reflect::LifetimeParam::new(
             stringify!(#name),
             &[#(#bounds.to_bound(),)*],
         )
-    };
+    }
 }
 
 pub fn build_type(param: &syn::TypeParam) -> proc_macro2::TokenStream {
@@ -54,12 +54,12 @@ pub fn build_type(param: &syn::TypeParam) -> proc_macro2::TokenStream {
             .with_bounds(&[#(#bounds.to_bound(),)*])
     };
 
-    return match &param.default {
+    match &param.default {
         None => quote!(#tokens.build()),
         Some(default) => {
             quote!(#tokens.with_default(&(::ayr_reflect::type_of!(#default))).build())
         }
-    };
+    }
 }
 
 pub fn build_const(param: &syn::ConstParam) -> proc_macro2::TokenStream {
@@ -72,27 +72,27 @@ pub fn build_const(param: &syn::ConstParam) -> proc_macro2::TokenStream {
         )
     };
 
-    return match &param.default {
+    match &param.default {
         None => tokens,
         Some(default) => quote!(#tokens.with_default(#default)),
-    };
+    }
 }
 
 pub fn build_bound(bound: &syn::TypeParamBound) -> proc_macro2::TokenStream {
-    return match bound {
+    match bound {
         syn::TypeParamBound::Lifetime(v) => build_lifetime_bound(v),
         syn::TypeParamBound::Trait(v) => build_trait_bound(v),
         syn::TypeParamBound::Verbatim(v) => v.clone(),
         _ => quote!(),
-    };
+    }
 }
 
 pub fn build_lifetime_bound(bound: &syn::Lifetime) -> proc_macro2::TokenStream {
     let name = &bound.ident;
 
-    return quote! {
+    quote! {
         ::ayr_reflect::LifetimeBound::new(stringify!(#name))
-    };
+    }
 }
 
 pub fn build_trait_bound(bound: &syn::TraitBound) -> proc_macro2::TokenStream {
@@ -102,10 +102,10 @@ pub fn build_trait_bound(bound: &syn::TraitBound) -> proc_macro2::TokenStream {
         syn::TraitBoundModifier::Maybe(_) => quote!(::ayr_reflect::TraitBoundModifier::Maybe),
     };
 
-    return quote! {
+    quote! {
         ::ayr_reflect::TraitBound::new(
             &(::ayr_reflect::Path::from(#path)),
             #modifier,
         )
-    };
+    }
 }

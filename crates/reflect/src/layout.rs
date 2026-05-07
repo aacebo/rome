@@ -8,33 +8,24 @@ pub enum Layout {
 
 impl Layout {
     pub fn is_unit(&self) -> bool {
-        return match self {
-            Self::Unit => true,
-            _ => false,
-        };
+        matches!(self, Self::Unit)
     }
 
     pub fn is_key(&self) -> bool {
-        return match self {
-            Self::Key => true,
-            _ => false,
-        };
+        matches!(self, Self::Key)
     }
 
     pub fn is_index(&self) -> bool {
-        return match self {
-            Self::Index => true,
-            _ => false,
-        };
+        matches!(self, Self::Index)
     }
 }
 
 impl std::fmt::Display for Layout {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        return match self {
+        match self {
             Self::Unit => write!(f, "unit"),
             Self::Key => write!(f, "key"),
             Self::Index => write!(f, "index"),
-        };
+        }
     }
 }

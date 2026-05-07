@@ -8,61 +8,61 @@ pub struct MapType {
 
 impl MapType {
     pub fn new(ty: &crate::Type, key: &crate::Type, value: &crate::Type) -> Self {
-        return Self {
+        Self {
             ty: Box::new(ty.clone()),
             key: Box::new(key.clone()),
             value: Box::new(value.clone()),
-        };
+        }
     }
 
     pub fn to_type(&self) -> crate::Type {
-        return crate::Type::Map(self.clone());
+        crate::Type::Map(self.clone())
     }
 
     pub fn id(&self) -> crate::TypeId {
-        return self.ty.id();
+        self.ty.id()
     }
 
     pub fn assignable_to(&self, ty: crate::Type) -> bool {
-        return self.ty.assignable_to(ty);
+        self.ty.assignable_to(ty)
     }
 
     pub fn convertable_to(&self, ty: crate::Type) -> bool {
-        return self.ty.convertable_to(ty);
+        self.ty.convertable_to(ty)
     }
 }
 
 impl MapType {
     pub fn meta(&self) -> &crate::MetaData {
-        return self.ty.meta();
+        self.ty.meta()
     }
 
     pub fn path(&self) -> &crate::Path {
-        return self.ty.path();
+        self.ty.path()
     }
 
     pub fn ty(&self) -> &crate::Type {
-        return &self.ty;
+        &self.ty
     }
 
     pub fn key(&self) -> &crate::Type {
-        return &self.key;
+        &self.key
     }
 
     pub fn value(&self) -> &crate::Type {
-        return &self.value;
+        &self.value
     }
 }
 
 impl std::fmt::Display for MapType {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        return write!(f, "{}", &self.ty);
+        write!(f, "{}", &self.ty)
     }
 }
 
 impl crate::ToType for MapType {
     fn to_type(&self) -> crate::Type {
-        return crate::Type::Map(self.clone());
+        crate::Type::Map(self.clone())
     }
 }
 
@@ -86,7 +86,7 @@ where
             .build()
             .to_type();
 
-        return MapType::new(&ty, &key, &value).to_type();
+        MapType::new(&ty, &key, &value).to_type()
     }
 }
 
@@ -110,7 +110,7 @@ where
             .build()
             .to_type();
 
-        return MapType::new(&ty, &key, &value).to_type();
+        MapType::new(&ty, &key, &value).to_type()
     }
 }
 
@@ -134,7 +134,7 @@ where
             .build()
             .to_type();
 
-        return MapType::new(&ty, &key, &value).to_type();
+        MapType::new(&ty, &key, &value).to_type()
     }
 }
 
@@ -158,7 +158,7 @@ where
             .build()
             .to_type();
 
-        return MapType::new(&ty, &key, &value).to_type();
+        MapType::new(&ty, &key, &value).to_type()
     }
 }
 

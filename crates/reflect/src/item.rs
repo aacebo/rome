@@ -7,46 +7,40 @@ pub enum Item {
 
 impl Item {
     pub fn id(&self) -> crate::TypeId {
-        return match self {
+        match self {
             Self::Type(v) => v.id(),
             Self::Impl(v) => v.id(),
-        };
+        }
     }
 
     pub fn is_type(&self) -> bool {
-        return match self {
-            Self::Type(_) => true,
-            _ => false,
-        };
+        matches!(self, Self::Type(_))
     }
 
     pub fn is_impl(&self) -> bool {
-        return match self {
-            Self::Impl(_) => true,
-            _ => false,
-        };
+        matches!(self, Self::Impl(_))
     }
 
     pub fn to_type(&self) -> crate::Type {
-        return match self {
+        match self {
             Self::Type(v) => v.clone(),
             _ => panic!("called 'to_type' on '{}'", self.id()),
-        };
+        }
     }
 
     pub fn to_impl(&self) -> crate::Impl {
-        return match self {
+        match self {
             Self::Impl(v) => v.clone(),
             _ => panic!("called 'to_impl' on '{}'", self.id()),
-        };
+        }
     }
 }
 
 impl std::fmt::Display for Item {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        return match self {
+        match self {
             Self::Type(v) => write!(f, "{}", v),
             Self::Impl(v) => write!(f, "{}", v),
-        };
+        }
     }
 }
