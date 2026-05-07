@@ -92,14 +92,20 @@ impl std::fmt::Display for MetaData {
     }
 }
 
-impl crate::ToType for MetaData {
-    fn to_type(&self) -> crate::Type {
+impl crate::TypeOf for MetaData {
+    fn type_of() -> crate::Type {
         crate::StructType::new()
-            .with_path(&crate::Path::from("ayr_reflect"))
+            .with_path(crate::Path::from("ayr_reflect"))
             .with_name("MetaData")
             .with_visibility(crate::Visibility::Public(crate::Public::Full))
             .build()
             .to_type()
+    }
+}
+
+impl crate::ToType for MetaData {
+    fn to_type(&self) -> crate::Type {
+        <Self as crate::TypeOf>::type_of()
     }
 }
 
@@ -119,6 +125,6 @@ impl crate::Dyn for MetaData {}
 
 impl crate::Object for MetaData {
     fn field(&self, name: &crate::FieldName) -> crate::Value {
-        self.get(name.as_str()).unwrap().clone()
+        self.get(&name.to_string()).unwrap().clone()
     }
 }

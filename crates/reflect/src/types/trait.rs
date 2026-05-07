@@ -16,7 +16,7 @@ impl TraitType {
     }
 
     pub fn to_type(&self) -> crate::Type {
-        crate::Type::Trait(self.clone())
+        crate::Type::Trait(std::rc::Rc::new(self.clone()))
     }
 
     pub fn id(&self) -> crate::TypeId {
@@ -84,7 +84,7 @@ impl TraitType {
 
 impl crate::ToType for TraitType {
     fn to_type(&self) -> crate::Type {
-        crate::Type::Trait(self.clone())
+        crate::Type::Trait(std::rc::Rc::new(self.clone()))
     }
 }
 
@@ -172,49 +172,42 @@ impl TraitTypeBuilder {
         })
     }
 
-    pub fn with_path(&self, path: &crate::Path) -> Self {
-        let mut next = self.clone();
-        next.0.path = path.clone();
-        next
+    pub fn with_path(mut self, path: crate::Path) -> Self {
+        self.0.path = path;
+        self
     }
 
-    pub fn with_name(&self, name: &str) -> Self {
-        let mut next = self.clone();
-        next.0.name = name.to_string();
-        next
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+        self.0.name = name.into();
+        self
     }
 
-    pub fn with_meta(&self, meta: &crate::MetaData) -> Self {
-        let mut next = self.clone();
-        next.0.meta = meta.clone();
-        next
+    pub fn with_meta(mut self, meta: crate::MetaData) -> Self {
+        self.0.meta = meta;
+        self
     }
 
-    pub fn with_visibility(&self, vis: crate::Visibility) -> Self {
-        let mut next = self.clone();
-        next.0.vis = vis;
-        next
+    pub fn with_visibility(mut self, vis: crate::Visibility) -> Self {
+        self.0.vis = vis;
+        self
     }
 
-    pub fn with_generics(&self, generics: &crate::Generics) -> Self {
-        let mut next = self.clone();
-        next.0.generics = generics.clone();
-        next
+    pub fn with_generics(mut self, generics: crate::Generics) -> Self {
+        self.0.generics = generics;
+        self
     }
 
-    pub fn with_methods(&self, methods: &[crate::Method]) -> Self {
-        let mut next = self.clone();
-        next.0.methods.append(&mut methods.to_vec());
-        next
+    pub fn with_methods(mut self, methods: impl IntoIterator<Item = crate::Method>) -> Self {
+        self.0.methods.extend(methods);
+        self
     }
 
-    pub fn with_method(&self, method: &crate::Method) -> Self {
-        let mut next = self.clone();
-        next.0.methods.push(method.clone());
-        next
+    pub fn with_method(mut self, method: crate::Method) -> Self {
+        self.0.methods.push(method);
+        self
     }
 
-    pub fn build(&self) -> crate::TraitType {
-        self.0.clone()
+    pub fn build(self) -> crate::TraitType {
+        self.0
     }
 }

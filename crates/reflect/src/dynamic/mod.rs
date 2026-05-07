@@ -91,7 +91,7 @@ impl Dynamic {
         }
     }
 
-    pub fn is<T: crate::Object>(&self) -> bool {
+    pub fn is<T: 'static>(&self) -> bool {
         match self {
             Self::Dyn(v) => v.is::<T>(),
             Self::Object(v) => v.is::<T>(),
@@ -99,7 +99,7 @@ impl Dynamic {
         }
     }
 
-    pub fn to<T: crate::Object>(&self) -> &T {
+    pub fn to<T: 'static>(&self) -> &T {
         match self {
             Self::Dyn(v) => v.downcast_ref::<T>().unwrap(),
             Self::Object(v) => v.downcast_ref::<T>().unwrap(),

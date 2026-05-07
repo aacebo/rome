@@ -35,7 +35,7 @@ pub fn build_lifetime(param: &syn::LifetimeParam) -> proc_macro2::TokenStream {
     quote! {
         ::ayr_reflect::LifetimeParam::new(
             stringify!(#name),
-            &[#(#bounds.to_bound(),)*],
+            &[#(#bounds,)*],
         )
     }
 }
@@ -51,13 +51,13 @@ pub fn build_type(param: &syn::TypeParam) -> proc_macro2::TokenStream {
     let tokens = quote! {
         ::ayr_reflect::TypeParam::new()
             .with_name(stringify!(#name))
-            .with_bounds(&[#(#bounds.to_bound(),)*])
+            .with_bounds([#(#bounds.to_bound(),)*])
     };
 
     match &param.default {
         None => quote!(#tokens.build()),
         Some(default) => {
-            quote!(#tokens.with_default(&(::ayr_reflect::type_of!(#default))).build())
+            quote!(#tokens.with_default(::ayr_reflect::type_of!(#default)).build())
         }
     }
 }

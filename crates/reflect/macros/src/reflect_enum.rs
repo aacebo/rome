@@ -63,21 +63,31 @@ pub fn derive(input: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::To
     quote! {
         impl ::ayr_reflect::TypeOf for #name {
             fn type_of() -> ::ayr_reflect::Type {
-                return #ty;
+                ::std::thread_local! {
+                    static CACHED: ::std::cell::RefCell<::std::option::Option<::ayr_reflect::Type>>
+                        = ::std::cell::RefCell::new(::std::option::Option::None);
+                }
+                CACHED.with(|c| {
+                    let mut guard = c.borrow_mut();
+                    if guard.is_none() {
+                        *guard = ::std::option::Option::Some(#ty);
+                    }
+                    guard.as_ref().unwrap().clone()
+                })
             }
         }
 
         impl ::ayr_reflect::ToType for #name {
             fn to_type(&self) -> ::ayr_reflect::Type {
-                return #ty;
+                <Self as ::ayr_reflect::TypeOf>::type_of()
             }
         }
 
         impl ::ayr_reflect::ToValue for #name {
             fn to_value(self) -> ::ayr_reflect::Value {
-                return match self {
+                match self {
                     #(#variants,)*
-                };
+                }
             }
         }
 
@@ -85,9 +95,9 @@ pub fn derive(input: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::To
 
         impl ::ayr_reflect::AsValue for #name {
             fn as_value(&self) -> ::ayr_reflect::Value {
-                return match self {
+                match self {
                     #(#variants,)*
-                };
+                }
             }
         }
     }
@@ -145,21 +155,31 @@ pub fn attr(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
     quote! {
         impl ::ayr_reflect::TypeOf for #name {
             fn type_of() -> ::ayr_reflect::Type {
-                return #ty;
+                ::std::thread_local! {
+                    static CACHED: ::std::cell::RefCell<::std::option::Option<::ayr_reflect::Type>>
+                        = ::std::cell::RefCell::new(::std::option::Option::None);
+                }
+                CACHED.with(|c| {
+                    let mut guard = c.borrow_mut();
+                    if guard.is_none() {
+                        *guard = ::std::option::Option::Some(#ty);
+                    }
+                    guard.as_ref().unwrap().clone()
+                })
             }
         }
 
         impl ::ayr_reflect::ToType for #name {
             fn to_type(&self) -> ::ayr_reflect::Type {
-                return #ty;
+                <Self as ::ayr_reflect::TypeOf>::type_of()
             }
         }
 
         impl ::ayr_reflect::ToValue for #name {
             fn to_value(self) -> ::ayr_reflect::Value {
-                return match self {
+                match self {
                     #(#variants,)*
-                };
+                }
             }
         }
 
@@ -167,9 +187,9 @@ pub fn attr(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
 
         impl ::ayr_reflect::AsValue for #name {
             fn as_value(&self) -> ::ayr_reflect::Value {
-                return match self {
+                match self {
                     #(#variants,)*
-                };
+                }
             }
         }
     }
@@ -204,13 +224,12 @@ pub fn build(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
                     quote! {
                         ::ayr_reflect::Variant::new()
                             .with_name(stringify!(#variant_name))
-                            .with_meta(&#variant_meta)
+                            .with_meta(#variant_meta)
                             .with_fields(
                                 ::ayr_reflect::Fields::new()
                                     .with_layout(::ayr_reflect::Layout::Key)
-                                    .with_fields(&[#(#fields,)*])
+                                    .with_fields([#(#fields,)*])
                                     .build()
-                                    .as_ref()
                             )
                             .build()
                     }
@@ -226,13 +245,12 @@ pub fn build(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
                     quote! {
                         ::ayr_reflect::Variant::new()
                             .with_name(stringify!(#variant_name))
-                            .with_meta(&#variant_meta)
+                            .with_meta(#variant_meta)
                             .with_fields(
                                 ::ayr_reflect::Fields::new()
                                     .with_layout(::ayr_reflect::Layout::Index)
-                                    .with_fields(&[#(#fields,)*])
+                                    .with_fields([#(#fields,)*])
                                     .build()
-                                    .as_ref()
                             )
                             .build()
                     }
@@ -243,12 +261,12 @@ pub fn build(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
 
     quote! {
         ::ayr_reflect::EnumType::new()
-            .with_path(&(::ayr_reflect::Path::from(module_path!())))
+            .with_path(::ayr_reflect::Path::from(module_path!()))
             .with_name(stringify!(#name))
-            .with_meta(&#meta)
-            .with_generics(&#generics)
+            .with_meta(#meta)
+            .with_generics(#generics)
             .with_visibility(#vis)
-            .with_variants(&[#(#variants,)*])
+            .with_variants([#(#variants,)*])
             .build()
             .to_type()
     }

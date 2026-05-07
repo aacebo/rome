@@ -1,10 +1,11 @@
+use std::rc::Rc;
 use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Ref {
     pub(crate) ty: crate::RefType,
-    pub(crate) value: Box<crate::Value>,
+    pub(crate) value: Rc<crate::Value>,
 }
 
 impl Ref {
@@ -41,7 +42,7 @@ impl AsRef<crate::Value> for Ref {
 
 impl AsMut<crate::Value> for Ref {
     fn as_mut(&mut self) -> &mut crate::Value {
-        &mut self.value
+        Rc::make_mut(&mut self.value)
     }
 }
 
@@ -55,7 +56,7 @@ impl std::ops::Deref for Ref {
 
 impl std::ops::DerefMut for Ref {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.value
+        Rc::make_mut(&mut self.value)
     }
 }
 
@@ -77,8 +78,8 @@ where
 {
     fn to_value(self) -> crate::Value {
         crate::Value::Ref(Ref {
-            ty: crate::RefType(Box::new(self.clone().to_type())),
-            value: Box::new(self.clone().to_value()),
+            ty: crate::RefType(Rc::new(self.clone().to_type())),
+            value: Rc::new(self.clone().to_value()),
         })
     }
 }
@@ -92,8 +93,8 @@ where
         let value = self.clone().clone();
 
         crate::Value::Ref(Ref {
-            ty: crate::RefType(Box::new(value.to_type())),
-            value: Box::new(value.as_value()),
+            ty: crate::RefType(Rc::new(value.to_type())),
+            value: Rc::new(value.as_value()),
         })
     }
 }
@@ -104,8 +105,8 @@ where
 {
     fn to_value(self) -> crate::Value {
         crate::Value::Ref(Ref {
-            ty: crate::RefType(Box::new(self.as_ref().to_type())),
-            value: Box::new(self.as_ref().clone().to_value()),
+            ty: crate::RefType(Rc::new(self.as_ref().to_type())),
+            value: Rc::new(self.as_ref().clone().to_value()),
         })
     }
 }
@@ -116,8 +117,8 @@ where
 {
     fn as_value(&self) -> crate::Value {
         crate::Value::Ref(Ref {
-            ty: crate::RefType(Box::new(self.as_ref().to_type())),
-            value: Box::new(self.as_ref().clone().as_value()),
+            ty: crate::RefType(Rc::new(self.as_ref().to_type())),
+            value: Rc::new(self.as_ref().clone().as_value()),
         })
     }
 }
@@ -128,8 +129,8 @@ where
 {
     fn from(value: &T) -> Self {
         Self::Ref(Ref {
-            ty: crate::RefType(Box::new(value.to_type())),
-            value: Box::new(value.clone().to_value()),
+            ty: crate::RefType(Rc::new(value.to_type())),
+            value: Rc::new(value.clone().to_value()),
         })
     }
 }

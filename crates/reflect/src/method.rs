@@ -9,7 +9,7 @@ pub struct Method {
     pub(crate) name: String,
     pub(crate) generics: crate::Generics,
     pub(crate) params: Vec<Param>,
-    pub(crate) return_type: Box<crate::Type>,
+    pub(crate) return_type: std::rc::Rc<crate::Type>,
 }
 
 impl Method {
@@ -110,59 +110,51 @@ impl MethodBuilder {
             name: String::from(""),
             generics: crate::Generics::new(),
             params: vec![],
-            return_type: Box::new(crate::Type::Void),
+            return_type: std::rc::Rc::new(crate::Type::Void),
         })
     }
 
-    pub fn with_name(&self, name: &str) -> Self {
-        let mut next = self.clone();
-        next.0.name = name.to_string();
-        next
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+        self.0.name = name.into();
+        self
     }
 
-    pub fn with_meta(&self, meta: &crate::MetaData) -> Self {
-        let mut next = self.clone();
-        next.0.meta = meta.clone();
-        next
+    pub fn with_meta(mut self, meta: crate::MetaData) -> Self {
+        self.0.meta = meta;
+        self
     }
 
-    pub fn with_is_async(&self, is_async: bool) -> Self {
-        let mut next = self.clone();
-        next.0.is_async = is_async;
-        next
+    pub fn with_is_async(mut self, is_async: bool) -> Self {
+        self.0.is_async = is_async;
+        self
     }
 
-    pub fn with_visibility(&self, vis: crate::Visibility) -> Self {
-        let mut next = self.clone();
-        next.0.vis = vis;
-        next
+    pub fn with_visibility(mut self, vis: crate::Visibility) -> Self {
+        self.0.vis = vis;
+        self
     }
 
-    pub fn with_generics(&self, generics: &crate::Generics) -> Self {
-        let mut next = self.clone();
-        next.0.generics = generics.clone();
-        next
+    pub fn with_generics(mut self, generics: crate::Generics) -> Self {
+        self.0.generics = generics;
+        self
     }
 
-    pub fn with_params(&self, params: &[crate::Param]) -> Self {
-        let mut next = self.clone();
-        next.0.params.append(&mut params.to_vec());
-        next
+    pub fn with_params(mut self, params: impl IntoIterator<Item = crate::Param>) -> Self {
+        self.0.params.extend(params);
+        self
     }
 
-    pub fn with_param(&self, param: &crate::Param) -> Self {
-        let mut next = self.clone();
-        next.0.params.push(param.clone());
-        next
+    pub fn with_param(mut self, param: crate::Param) -> Self {
+        self.0.params.push(param);
+        self
     }
 
-    pub fn with_return_type(&self, ty: &crate::Type) -> Self {
-        let mut next = self.clone();
-        next.0.return_type = Box::new(ty.clone());
-        next
+    pub fn with_return_type(mut self, ty: crate::Type) -> Self {
+        self.0.return_type = std::rc::Rc::new(ty);
+        self
     }
 
-    pub fn build(&self) -> crate::Method {
-        self.0.clone()
+    pub fn build(self) -> crate::Method {
+        self.0
     }
 }

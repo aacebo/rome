@@ -1,7 +1,7 @@
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct SliceType {
-    pub(crate) ty: Box<crate::Type>,
+    pub(crate) ty: std::rc::Rc<crate::Type>,
     pub(crate) capacity: Option<usize>,
 }
 
@@ -47,7 +47,7 @@ impl SliceType {
     }
 
     pub fn convertable_to(&self, ty: crate::Type) -> bool {
-        ty.is_slice_of(*self.ty.clone())
+        ty.is_slice_of((*self.ty).clone())
     }
 }
 
@@ -71,7 +71,7 @@ where
         let ty = T::type_of();
 
         crate::Type::Slice(SliceType {
-            ty: Box::new(ty),
+            ty: std::rc::Rc::new(ty),
             capacity: Some(N),
         })
     }
@@ -85,7 +85,7 @@ where
         let ty = T::type_of();
 
         crate::Type::Slice(SliceType {
-            ty: Box::new(ty),
+            ty: std::rc::Rc::new(ty),
             capacity: None,
         })
     }
@@ -99,7 +99,7 @@ where
         let ty = T::type_of();
 
         crate::Type::Slice(SliceType {
-            ty: Box::new(ty),
+            ty: std::rc::Rc::new(ty),
             capacity: Some(N),
         })
     }
@@ -113,7 +113,7 @@ where
         let ty = T::type_of();
 
         crate::Type::Slice(SliceType {
-            ty: Box::new(ty),
+            ty: std::rc::Rc::new(ty),
             capacity: None,
         })
     }

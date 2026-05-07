@@ -14,7 +14,7 @@ impl ModType {
     }
 
     pub fn to_type(&self) -> crate::Type {
-        crate::Type::Mod(self.clone())
+        crate::Type::Mod(std::rc::Rc::new(self.clone()))
     }
 
     pub fn id(&self) -> crate::TypeId {
@@ -56,7 +56,7 @@ impl ModType {
 
 impl crate::ToType for ModType {
     fn to_type(&self) -> crate::Type {
-        crate::Type::Mod(self.clone())
+        crate::Type::Mod(std::rc::Rc::new(self.clone()))
     }
 }
 
@@ -116,31 +116,27 @@ impl ModTypeBuilder {
         })
     }
 
-    pub fn with_path(&self, path: &crate::Path) -> Self {
-        let mut next = self.clone();
-        next.0.path = path.clone();
-        next
+    pub fn with_path(mut self, path: crate::Path) -> Self {
+        self.0.path = path;
+        self
     }
 
-    pub fn with_meta(&self, meta: &crate::MetaData) -> Self {
-        let mut next = self.clone();
-        next.0.meta = meta.clone();
-        next
+    pub fn with_meta(mut self, meta: crate::MetaData) -> Self {
+        self.0.meta = meta;
+        self
     }
 
-    pub fn with_visibility(&self, vis: crate::Visibility) -> Self {
-        let mut next = self.clone();
-        next.0.vis = vis;
-        next
+    pub fn with_visibility(mut self, vis: crate::Visibility) -> Self {
+        self.0.vis = vis;
+        self
     }
 
-    pub fn with_items(&self, items: &[crate::Item]) -> Self {
-        let mut next = self.clone();
-        next.0.items.append(&mut items.to_vec());
-        next
+    pub fn with_items(mut self, items: impl IntoIterator<Item = crate::Item>) -> Self {
+        self.0.items.extend(items);
+        self
     }
 
-    pub fn build(&self) -> crate::ModType {
-        self.0.clone()
+    pub fn build(self) -> crate::ModType {
+        self.0
     }
 }

@@ -2,7 +2,7 @@
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Mut {
     pub(crate) ty: crate::MutType,
-    pub(crate) value: Box<crate::Value>,
+    pub(crate) value: std::rc::Rc<crate::Value>,
 }
 
 impl Mut {
@@ -27,8 +27,8 @@ where
         let value = self.clone();
 
         crate::Value::Mut(Mut {
-            ty: crate::MutType::new(&value.to_type()),
-            value: Box::new(value.to_value()),
+            ty: crate::MutType::new(value.to_type()),
+            value: std::rc::Rc::new(value.to_value()),
         })
     }
 }
@@ -41,8 +41,8 @@ where
         let value = self.clone();
 
         crate::Value::Mut(Mut {
-            ty: crate::MutType::new(&value.to_type()),
-            value: Box::new(value.as_value()),
+            ty: crate::MutType::new(value.to_type()),
+            value: std::rc::Rc::new(value.as_value()),
         })
     }
 }
@@ -50,8 +50,8 @@ where
 impl<T: Clone + crate::ToType + crate::ToValue> From<&T> for Mut {
     fn from(value: &T) -> Self {
         Self {
-            ty: crate::MutType::new(&value.to_type()),
-            value: Box::new(value.clone().to_value()),
+            ty: crate::MutType::new(value.to_type()),
+            value: std::rc::Rc::new(value.clone().to_value()),
         }
     }
 }
@@ -88,7 +88,7 @@ impl AsRef<crate::Value> for Mut {
 
 impl AsMut<crate::Value> for Mut {
     fn as_mut(&mut self) -> &mut crate::Value {
-        &mut self.value
+        std::rc::Rc::make_mut(&mut self.value)
     }
 }
 
@@ -102,7 +102,7 @@ impl std::ops::Deref for Mut {
 
 impl std::ops::DerefMut for Mut {
     fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.value
+        std::rc::Rc::make_mut(&mut self.value)
     }
 }
 

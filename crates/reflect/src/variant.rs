@@ -60,25 +60,22 @@ impl VariantBuilder {
         })
     }
 
-    pub fn with_name(&self, name: &str) -> Self {
-        let mut next = self.clone();
-        next.0.name = name.to_string();
-        next
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+        self.0.name = name.into();
+        self
     }
 
-    pub fn with_meta(&self, meta: &crate::MetaData) -> Self {
-        let mut next = self.clone();
-        next.0.meta = meta.clone();
-        next
+    pub fn with_meta(mut self, meta: crate::MetaData) -> Self {
+        self.0.meta = meta;
+        self
     }
 
-    pub fn with_fields(&self, fields: &crate::Fields) -> Self {
-        let mut next = self.clone();
-        next.0.fields = fields.clone();
-        next
+    pub fn with_fields(mut self, fields: crate::Fields) -> Self {
+        self.0.fields = fields;
+        self
     }
 
-    pub fn build(&self) -> crate::Variant {
-        self.0.clone()
+    pub fn build(self) -> crate::Variant {
+        self.0
     }
 }

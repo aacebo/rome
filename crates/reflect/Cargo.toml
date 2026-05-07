@@ -17,7 +17,18 @@ workspace = true
 [features]
 macros = ["ayr-reflect-macros"]
 serde = ["dep:serde"]
+dhat-heap = []
 
 [dependencies]
 serde = { workspace = true, features = ["derive", "rc"], optional = true }
 ayr-reflect-macros = { path = "./macros", optional = true }
+
+[dev-dependencies]
+criterion = { version = "0.5", features = ["html_reports"] }
+dhat = { version = "0.3" }
+serde_json = { version = "1" }
+ayr-reflect-macros = { path = "./macros" }
+
+[[bench]]
+name = "reflect_bench"
+harness = false

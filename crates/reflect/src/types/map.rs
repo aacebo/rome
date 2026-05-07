@@ -1,22 +1,22 @@
 #[derive(Debug, Clone, PartialEq)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct MapType {
-    pub(crate) ty: Box<crate::Type>,
-    pub(crate) key: Box<crate::Type>,
-    pub(crate) value: Box<crate::Type>,
+    pub(crate) ty: std::rc::Rc<crate::Type>,
+    pub(crate) key: std::rc::Rc<crate::Type>,
+    pub(crate) value: std::rc::Rc<crate::Type>,
 }
 
 impl MapType {
-    pub fn new(ty: &crate::Type, key: &crate::Type, value: &crate::Type) -> Self {
+    pub fn new(ty: crate::Type, key: crate::Type, value: crate::Type) -> Self {
         Self {
-            ty: Box::new(ty.clone()),
-            key: Box::new(key.clone()),
-            value: Box::new(value.clone()),
+            ty: std::rc::Rc::new(ty),
+            key: std::rc::Rc::new(key),
+            value: std::rc::Rc::new(value),
         }
     }
 
     pub fn to_type(&self) -> crate::Type {
-        crate::Type::Map(self.clone())
+        crate::Type::Map(std::rc::Rc::new(self.clone()))
     }
 
     pub fn id(&self) -> crate::TypeId {
@@ -62,7 +62,7 @@ impl std::fmt::Display for MapType {
 
 impl crate::ToType for MapType {
     fn to_type(&self) -> crate::Type {
-        crate::Type::Map(self.clone())
+        crate::Type::Map(std::rc::Rc::new(self.clone()))
     }
 }
 
@@ -72,21 +72,20 @@ where
     V: crate::TypeOf,
 {
     fn type_of() -> crate::Type {
-        let path = crate::Path::from("std::collections");
         let key = K::type_of();
         let value = V::type_of();
         let ty = crate::StructType::new()
-            .with_path(&path)
+            .with_path(crate::Path::from("std::collections"))
             .with_name("HashMap")
             .with_visibility(crate::Visibility::Public(crate::Public::Full))
-            .with_generics(&crate::Generics::from([
+            .with_generics(crate::Generics::from([
                 crate::TypeParam::new().with_name("K").build().to_generic(),
                 crate::TypeParam::new().with_name("V").build().to_generic(),
             ]))
             .build()
             .to_type();
 
-        MapType::new(&ty, &key, &value).to_type()
+        MapType::new(ty, key, value).to_type()
     }
 }
 
@@ -96,21 +95,7 @@ where
     V: crate::TypeOf,
 {
     fn to_type(&self) -> crate::Type {
-        let path = crate::Path::from("std::collections");
-        let key = K::type_of();
-        let value = V::type_of();
-        let ty = crate::StructType::new()
-            .with_path(&path)
-            .with_name("HashMap")
-            .with_visibility(crate::Visibility::Public(crate::Public::Full))
-            .with_generics(&crate::Generics::from([
-                crate::TypeParam::new().with_name("K").build().to_generic(),
-                crate::TypeParam::new().with_name("V").build().to_generic(),
-            ]))
-            .build()
-            .to_type();
-
-        MapType::new(&ty, &key, &value).to_type()
+        <Self as crate::TypeOf>::type_of()
     }
 }
 
@@ -120,21 +105,20 @@ where
     V: crate::TypeOf,
 {
     fn type_of() -> crate::Type {
-        let path = crate::Path::from("std::collections");
         let key = K::type_of();
         let value = V::type_of();
         let ty = crate::StructType::new()
-            .with_path(&path)
+            .with_path(crate::Path::from("std::collections"))
             .with_name("BTreeMap")
             .with_visibility(crate::Visibility::Public(crate::Public::Full))
-            .with_generics(&crate::Generics::from([
+            .with_generics(crate::Generics::from([
                 crate::TypeParam::new().with_name("K").build().to_generic(),
                 crate::TypeParam::new().with_name("V").build().to_generic(),
             ]))
             .build()
             .to_type();
 
-        MapType::new(&ty, &key, &value).to_type()
+        MapType::new(ty, key, value).to_type()
     }
 }
 
@@ -144,21 +128,7 @@ where
     V: crate::TypeOf,
 {
     fn to_type(&self) -> crate::Type {
-        let path = crate::Path::from("std::collections");
-        let key = K::type_of();
-        let value = V::type_of();
-        let ty = crate::StructType::new()
-            .with_path(&path)
-            .with_name("BTreeMap")
-            .with_visibility(crate::Visibility::Public(crate::Public::Full))
-            .with_generics(&crate::Generics::from([
-                crate::TypeParam::new().with_name("K").build().to_generic(),
-                crate::TypeParam::new().with_name("V").build().to_generic(),
-            ]))
-            .build()
-            .to_type();
-
-        MapType::new(&ty, &key, &value).to_type()
+        <Self as crate::TypeOf>::type_of()
     }
 }
 

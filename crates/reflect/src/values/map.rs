@@ -60,19 +60,19 @@ impl Map {
     }
 
     pub fn to_type(&self) -> crate::Type {
-        crate::Type::Map(self.ty.clone())
+        crate::Type::Map(std::rc::Rc::new(self.ty.clone()))
     }
 
     pub fn iter(&self) -> std::collections::btree_map::Iter<'_, crate::Value, crate::Value> {
         self.data.iter()
     }
 
-    pub fn keys(&self) -> Vec<crate::Value> {
-        self.data.clone().into_keys().collect::<Vec<_>>()
+    pub fn keys(&self) -> std::collections::btree_map::Keys<'_, crate::Value, crate::Value> {
+        self.data.keys()
     }
 
-    pub fn values(&self) -> Vec<crate::Value> {
-        self.data.clone().into_values().collect::<Vec<_>>()
+    pub fn values(&self) -> std::collections::btree_map::Values<'_, crate::Value, crate::Value> {
+        self.data.values()
     }
 
     pub fn len(&self) -> usize {
@@ -99,8 +99,8 @@ impl Map {
         self.data.get_mut(key)
     }
 
-    pub fn set(&mut self, value: crate::Value) {
-        self.data = value.to_map().data().clone();
+    pub fn set(&mut self, map: Map) {
+        self.data = map.data;
     }
 
     pub fn set_key_value(&mut self, key: crate::Value, value: crate::Value) {
@@ -110,7 +110,7 @@ impl Map {
 
 impl crate::ToType for Map {
     fn to_type(&self) -> crate::Type {
-        crate::Type::Map(self.ty.clone())
+        crate::Type::Map(std::rc::Rc::new(self.ty.clone()))
     }
 }
 

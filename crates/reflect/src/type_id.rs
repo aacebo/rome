@@ -1,4 +1,5 @@
 use std::ops::{Deref, DerefMut};
+use std::rc::Rc;
 
 #[derive(Debug, Clone)]
 #[cfg_attr(
@@ -6,15 +7,30 @@ use std::ops::{Deref, DerefMut};
     derive(serde::Serialize, serde::Deserialize),
     serde(transparent)
 )]
-pub struct TypeId(String);
+pub struct TypeId(Rc<str>);
+
+thread_local! {
+    static INTERNED: std::cell::RefCell<std::collections::HashMap<&'static str, Rc<str>>>
+        = std::cell::RefCell::new(std::collections::HashMap::new());
+}
 
 impl TypeId {
-    pub(crate) fn from_str(value: &str) -> Self {
-        Self(value.to_string())
+    pub(crate) fn from_str(value: &'static str) -> Self {
+        let rc = INTERNED.with(|m| {
+            let mut map = m.borrow_mut();
+            if let Some(existing) = map.get(value) {
+                existing.clone()
+            } else {
+                let rc: Rc<str> = Rc::from(value);
+                map.insert(value, rc.clone());
+                rc
+            }
+        });
+        Self(rc)
     }
 
     pub(crate) fn from_string(value: String) -> Self {
-        Self(value)
+        Self(Rc::from(value.as_str()))
     }
 }
 
@@ -28,19 +44,19 @@ impl Eq for TypeId {}
 
 impl PartialEq for TypeId {
     fn eq(&self, other: &Self) -> bool {
-        self.0 == other.0
+        Rc::ptr_eq(&self.0, &other.0) || *self.0 == *other.0
     }
 }
 
 impl PartialEq<&str> for TypeId {
     fn eq(&self, other: &&str) -> bool {
-        &self.0 == other
+        &*self.0 == *other
     }
 }
 
 impl PartialEq<String> for TypeId {
     fn eq(&self, other: &String) -> bool {
-        &self.0 == other
+        &*self.0 == other.as_str()
     }
 }
 

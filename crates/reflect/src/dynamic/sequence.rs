@@ -79,10 +79,10 @@ impl<T: Clone + Sequence> Sequence for Arc<T> {
 impl<T> crate::TypeOf for Vec<T> {
     fn type_of() -> crate::Type {
         crate::StructType::new()
-            .with_path(&crate::Path::from("std::vec"))
+            .with_path(crate::Path::from("std::vec"))
             .with_name("Vec")
             .with_visibility(crate::Visibility::Public(crate::Public::Full))
-            .with_generics(&crate::Generics::from([crate::TypeParam::new()
+            .with_generics(crate::Generics::from([crate::TypeParam::new()
                 .with_name("T")
                 .build()
                 .to_generic()]))
@@ -104,7 +104,7 @@ where
     fn to_value(self) -> crate::Value {
         crate::Value::Slice(crate::Slice {
             ty: crate::SliceType {
-                ty: Box::new(T::type_of()),
+                ty: std::rc::Rc::new(T::type_of()),
                 capacity: None,
             },
             value: self.iter().map(|v| v.as_value()).collect::<Vec<_>>(),
@@ -119,7 +119,7 @@ where
     fn as_value(&self) -> crate::Value {
         crate::Value::Slice(crate::Slice {
             ty: crate::SliceType {
-                ty: Box::new(T::type_of()),
+                ty: std::rc::Rc::new(T::type_of()),
                 capacity: None,
             },
             value: self.iter().map(|v| v.as_value()).collect::<Vec<_>>(),

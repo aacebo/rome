@@ -29,15 +29,24 @@ impl PartialEq<crate::Value> for Slice {
     }
 }
 
+impl From<Vec<crate::Value>> for Slice {
+    fn from(value: Vec<crate::Value>) -> Self {
+        let ty = std::rc::Rc::new(
+            value
+                .first()
+                .map(crate::ToType::to_type)
+                .unwrap_or(crate::Type::Any),
+        );
+        Self {
+            ty: crate::SliceType { ty, capacity: None },
+            value,
+        }
+    }
+}
+
 impl From<&[crate::Value]> for Slice {
     fn from(value: &[crate::Value]) -> Self {
-        Self {
-            ty: crate::SliceType {
-                ty: Box::new(value.first().unwrap().to_type()),
-                capacity: None,
-            },
-            value: value.to_vec(),
-        }
+        Self::from(value.to_vec())
     }
 }
 
@@ -82,7 +91,7 @@ where
     fn to_value(self) -> crate::Value {
         crate::Value::Slice(Slice {
             ty: crate::SliceType {
-                ty: Box::new(T::type_of()),
+                ty: std::rc::Rc::new(T::type_of()),
                 capacity: None,
             },
             value: self.iter().map(|v| v.clone().to_value()).collect(),
@@ -97,10 +106,10 @@ where
     fn as_value(&self) -> crate::Value {
         crate::Value::Slice(Slice {
             ty: crate::SliceType {
-                ty: Box::new(T::type_of()),
+                ty: std::rc::Rc::new(T::type_of()),
                 capacity: None,
             },
-            value: self.iter().map(|v| v.clone().as_value()).collect(),
+            value: self.iter().map(crate::AsValue::as_value).collect(),
         })
     }
 }
@@ -112,7 +121,7 @@ where
     fn to_value(self) -> crate::Value {
         crate::Value::Slice(Slice {
             ty: crate::SliceType {
-                ty: Box::new(T::type_of()),
+                ty: std::rc::Rc::new(T::type_of()),
                 capacity: Some(N),
             },
             value: self.iter().map(|v| v.clone().to_value()).collect(),
@@ -127,10 +136,10 @@ where
     fn as_value(&self) -> crate::Value {
         crate::Value::Slice(Slice {
             ty: crate::SliceType {
-                ty: Box::new(T::type_of()),
+                ty: std::rc::Rc::new(T::type_of()),
                 capacity: Some(N),
             },
-            value: self.iter().map(|v| v.clone().as_value()).collect(),
+            value: self.iter().map(crate::AsValue::as_value).collect(),
         })
     }
 }

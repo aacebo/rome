@@ -16,7 +16,7 @@ impl EnumType {
     }
 
     pub fn to_type(&self) -> crate::Type {
-        crate::Type::Enum(self.clone())
+        crate::Type::Enum(std::rc::Rc::new(self.clone()))
     }
 
     pub fn id(&self) -> crate::TypeId {
@@ -78,7 +78,7 @@ impl EnumType {
 
 impl crate::ToType for EnumType {
     fn to_type(&self) -> crate::Type {
-        crate::Type::Enum(self.clone())
+        crate::Type::Enum(std::rc::Rc::new(self.clone()))
     }
 }
 
@@ -126,49 +126,42 @@ impl EnumTypeBuilder {
         })
     }
 
-    pub fn with_path(&self, path: &crate::Path) -> Self {
-        let mut next = self.clone();
-        next.0.path = path.clone();
-        next
+    pub fn with_path(mut self, path: crate::Path) -> Self {
+        self.0.path = path;
+        self
     }
 
-    pub fn with_name(&self, name: &str) -> Self {
-        let mut next = self.clone();
-        next.0.name = name.to_string();
-        next
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+        self.0.name = name.into();
+        self
     }
 
-    pub fn with_meta(&self, meta: &crate::MetaData) -> Self {
-        let mut next = self.clone();
-        next.0.meta = meta.clone();
-        next
+    pub fn with_meta(mut self, meta: crate::MetaData) -> Self {
+        self.0.meta = meta;
+        self
     }
 
-    pub fn with_visibility(&self, vis: crate::Visibility) -> Self {
-        let mut next = self.clone();
-        next.0.vis = vis;
-        next
+    pub fn with_visibility(mut self, vis: crate::Visibility) -> Self {
+        self.0.vis = vis;
+        self
     }
 
-    pub fn with_generics(&self, generics: &crate::Generics) -> Self {
-        let mut next = self.clone();
-        next.0.generics = generics.clone();
-        next
+    pub fn with_generics(mut self, generics: crate::Generics) -> Self {
+        self.0.generics = generics;
+        self
     }
 
-    pub fn with_variants(&self, variants: &[crate::Variant]) -> Self {
-        let mut next = self.clone();
-        next.0.variants.append(&mut variants.to_vec());
-        next
+    pub fn with_variants(mut self, variants: impl IntoIterator<Item = crate::Variant>) -> Self {
+        self.0.variants.extend(variants);
+        self
     }
 
-    pub fn with_variant(&self, variant: &crate::Variant) -> Self {
-        let mut next = self.clone();
-        next.0.variants.push(variant.clone());
-        next
+    pub fn with_variant(mut self, variant: crate::Variant) -> Self {
+        self.0.variants.push(variant);
+        self
     }
 
-    pub fn build(&self) -> crate::EnumType {
-        self.0.clone()
+    pub fn build(self) -> crate::EnumType {
+        self.0
     }
 }

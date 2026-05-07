@@ -77,31 +77,27 @@ impl TypeParamBuilder {
         })
     }
 
-    pub fn with_name(&self, name: &str) -> Self {
-        let mut next = self.clone();
-        next.0.name = name.to_string();
-        next
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+        self.0.name = name.into();
+        self
     }
 
-    pub fn with_default(&self, default: &crate::Type) -> Self {
-        let mut next = self.clone();
-        next.0.default = Some(default.clone());
-        next
+    pub fn with_default(mut self, default: crate::Type) -> Self {
+        self.0.default = Some(default);
+        self
     }
 
-    pub fn with_bounds(&self, bounds: &[crate::Bound]) -> Self {
-        let mut next = self.clone();
-        next.0.bounds.append(&mut bounds.to_vec());
-        next
+    pub fn with_bounds(mut self, bounds: impl IntoIterator<Item = crate::Bound>) -> Self {
+        self.0.bounds.extend(bounds);
+        self
     }
 
-    pub fn with_bound(&self, bound: &crate::Bound) -> Self {
-        let mut next = self.clone();
-        next.0.bounds.push(bound.clone());
-        next
+    pub fn with_bound(mut self, bound: crate::Bound) -> Self {
+        self.0.bounds.push(bound);
+        self
     }
 
-    pub fn build(&self) -> crate::TypeParam {
-        self.0.clone()
+    pub fn build(self) -> crate::TypeParam {
+        self.0
     }
 }

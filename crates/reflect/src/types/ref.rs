@@ -6,11 +6,11 @@ use std::sync::Arc;
     derive(serde::Serialize, serde::Deserialize),
     serde(transparent)
 )]
-pub struct RefType(pub(crate) Box<crate::Type>);
+pub struct RefType(pub(crate) std::rc::Rc<crate::Type>);
 
 impl RefType {
-    pub fn new(ty: &crate::Type) -> Self {
-        Self(Box::new(ty.clone()))
+    pub fn new(ty: crate::Type) -> Self {
+        Self(std::rc::Rc::new(ty))
     }
 
     pub fn to_type(&self) -> crate::Type {
@@ -34,7 +34,7 @@ impl RefType {
     }
 
     pub fn convertable_to(&self, ty: crate::Type) -> bool {
-        ty.is_ref_of(*self.0.clone())
+        ty.is_ref_of((*self.0).clone())
     }
 }
 
@@ -64,7 +64,7 @@ where
     T: crate::TypeOf,
 {
     fn type_of() -> crate::Type {
-        crate::RefType::new(&T::type_of()).to_type()
+        crate::RefType::new(T::type_of()).to_type()
     }
 }
 
@@ -73,7 +73,7 @@ where
     T: crate::TypeOf,
 {
     fn to_type(&self) -> crate::Type {
-        crate::RefType::new(&T::type_of()).to_type()
+        crate::RefType::new(T::type_of()).to_type()
     }
 }
 
@@ -82,7 +82,7 @@ where
     T: Clone + crate::ToType,
 {
     fn to_type(&self) -> crate::Type {
-        crate::RefType::new(&self.as_ref().to_type()).to_type()
+        crate::RefType::new(self.as_ref().to_type()).to_type()
     }
 }
 

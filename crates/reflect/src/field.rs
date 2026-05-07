@@ -4,7 +4,7 @@ pub struct Field {
     pub(crate) meta: crate::MetaData,
     pub(crate) vis: crate::Visibility,
     pub(crate) name: FieldName,
-    pub(crate) ty: Box<crate::Type>,
+    pub(crate) ty: std::rc::Rc<crate::Type>,
 }
 
 impl Field {
@@ -164,35 +164,31 @@ impl FieldBuilder {
             meta: crate::MetaData::new(),
             vis: crate::Visibility::Private,
             name: crate::FieldName::from(""),
-            ty: Box::new(crate::Type::Any),
+            ty: std::rc::Rc::new(crate::Type::Any),
         })
     }
 
-    pub fn with_name(&self, name: &crate::FieldName) -> Self {
-        let mut next = self.clone();
-        next.0.name = name.clone();
-        next
+    pub fn with_name(mut self, name: crate::FieldName) -> Self {
+        self.0.name = name;
+        self
     }
 
-    pub fn with_type(&self, ty: &crate::Type) -> Self {
-        let mut next = self.clone();
-        next.0.ty = Box::new(ty.clone());
-        next
+    pub fn with_type(mut self, ty: crate::Type) -> Self {
+        self.0.ty = std::rc::Rc::new(ty);
+        self
     }
 
-    pub fn with_meta(&self, meta: &crate::MetaData) -> Self {
-        let mut next = self.clone();
-        next.0.meta = meta.clone();
-        next
+    pub fn with_meta(mut self, meta: crate::MetaData) -> Self {
+        self.0.meta = meta;
+        self
     }
 
-    pub fn with_visibility(&self, vis: crate::Visibility) -> Self {
-        let mut next = self.clone();
-        next.0.vis = vis;
-        next
+    pub fn with_visibility(mut self, vis: crate::Visibility) -> Self {
+        self.0.vis = vis;
+        self
     }
 
-    pub fn build(&self) -> crate::Field {
-        self.0.clone()
+    pub fn build(self) -> crate::Field {
+        self.0
     }
 }

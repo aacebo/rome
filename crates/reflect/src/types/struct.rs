@@ -16,7 +16,7 @@ impl StructType {
     }
 
     pub fn to_type(&self) -> crate::Type {
-        crate::Type::Struct(self.clone())
+        crate::Type::Struct(std::rc::Rc::new(self.clone()))
     }
 
     pub fn id(&self) -> crate::TypeId {
@@ -66,7 +66,7 @@ impl StructType {
 
 impl crate::ToType for StructType {
     fn to_type(&self) -> crate::Type {
-        crate::Type::Struct(self.clone())
+        crate::Type::Struct(std::rc::Rc::new(self.clone()))
     }
 }
 
@@ -104,43 +104,37 @@ impl StructTypeBuilder {
         })
     }
 
-    pub fn with_path(&self, path: &crate::Path) -> Self {
-        let mut next = self.clone();
-        next.0.path = path.clone();
-        next
+    pub fn with_path(mut self, path: crate::Path) -> Self {
+        self.0.path = path;
+        self
     }
 
-    pub fn with_name(&self, name: &str) -> Self {
-        let mut next = self.clone();
-        next.0.name = name.to_string();
-        next
+    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+        self.0.name = name.into();
+        self
     }
 
-    pub fn with_meta(&self, meta: &crate::MetaData) -> Self {
-        let mut next = self.clone();
-        next.0.meta = meta.clone();
-        next
+    pub fn with_meta(mut self, meta: crate::MetaData) -> Self {
+        self.0.meta = meta;
+        self
     }
 
-    pub fn with_visibility(&self, vis: crate::Visibility) -> Self {
-        let mut next = self.clone();
-        next.0.vis = vis;
-        next
+    pub fn with_visibility(mut self, vis: crate::Visibility) -> Self {
+        self.0.vis = vis;
+        self
     }
 
-    pub fn with_generics(&self, generics: &crate::Generics) -> Self {
-        let mut next = self.clone();
-        next.0.generics = generics.clone();
-        next
+    pub fn with_generics(mut self, generics: crate::Generics) -> Self {
+        self.0.generics = generics;
+        self
     }
 
-    pub fn with_fields(&self, fields: &crate::Fields) -> Self {
-        let mut next = self.clone();
-        next.0.fields = fields.clone();
-        next
+    pub fn with_fields(mut self, fields: crate::Fields) -> Self {
+        self.0.fields = fields;
+        self
     }
 
-    pub fn build(&self) -> crate::StructType {
-        self.0.clone()
+    pub fn build(self) -> crate::StructType {
+        self.0
     }
 }

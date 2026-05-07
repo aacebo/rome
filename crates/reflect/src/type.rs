@@ -3,18 +3,18 @@
 pub enum Type {
     Any,
     Bool(crate::BoolType),
-    Enum(crate::EnumType),
+    Enum(std::rc::Rc<crate::EnumType>),
     Number(crate::NumberType),
     Str(crate::StrType),
     Ref(crate::RefType),
     Slice(crate::SliceType),
-    Map(crate::MapType),
-    Struct(crate::StructType),
+    Map(std::rc::Rc<crate::MapType>),
+    Struct(std::rc::Rc<crate::StructType>),
     This(crate::ThisType),
-    Tuple(crate::TupleType),
-    Trait(crate::TraitType),
+    Tuple(std::rc::Rc<crate::TupleType>),
+    Trait(std::rc::Rc<crate::TraitType>),
     Mut(crate::MutType),
-    Mod(crate::ModType),
+    Mod(std::rc::Rc<crate::ModType>),
     Void,
 }
 
@@ -227,14 +227,14 @@ impl Type {
 
     pub fn to_enum(&self) -> crate::EnumType {
         match self {
-            Self::Enum(v) => v.clone(),
+            Self::Enum(v) => v.as_ref().clone(),
             _ => panic!("called 'to_enum' on '{}'", self.id()),
         }
     }
 
     pub fn as_enum(&self) -> &crate::EnumType {
         match self {
-            Self::Enum(v) => v,
+            Self::Enum(v) => v.as_ref(),
             _ => panic!("called 'as_enum' on '{}'", self.id()),
         }
     }
@@ -270,14 +270,14 @@ impl Type {
 
     pub fn to_struct(&self) -> crate::StructType {
         match self {
-            Self::Struct(v) => v.clone(),
+            Self::Struct(v) => v.as_ref().clone(),
             _ => panic!("called 'to_struct' on '{}'", self.id()),
         }
     }
 
     pub fn as_struct(&self) -> &crate::StructType {
         match self {
-            Self::Struct(v) => v,
+            Self::Struct(v) => v.as_ref(),
             _ => panic!("called 'as_struct' on '{}'", self.id()),
         }
     }
@@ -354,28 +354,28 @@ impl Type {
 
     pub fn to_tuple(&self) -> crate::TupleType {
         match self {
-            Self::Tuple(v) => v.clone(),
+            Self::Tuple(v) => v.as_ref().clone(),
             _ => panic!("called 'to_tuple' on '{}'", self.id()),
         }
     }
 
     pub fn as_tuple(&self) -> &crate::TupleType {
         match self {
-            Self::Tuple(v) => v,
+            Self::Tuple(v) => v.as_ref(),
             _ => panic!("called 'as_tuple' on '{}'", self.id()),
         }
     }
 
     pub fn to_trait(&self) -> crate::TraitType {
         match self {
-            Self::Trait(v) => v.clone(),
+            Self::Trait(v) => v.as_ref().clone(),
             _ => panic!("called 'to_trait' on '{}'", self.id()),
         }
     }
 
     pub fn as_trait(&self) -> &crate::TraitType {
         match self {
-            Self::Trait(v) => v,
+            Self::Trait(v) => v.as_ref(),
             _ => panic!("called 'as_trait' on '{}'", self.id()),
         }
     }
@@ -396,28 +396,28 @@ impl Type {
 
     pub fn to_mod(&self) -> crate::ModType {
         match self {
-            Self::Mod(v) => v.clone(),
+            Self::Mod(v) => v.as_ref().clone(),
             _ => panic!("called 'to_mod' on '{}'", self.id()),
         }
     }
 
     pub fn as_mod(&self) -> &crate::ModType {
         match self {
-            Self::Mod(v) => v,
+            Self::Mod(v) => v.as_ref(),
             _ => panic!("called 'as_mod' on '{}'", self.id()),
         }
     }
 
     pub fn to_map(&self) -> crate::MapType {
         match self {
-            Self::Map(v) => v.clone(),
+            Self::Map(v) => v.as_ref().clone(),
             _ => panic!("called 'to_map' on '{}'", self.id()),
         }
     }
 
     pub fn as_map(&self) -> &crate::MapType {
         match self {
-            Self::Map(v) => v,
+            Self::Map(v) => v.as_ref(),
             _ => panic!("called 'as_map' on '{}'", self.id()),
         }
     }

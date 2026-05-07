@@ -2,14 +2,14 @@
 #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
 pub struct Param {
     pub(crate) name: String,
-    pub(crate) ty: Box<crate::Type>,
+    pub(crate) ty: std::rc::Rc<crate::Type>,
 }
 
 impl Param {
-    pub fn new(name: &str, ty: &crate::Type) -> Self {
+    pub fn new(name: &str, ty: crate::Type) -> Self {
         Self {
             name: name.to_string(),
-            ty: Box::new(ty.clone()),
+            ty: std::rc::Rc::new(ty),
         }
     }
 
