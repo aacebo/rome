@@ -90,6 +90,7 @@ dependencies = [
  "dhat",
  "serde",
  "serde_json",
+ "valuable",
 ]
 
 [[package]]
@@ -105,7 +106,9 @@ dependencies = [
 name = "ayr-task"
 version = "0.0.0"
 dependencies = [
+ "criterion",
  "crossbeam",
+ "dhat",
  "futures",
  "tokio",
  "tracing",
@@ -878,6 +881,26 @@ name = "unicode-ident"
 version = "1.0.24"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "e6e4313cd5fcd3dad5cafa179702e2b244f760991f45397d14d4ebf38247da75"
+
+[[package]]
+name = "valuable"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "ba73ea9cf16a25df0c8caa16c51acb937d5712a8429db78a3ee29d5dcacd3a65"
+dependencies = [
+ "valuable-derive",
+]
+
+[[package]]
+name = "valuable-derive"
+version = "0.1.1"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "4e3a32a9bcc0f6c6ccfd5b27bcf298c58e753bcc9eeff268157a303393183a6d"
+dependencies = [
+ "proc-macro2",
+ "quote",
+ "syn",
+]
 
 [[package]]
 name = "version_check"

@@ -1,10 +1,5 @@
 # `ayr-reflect` performance baseline
 
-This file is the contract for the perf-refactor work documented in
-`C:\Users\aacebo\.claude\plans\review-my-new-reflect-sparkling-hippo.md`.
-Each refactor batch must re-run the benches and append a new column here so
-progression is visible at a glance. Don't overwrite the baseline column.
-
 ## How to reproduce
 
 ```powershell
@@ -220,3 +215,37 @@ All acceptance criteria met:
 - `assignable_to_primitive` allocs: **0** (target was 0 ✓)
 - `clone_struct_type` allocs: **0** (target was 0 ✓)
 - All 67 tests pass; clippy 0 warnings.
+
+## vs `valuable` comparison
+
+`valuable` (tokio-rs) is a zero-alloc, object-safe value inspection crate.
+It uses a visitor pattern but never builds a type tree — it just walks the
+live value in place. That makes it a useful lower-bound reference: `ayr-reflect`
+does more (type descriptors, serde, serialization) but the comparable visitor
+operations should be in the same ballpark.
+
+```powershell
+cargo bench -p ayr-reflect --features serde
+```
+
+Date captured: 2026-05-08.
+
+| Bench | `ayr-reflect` | `valuable` | Notes |
+|---|---|---|---|
+| `type_of_struct` / `visit_struct` | 5.35 ns | 16.4 ns | ayr-reflect wins — thread_local cache |
+| `assignable_to_primitive` | 28.9 ns | — | no valuable equivalent |
+| `clone_struct_type` | 2.29 ns | — | no valuable equivalent |
+| `to_value_vec_string` / `visit_vec_string` | 210 ns | 1.81 ns | valuable wins — borrows, no clones |
+| `serialize_object_json` | 1.08 µs | — | no valuable equivalent |
+
+### Reading the numbers
+
+- **`type_of_struct` vs `valuable/visit_struct`** — `ayr-reflect` (5.35 ns) is
+  3× faster than `valuable` (16.4 ns) for struct traversal. The thread_local
+  cache means `type_of()` is essentially a pointer deref + Rc clone; `valuable`
+  still walks all fields via vtable dispatch each time.
+- **`to_value_vec_string` vs `valuable/visit_vec_string`** — `valuable` (1.81 ns)
+  is ~116× faster because it borrows strings through the visitor and never
+  allocates. `ayr-reflect` (210 ns) clones each string into `Value::Str`.
+  This is the main area where removing mutability / switching to borrowed values
+  could close the gap.

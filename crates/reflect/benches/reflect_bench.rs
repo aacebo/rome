@@ -1,23 +1,64 @@
-//! Performance baseline for ayr-reflect.
+//! Performance baseline for ayr-reflect vs valuable.
 //!
-//! Two run modes:
-//!   * `cargo bench -p ayr-reflect`                      — criterion timing.
-//!   * `cargo bench -p ayr-reflect --features dhat-heap` — runs each bench
-//!     once under dhat to capture allocation counts. Output is written to
-//!     `dhat-heap.json` in the workspace root; counts are also printed.
+//! Run with:
+//!   cargo bench -p ayr-reflect --features serde
+//!
+//! Each benchmark emits a criterion timing line plus a dhat allocation delta
+//! on stderr, e.g.:
+//!   dhat [type_of_struct]  allocs: 0  bytes: 0
 
 #![allow(unused)]
 
-use ayr_reflect::{AsValue, ToType, ToValue, TypeOf};
-use ayr_reflect_macros::Reflect;
-
-#[cfg(feature = "dhat-heap")]
 #[global_allocator]
 static ALLOC: dhat::Alloc = dhat::Alloc;
 
+use std::path::Path;
+
+use ayr_reflect::{AsValue, ToType, ToValue, TypeOf};
+use ayr_reflect_macros::Reflect;
+use criterion::{Criterion, black_box, criterion_group, criterion_main};
+use valuable::Valuable;
+
+// ----- dhat criterion profiler -----
+
+struct DhatProfiler {
+    profiler: Option<dhat::Profiler>,
+    before: Option<dhat::HeapStats>,
+}
+
+impl DhatProfiler {
+    fn new() -> Self {
+        Self {
+            profiler: None,
+            before: None,
+        }
+    }
+}
+
+impl criterion::profiler::Profiler for DhatProfiler {
+    fn start_profiling(&mut self, _id: &str, _dir: &Path) {
+        self.profiler = Some(dhat::Profiler::builder().testing().build());
+        self.before = Some(dhat::HeapStats::get());
+    }
+
+    fn stop_profiling(&mut self, id: &str, _dir: &Path) {
+        let after = dhat::HeapStats::get();
+        if let Some(before) = self.before.take() {
+            let allocs = after.total_blocks - before.total_blocks;
+            let bytes = after.total_bytes - before.total_bytes;
+            eprintln!("  dhat [{id}]  allocs: {allocs}  bytes: {bytes}");
+        }
+        self.profiler = None;
+    }
+}
+
+fn custom_criterion() -> Criterion {
+    Criterion::default().with_profiler(DhatProfiler::new())
+}
+
 // ----- shared sample types -----
 
-#[derive(Debug, Clone, Reflect)]
+#[derive(Debug, Clone, Reflect, Valuable)]
 pub struct User {
     pub id: u64,
     pub name: String,
@@ -40,7 +81,7 @@ fn sample_strings() -> Vec<String> {
     vec!["a".to_string(), "b".to_string(), "c".to_string()]
 }
 
-// ----- bench bodies (also reused under dhat) -----
+// ----- ayr-reflect bench bodies -----
 
 #[inline(never)]
 fn bench_type_of_struct() -> ayr_reflect::Type {
@@ -70,26 +111,52 @@ fn bench_serialize_object_json(user: &User) -> String {
     serde_json::to_string(&dynamic).expect("serialize")
 }
 
-// ----- criterion main (default) -----
+// ----- valuable bench bodies -----
 
-#[cfg(not(feature = "dhat-heap"))]
-use criterion::{Criterion, black_box, criterion_group, criterion_main};
+struct NoopVisitor;
 
-#[cfg(not(feature = "dhat-heap"))]
+impl valuable::Visit for NoopVisitor {
+    fn visit_value(&mut self, value: valuable::Value<'_>) {
+        match value {
+            valuable::Value::Structable(v) => v.visit(self),
+            valuable::Value::Listable(v) => v.visit(self),
+            _ => {}
+        }
+    }
+
+    fn visit_named_fields(&mut self, named_fields: &valuable::NamedValues<'_>) {
+        for (_, v) in named_fields.iter() {
+            v.visit(self);
+        }
+    }
+
+    fn visit_primitive_slice(&mut self, _: valuable::Slice<'_>) {}
+}
+
+#[inline(never)]
+fn bench_valuable_visit_struct(user: &User) {
+    user.visit(&mut NoopVisitor);
+}
+
+#[inline(never)]
+fn bench_valuable_visit_vec_string(v: &Vec<String>) {
+    v.visit(&mut NoopVisitor);
+}
+
+// ----- ayr-reflect criterion fns -----
+
 fn type_of_struct(c: &mut Criterion) {
     c.bench_function("type_of_struct", |b| {
         b.iter(|| black_box(bench_type_of_struct()));
     });
 }
 
-#[cfg(not(feature = "dhat-heap"))]
 fn assignable_to_primitive(c: &mut Criterion) {
     c.bench_function("assignable_to_primitive", |b| {
         b.iter(|| black_box(bench_assignable_to_primitive()));
     });
 }
 
-#[cfg(not(feature = "dhat-heap"))]
 fn clone_struct_type(c: &mut Criterion) {
     let t = <User as TypeOf>::type_of();
     c.bench_function("clone_struct_type", |b| {
@@ -97,14 +164,12 @@ fn clone_struct_type(c: &mut Criterion) {
     });
 }
 
-#[cfg(not(feature = "dhat-heap"))]
 fn to_value_vec_string(c: &mut Criterion) {
     c.bench_function("to_value_vec_string", |b| {
         b.iter_with_setup(sample_strings, |v| black_box(bench_to_value_vec_string(v)));
     });
 }
 
-#[cfg(not(feature = "dhat-heap"))]
 fn serialize_object_json(c: &mut Criterion) {
     let user = sample_user();
     c.bench_function("serialize_object_json", |b| {
@@ -112,95 +177,35 @@ fn serialize_object_json(c: &mut Criterion) {
     });
 }
 
-#[cfg(not(feature = "dhat-heap"))]
-criterion_group!(
-    benches,
-    type_of_struct,
-    assignable_to_primitive,
-    clone_struct_type,
-    to_value_vec_string,
-    serialize_object_json,
-);
+// ----- valuable criterion fns -----
 
-#[cfg(not(feature = "dhat-heap"))]
-criterion_main!(benches);
-
-// ----- dhat main (feature gated) -----
-//
-// Runs each bench body N times under the dhat heap profiler so the
-// per-call allocation count is N* the per-iteration cost. We use N=10000
-// for benches that allocate per-iteration (so the relative cost dominates
-// the dhat fixed overhead).
-
-#[cfg(feature = "dhat-heap")]
-fn main() {
-    let _profiler = dhat::Profiler::builder().testing().build();
-
-    const ITERS: usize = 10_000;
-
-    // Snapshot before/after each bench for delta accounting.
-    let mut report = Vec::<(String, dhat::HeapStats, dhat::HeapStats)>::new();
-
-    {
-        let before = dhat::HeapStats::get();
-        for _ in 0..ITERS {
-            std::hint::black_box(bench_type_of_struct());
-        }
-        let after = dhat::HeapStats::get();
-        report.push(("type_of_struct".into(), before, after));
-    }
-
-    {
-        let before = dhat::HeapStats::get();
-        for _ in 0..ITERS {
-            std::hint::black_box(bench_assignable_to_primitive());
-        }
-        let after = dhat::HeapStats::get();
-        report.push(("assignable_to_primitive".into(), before, after));
-    }
-
-    {
-        let t = <User as TypeOf>::type_of();
-        let before = dhat::HeapStats::get();
-        for _ in 0..ITERS {
-            std::hint::black_box(bench_clone_struct_type(&t));
-        }
-        let after = dhat::HeapStats::get();
-        report.push(("clone_struct_type".into(), before, after));
-    }
-
-    {
-        let before = dhat::HeapStats::get();
-        for _ in 0..ITERS {
-            std::hint::black_box(bench_to_value_vec_string(sample_strings()));
-        }
-        let after = dhat::HeapStats::get();
-        report.push(("to_value_vec_string".into(), before, after));
-    }
-
-    {
-        let user = sample_user();
-        let before = dhat::HeapStats::get();
-        for _ in 0..ITERS {
-            std::hint::black_box(bench_serialize_object_json(&user));
-        }
-        let after = dhat::HeapStats::get();
-        report.push(("serialize_object_json".into(), before, after));
-    }
-
-    println!();
-    println!("dhat baseline (averaged over {} iterations):", ITERS);
-    println!(
-        "{:<28} {:>14} {:>14} {:>16}",
-        "bench", "allocs/iter", "bytes/iter", "max_live_bytes"
-    );
-    for (name, before, after) in &report {
-        let allocs = (after.total_blocks - before.total_blocks) as f64 / ITERS as f64;
-        let bytes = (after.total_bytes - before.total_bytes) as f64 / ITERS as f64;
-        let max_live = after.max_bytes;
-        println!(
-            "{:<28} {:>14.2} {:>14.0} {:>16}",
-            name, allocs, bytes, max_live
-        );
-    }
+fn valuable_visit_struct(c: &mut Criterion) {
+    let user = sample_user();
+    c.bench_function("valuable/visit_struct", |b| {
+        b.iter(|| black_box(bench_valuable_visit_struct(&user)));
+    });
 }
+
+fn valuable_visit_vec_string(c: &mut Criterion) {
+    let v = sample_strings();
+    c.bench_function("valuable/visit_vec_string", |b| {
+        b.iter(|| black_box(bench_valuable_visit_vec_string(&v)));
+    });
+}
+
+// ----- groups -----
+
+criterion_group! {
+    name = benches;
+    config = custom_criterion();
+    targets = type_of_struct, assignable_to_primitive, clone_struct_type,
+              to_value_vec_string, serialize_object_json
+}
+
+criterion_group! {
+    name = valuable_benches;
+    config = custom_criterion();
+    targets = valuable_visit_struct, valuable_visit_vec_string
+}
+
+criterion_main!(benches, valuable_benches);
