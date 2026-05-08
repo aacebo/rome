@@ -61,6 +61,7 @@ name = "ayr-core"
 version = "0.0.0"
 dependencies = [
  "ayr-diagnostic",
+ "ayr-reflect",
  "ayr-time",
  "crossbeam",
  "serde",

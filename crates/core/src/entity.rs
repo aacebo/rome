@@ -1,7 +1,10 @@
+use serde::ser::SerializeStruct;
+
 use super::{Context, Zone};
 
-pub trait Entity: Send + Sync + std::any::Any + std::fmt::Debug {
-    fn name(&self) -> &str;
+pub trait Entity: Send + Sync + std::fmt::Debug + std::any::Any {
+    fn name(&self) -> &'static str;
+    fn value(&self) -> ayr_reflect::Value;
 
     fn on_spawn(&mut self, _ctx: &Context, _zone: &dyn Zone) {}
     fn on_change(&mut self, _ctx: &Context, _zone: &dyn Zone) {}
@@ -13,6 +16,9 @@ impl serde::Serialize for dyn Entity {
     where
         S: serde::Serializer,
     {
-        self.name().serialize(s)
+        let mut v = s.serialize_struct("Entity", 2)?;
+        v.serialize_field("name", self.name())?;
+        v.serialize_field("value", &self.value())?;
+        v.end()
     }
 }

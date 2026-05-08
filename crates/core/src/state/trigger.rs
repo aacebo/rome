@@ -1,6 +1,6 @@
 use super::{Action, action::Next};
 
-pub trait Trigger<TAction: Action>: Send + Sync + 'static {
+pub trait Trigger<TAction: Action>: Send + Sync + std::any::Any {
     fn execute(&self, state: &TAction::State, action: &TAction, next: &Next<TAction::State>);
 }
 
@@ -14,7 +14,7 @@ where
     }
 }
 
-pub(super) trait AnyTrigger<TState>: Send + Sync + 'static {
+pub(super) trait AnyTrigger<TState>: Send + Sync + std::any::Any {
     fn execute(&self, state: &TState, action: &dyn Action<State = TState>, next: &Next<TState>);
 }
 

@@ -1,6 +1,6 @@
 use super::Context;
 
-pub trait Zone: Send + Sync + std::any::Any + std::fmt::Debug {
+pub trait Zone: Send + Sync + std::fmt::Debug + std::any::Any {
     fn name(&self) -> &'static str;
 
     /// Called when the scene is entered/started.

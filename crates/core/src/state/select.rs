@@ -15,7 +15,6 @@ where
 
 impl<'a, TState, T> From<&'a TState> for Select<'a, TState, T>
 where
-    TState: 'static,
     T: Selector<TState>,
 {
     fn from(state: &'a TState) -> Self {
@@ -30,7 +29,6 @@ where
 
 impl<'a, TState, T> std::ops::Deref for Select<'a, TState, T>
 where
-    TState: 'static,
     T: Selector<TState>,
 {
     type Target = T;

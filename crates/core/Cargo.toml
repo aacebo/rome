@@ -19,3 +19,4 @@ crossbeam = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }
 ayr-diagnostic.path = "../diagnostic"
 ayr-time.path = "../time"
+ayr-reflect = { path = "../reflect", features = ["serde", "macros"] }
