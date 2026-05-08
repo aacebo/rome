@@ -1,6 +1,6 @@
 use super::Context;
 
-pub trait Entity: Send + Sync + std::fmt::Debug + std::any::Any + ayr_reflect::AsValue {
+pub trait Entity: Send + Sync + std::fmt::Debug + std::any::Any + ayr_reflect::ToValue {
     fn name(&self) -> &'static str;
 
     fn on_spawn(&mut self, _ctx: &Context) {}
@@ -13,6 +13,6 @@ impl serde::Serialize for dyn Entity {
     where
         S: serde::Serializer,
     {
-        self.as_value().serialize(s)
+        self.to_value().serialize(s)
     }
 }

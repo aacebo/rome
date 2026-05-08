@@ -48,13 +48,13 @@ pub fn derive(input: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::To
 
             if variant_fields.len() == 1 {
                 return quote! {
-                    Self::#variant_ident(v) => ::ayr_reflect::value_of!(v)
+                    Self::#variant_ident(v) => ::ayr_reflect::ToValue::to_value(v)
                 };
             }
 
             quote! {
                 Self::#variant_ident(#(#variant_fields,)*) => {
-                    ::ayr_reflect::value_of!((#(#variant_fields,)*))
+                    ::ayr_reflect::value_of!((#(#variant_fields.clone(),)*))
                 }
             }
         })
@@ -67,11 +67,14 @@ pub fn derive(input: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::To
                     static CACHED: ::std::cell::RefCell<::std::option::Option<::ayr_reflect::Type>>
                         = ::std::cell::RefCell::new(::std::option::Option::None);
                 }
+
                 CACHED.with(|c| {
                     let mut guard = c.borrow_mut();
+
                     if guard.is_none() {
                         *guard = ::std::option::Option::Some(#ty);
                     }
+
                     guard.as_ref().unwrap().clone()
                 })
             }
@@ -83,23 +86,20 @@ pub fn derive(input: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::To
             }
         }
 
+        impl ::ayr_reflect::Object for #name {
+            fn field(&self, name: &::ayr_reflect::FieldName) -> ::ayr_reflect::Value<'_> {
+                match self {
+                    #(#variants,)*
+                }
+            }
+        }
+
         impl ::ayr_reflect::ToValue for #name {
-            fn to_value(self) -> ::ayr_reflect::Value {
-                match self {
-                    #(#variants,)*
-                }
+            fn to_value<'__a>(&'__a self) -> ::ayr_reflect::Value<'__a> {
+                ::ayr_reflect::Value::Dynamic(::ayr_reflect::Dynamic::from_object(self))
             }
         }
 
-        impl ::ayr_reflect::Dyn for #name { }
-
-        impl ::ayr_reflect::AsValue for #name {
-            fn as_value(&self) -> ::ayr_reflect::Value {
-                match self {
-                    #(#variants,)*
-                }
-            }
-        }
     }
 }
 
@@ -140,13 +140,13 @@ pub fn attr(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
 
             if variant_fields.len() == 1 {
                 return quote! {
-                    Self::#variant_ident(v) => ::ayr_reflect::value_of!(v)
+                    Self::#variant_ident(v) => ::ayr_reflect::ToValue::to_value(v)
                 };
             }
 
             quote! {
                 Self::#variant_ident(#(#variant_fields,)*) => {
-                    ::ayr_reflect::value_of!((#(#variant_fields,)*))
+                    ::ayr_reflect::value_of!((#(#variant_fields.clone(),)*))
                 }
             }
         })
@@ -159,11 +159,14 @@ pub fn attr(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
                     static CACHED: ::std::cell::RefCell<::std::option::Option<::ayr_reflect::Type>>
                         = ::std::cell::RefCell::new(::std::option::Option::None);
                 }
+
                 CACHED.with(|c| {
                     let mut guard = c.borrow_mut();
+
                     if guard.is_none() {
                         *guard = ::std::option::Option::Some(#ty);
                     }
+
                     guard.as_ref().unwrap().clone()
                 })
             }
@@ -176,22 +179,13 @@ pub fn attr(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
         }
 
         impl ::ayr_reflect::ToValue for #name {
-            fn to_value(self) -> ::ayr_reflect::Value {
+            fn to_value<'__a>(&'__a self) -> ::ayr_reflect::Value<'__a> {
                 match self {
                     #(#variants,)*
                 }
             }
         }
 
-        impl ::ayr_reflect::Dyn for #name { }
-
-        impl ::ayr_reflect::AsValue for #name {
-            fn as_value(&self) -> ::ayr_reflect::Value {
-                match self {
-                    #(#variants,)*
-                }
-            }
-        }
     }
 }
 

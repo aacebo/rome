@@ -14,7 +14,7 @@ static ALLOC: dhat::Alloc = dhat::Alloc;
 
 use std::path::Path;
 
-use ayr_reflect::{AsValue, ToType, ToValue, TypeOf};
+use ayr_reflect::{ToType, ToValue, TypeOf};
 use ayr_reflect_macros::Reflect;
 use criterion::{Criterion, black_box, criterion_group, criterion_main};
 use valuable::Valuable;
@@ -101,13 +101,13 @@ fn bench_clone_struct_type(t: &ayr_reflect::Type) -> ayr_reflect::Type {
 }
 
 #[inline(never)]
-fn bench_to_value_vec_string(v: Vec<String>) -> ayr_reflect::Value {
-    v.to_value()
+fn bench_to_value_vec_string(v: &Vec<String>) {
+    let _ = std::hint::black_box(v.to_value());
 }
 
 #[inline(never)]
 fn bench_serialize_object_json(user: &User) -> String {
-    let dynamic = ayr_reflect::Dynamic::from_object(user.clone());
+    let dynamic = ayr_reflect::Dynamic::from_object(user);
     serde_json::to_string(&dynamic).expect("serialize")
 }
 
@@ -166,7 +166,7 @@ fn clone_struct_type(c: &mut Criterion) {
 
 fn to_value_vec_string(c: &mut Criterion) {
     c.bench_function("to_value_vec_string", |b| {
-        b.iter_with_setup(sample_strings, |v| black_box(bench_to_value_vec_string(v)));
+        b.iter_with_setup(sample_strings, |v| bench_to_value_vec_string(&v));
     });
 }
 

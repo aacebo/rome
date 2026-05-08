@@ -1,11 +1,10 @@
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Slice {
+pub struct Slice<'a> {
     pub(crate) ty: crate::SliceType,
-    pub(crate) value: Vec<crate::Value>,
+    pub(crate) value: Vec<crate::Value<'a>>,
 }
 
-impl Slice {
+impl<'a> Slice<'a> {
     pub fn to_type(&self) -> crate::Type {
         crate::Type::Slice(self.ty.clone())
     }
@@ -18,19 +17,19 @@ impl Slice {
         self.value.is_empty()
     }
 
-    pub fn iter(&self) -> std::slice::Iter<'_, crate::Value> {
+    pub fn iter(&self) -> std::slice::Iter<'_, crate::Value<'a>> {
         self.value.iter()
     }
 }
 
-impl PartialEq<crate::Value> for Slice {
-    fn eq(&self, other: &crate::Value) -> bool {
+impl<'a> PartialEq<crate::Value<'a>> for Slice<'a> {
+    fn eq(&self, other: &crate::Value<'a>) -> bool {
         other.is_slice() && other.as_slice() == self
     }
 }
 
-impl From<Vec<crate::Value>> for Slice {
-    fn from(value: Vec<crate::Value>) -> Self {
+impl<'a> From<Vec<crate::Value<'a>>> for Slice<'a> {
+    fn from(value: Vec<crate::Value<'a>>) -> Self {
         let ty = std::rc::Rc::new(
             value
                 .first()
@@ -44,42 +43,28 @@ impl From<Vec<crate::Value>> for Slice {
     }
 }
 
-impl From<&[crate::Value]> for Slice {
-    fn from(value: &[crate::Value]) -> Self {
-        Self::from(value.to_vec())
-    }
-}
-
-impl std::fmt::Display for Slice {
+impl<'a> std::fmt::Display for Slice<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "[")?;
 
         for (i, value) in self.value.iter().enumerate() {
             write!(f, "{}", value)?;
-
             if i < self.value.len() - 1 {
                 write!(f, ", ")?;
             }
         }
-
         write!(f, "]")
     }
 }
 
-impl crate::ToType for Slice {
+impl<'a> crate::ToType for Slice<'a> {
     fn to_type(&self) -> crate::Type {
         crate::Type::Slice(self.ty.clone())
     }
 }
 
-impl crate::ToValue for Slice {
-    fn to_value(self) -> crate::Value {
-        crate::Value::Slice(self.clone())
-    }
-}
-
-impl crate::AsValue for Slice {
-    fn as_value(&self) -> crate::Value {
+impl<'a> crate::ToValue for Slice<'a> {
+    fn to_value<'b>(&'b self) -> crate::Value<'b> {
         crate::Value::Slice(self.clone())
     }
 }
@@ -88,28 +73,13 @@ impl<T> crate::ToValue for &[T]
 where
     T: Clone + crate::TypeOf + crate::ToValue,
 {
-    fn to_value(self) -> crate::Value {
+    fn to_value<'a>(&'a self) -> crate::Value<'a> {
         crate::Value::Slice(Slice {
             ty: crate::SliceType {
                 ty: std::rc::Rc::new(T::type_of()),
                 capacity: None,
             },
-            value: self.iter().map(|v| v.clone().to_value()).collect(),
-        })
-    }
-}
-
-impl<T> crate::AsValue for &[T]
-where
-    T: Clone + crate::TypeOf + crate::AsValue,
-{
-    fn as_value(&self) -> crate::Value {
-        crate::Value::Slice(Slice {
-            ty: crate::SliceType {
-                ty: std::rc::Rc::new(T::type_of()),
-                capacity: None,
-            },
-            value: self.iter().map(crate::AsValue::as_value).collect(),
+            value: self.iter().map(|v| v.to_value()).collect(),
         })
     }
 }
@@ -118,69 +88,43 @@ impl<const N: usize, T> crate::ToValue for [T; N]
 where
     T: Clone + crate::TypeOf + crate::ToValue,
 {
-    fn to_value(self) -> crate::Value {
+    fn to_value<'a>(&'a self) -> crate::Value<'a> {
         crate::Value::Slice(Slice {
             ty: crate::SliceType {
                 ty: std::rc::Rc::new(T::type_of()),
                 capacity: Some(N),
             },
-            value: self.iter().map(|v| v.clone().to_value()).collect(),
+            value: self.iter().map(|v| v.to_value()).collect(),
         })
     }
 }
 
-impl<const N: usize, T> crate::AsValue for [T; N]
-where
-    T: Clone + crate::TypeOf + crate::AsValue,
-{
-    fn as_value(&self) -> crate::Value {
-        crate::Value::Slice(Slice {
-            ty: crate::SliceType {
-                ty: std::rc::Rc::new(T::type_of()),
-                capacity: Some(N),
-            },
-            value: self.iter().map(crate::AsValue::as_value).collect(),
-        })
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for Slice<'a> {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        self.value.serialize(s)
     }
 }
 
-impl AsRef<[crate::Value]> for Slice {
-    fn as_ref(&self) -> &[crate::Value] {
+impl<'a> AsRef<[crate::Value<'a>]> for Slice<'a> {
+    fn as_ref(&self) -> &[crate::Value<'a>] {
         self.value.as_slice()
     }
 }
 
-impl AsMut<[crate::Value]> for Slice {
-    fn as_mut(&mut self) -> &mut [crate::Value] {
-        self.value.as_mut_slice()
-    }
-}
-
-impl std::ops::Deref for Slice {
-    type Target = [crate::Value];
+impl<'a> std::ops::Deref for Slice<'a> {
+    type Target = [crate::Value<'a>];
 
     fn deref(&self) -> &Self::Target {
         self.value.as_slice()
     }
 }
 
-impl std::ops::DerefMut for Slice {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        self.value.as_mut_slice()
-    }
-}
-
-impl std::ops::Index<usize> for Slice {
-    type Output = crate::Value;
+impl<'a> std::ops::Index<usize> for Slice<'a> {
+    type Output = crate::Value<'a>;
 
     fn index(&self, index: usize) -> &Self::Output {
         self.value.index(index)
-    }
-}
-
-impl std::ops::IndexMut<usize> for Slice {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        self.value.index_mut(index)
     }
 }
 

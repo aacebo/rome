@@ -22,19 +22,10 @@ impl<T> crate::ToType for Option<T> {
 }
 
 impl<T: crate::ToValue> crate::ToValue for Option<T> {
-    fn to_value(self) -> crate::Value {
+    fn to_value<'a>(&'a self) -> crate::Value<'a> {
         match self {
             None => crate::Value::Null,
             Some(v) => v.to_value(),
-        }
-    }
-}
-
-impl<T: crate::AsValue> crate::AsValue for Option<T> {
-    fn as_value(&self) -> crate::Value {
-        match self {
-            None => crate::Value::Null,
-            Some(v) => v.as_value(),
         }
     }
 }

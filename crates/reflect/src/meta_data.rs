@@ -1,12 +1,8 @@
 use std::collections::BTreeMap;
 
 #[derive(Debug, Clone, PartialEq, Default)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(transparent)
-)]
-pub struct MetaData(BTreeMap<String, crate::Value>);
+#[cfg_attr(feature = "serde", derive(serde::Serialize), serde(transparent))]
+pub struct MetaData(BTreeMap<String, crate::Value<'static>>);
 
 impl MetaData {
     pub fn new() -> Self {
@@ -21,7 +17,7 @@ impl MetaData {
         self.0.is_empty()
     }
 
-    pub fn iter(&self) -> std::collections::btree_map::Iter<'_, String, crate::Value> {
+    pub fn iter(&self) -> std::collections::btree_map::Iter<'_, String, crate::Value<'static>> {
         self.0.iter()
     }
 
@@ -29,50 +25,35 @@ impl MetaData {
         self.0.contains_key(key)
     }
 
-    pub fn set(&mut self, key: &str, value: &crate::Value) {
-        self.0.insert(key.to_string(), value.clone());
-    }
-
-    pub fn get(&self, key: &str) -> Option<&crate::Value> {
+    pub fn get(&self, key: &str) -> Option<&crate::Value<'static>> {
         self.0.get(key)
-    }
-
-    pub fn get_mut(&mut self, key: &str) -> Option<&mut crate::Value> {
-        self.0.get_mut(key)
     }
 
     pub fn merge(mut self, other: &Self) -> Self {
         for (key, value) in &other.0 {
-            self.set(key, value);
+            self.0.insert(key.clone(), value.clone());
         }
-
         self
     }
 }
 
-impl<const N: usize, V: crate::ToValue> From<[(&str, V); N]> for MetaData {
-    fn from(value: [(&str, V); N]) -> Self {
+impl<const N: usize, V: crate::ToValue + 'static> From<[(&str, V); N]> for MetaData {
+    fn from(items: [(&str, V); N]) -> Self {
         let mut data = BTreeMap::new();
 
-        for (key, value) in value {
-            data.insert(key.to_string(), value.to_value());
+        for (key, value) in items {
+            let static_val: crate::Value<'static> = value.to_value().to_static();
+            data.insert(key.to_string(), static_val);
         }
-
         Self(data)
     }
 }
 
 impl std::ops::Index<&str> for MetaData {
-    type Output = crate::Value;
+    type Output = crate::Value<'static>;
 
     fn index(&self, index: &str) -> &Self::Output {
         self.get(index).unwrap()
-    }
-}
-
-impl std::ops::IndexMut<&str> for MetaData {
-    fn index_mut(&mut self, index: &str) -> &mut Self::Output {
-        self.get_mut(index).unwrap()
     }
 }
 
@@ -83,11 +64,9 @@ impl std::fmt::Display for MetaData {
         for (key, value) in &self.0 {
             write!(f, "\n\t{}: {}", key, value)?;
         }
-
         if !self.0.is_empty() {
             writeln!(f)?;
         }
-
         write!(f, "}}")
     }
 }
@@ -110,21 +89,13 @@ impl crate::ToType for MetaData {
 }
 
 impl crate::ToValue for MetaData {
-    fn to_value(self) -> crate::Value {
-        crate::Dynamic::from_object(self).to_value()
+    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+        crate::Value::Dynamic(crate::Dynamic::from_object(self))
     }
 }
-
-impl crate::AsValue for MetaData {
-    fn as_value(&self) -> crate::Value {
-        crate::Dynamic::from_object(self.clone()).as_value()
-    }
-}
-
-impl crate::Dyn for MetaData {}
 
 impl crate::Object for MetaData {
-    fn field(&self, name: &crate::FieldName) -> crate::Value {
+    fn field(&self, name: &crate::FieldName) -> crate::Value<'_> {
         self.get(&name.to_string()).unwrap().clone()
     }
 }

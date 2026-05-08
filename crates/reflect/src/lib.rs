@@ -14,7 +14,6 @@ mod option;
 mod param;
 mod path;
 mod result;
-mod set;
 mod r#type;
 mod type_id;
 mod type_of;
@@ -42,8 +41,6 @@ pub use param::*;
 pub use path::*;
 #[allow(unused)]
 pub use result::*;
-#[allow(unused)]
-pub use set::*;
 pub use r#type::*;
 pub use type_id::*;
 pub use type_of::*;

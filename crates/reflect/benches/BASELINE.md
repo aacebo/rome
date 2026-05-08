@@ -216,13 +216,32 @@ All acceptance criteria met:
 - `clone_struct_type` allocs: **0** (target was 0 ✓)
 - All 67 tests pass; clippy 0 warnings.
 
+## After lifetime migration — `Value<'a>` + no-clone architecture
+
+Date: 2026-05-08.
+
+Changes:
+- `Value<'a>` is now lifetime-bound: `Str<'a>(&'a str)`, `Slice<'a>`, `Map<'a>`, `Ref<'a>`, `Mut<'a>`, `Dynamic<'a>` all borrow rather than own.
+- `ToValue::to_value<'a>(&'a self) -> Value<'a>` — lifetime ties output to borrow of `self`.
+- `AsValue` and `AsValueMut` removed; single `ToValue` trait.
+- `Dynamic<'a>` holds `&'a dyn Object` — no `Arc`, struct reflection borrows `self`.
+- Macro-generated `ToValue` for structs: `Dynamic::from_object(self)` — zero clone.
+- `TypeId` changed from `Rc<str>` to `&'static str` with `Box::leak` interning and `ptr::eq` fast path.
+- Bench `to_value_vec_string` fixed to borrow from the source vec (no `.to_static()` leak).
+
+| Bench | prev | after migration | Time Δ | Notes |
+|---|---|---|---|---|
+| `type_of_struct` | 5.35 ns | **4.21 ns** | **-21%** | thread_local cache still wins |
+| `assignable_to_primitive` | 28.9 ns | **9.67 ns** | **-67%** | `ptr::eq` + `&'static str` intern |
+| `clone_struct_type` | 2.29 ns | **1.82 ns** | **-21%** | |
+| `to_value_vec_string` | 210 ns | **151 ns** | **-28%** | borrows `&'a str`; Vec<Value> still allocated |
+| `serialize_object_json` | 1.08 µs | **717 ns** | **-34%** | no-clone `from_object(&user)` |
+
 ## vs `valuable` comparison
 
 `valuable` (tokio-rs) is a zero-alloc, object-safe value inspection crate.
 It uses a visitor pattern but never builds a type tree — it just walks the
-live value in place. That makes it a useful lower-bound reference: `ayr-reflect`
-does more (type descriptors, serde, serialization) but the comparable visitor
-operations should be in the same ballpark.
+live value in place.
 
 ```powershell
 cargo bench -p ayr-reflect --features serde
@@ -232,20 +251,8 @@ Date captured: 2026-05-08.
 
 | Bench | `ayr-reflect` | `valuable` | Notes |
 |---|---|---|---|
-| `type_of_struct` / `visit_struct` | 5.35 ns | 16.4 ns | ayr-reflect wins — thread_local cache |
-| `assignable_to_primitive` | 28.9 ns | — | no valuable equivalent |
-| `clone_struct_type` | 2.29 ns | — | no valuable equivalent |
-| `to_value_vec_string` / `visit_vec_string` | 210 ns | 1.81 ns | valuable wins — borrows, no clones |
-| `serialize_object_json` | 1.08 µs | — | no valuable equivalent |
-
-### Reading the numbers
-
-- **`type_of_struct` vs `valuable/visit_struct`** — `ayr-reflect` (5.35 ns) is
-  3× faster than `valuable` (16.4 ns) for struct traversal. The thread_local
-  cache means `type_of()` is essentially a pointer deref + Rc clone; `valuable`
-  still walks all fields via vtable dispatch each time.
-- **`to_value_vec_string` vs `valuable/visit_vec_string`** — `valuable` (1.81 ns)
-  is ~116× faster because it borrows strings through the visitor and never
-  allocates. `ayr-reflect` (210 ns) clones each string into `Value::Str`.
-  This is the main area where removing mutability / switching to borrowed values
-  could close the gap.
+| `type_of_struct` / `visit_struct` | 4.21 ns | 16.6 ns | ayr-reflect wins — thread_local cache |
+| `assignable_to_primitive` | 9.67 ns | — | no valuable equivalent |
+| `clone_struct_type` | 1.82 ns | — | no valuable equivalent |
+| `to_value_vec_string` / `visit_vec_string` | 151 ns | 1.99 ns | valuable borrows; ayr-reflect allocates Vec<Value> |
+| `serialize_object_json` | 717 ns | — | no valuable equivalent |

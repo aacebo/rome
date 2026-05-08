@@ -4,7 +4,7 @@ macro_rules! float {
         /// Value: Implementations
         ///
 
-        impl crate::Value {
+        impl crate::Value<'_> {
             pub fn is_float(&self) -> bool {
                 return match self {
                     Self::Number(v) => v.is_float(),
@@ -33,25 +33,19 @@ macro_rules! float {
 
         $(
             impl crate::ToValue for $type {
-                fn to_value(self) -> crate::Value {
-                    return crate::Value::Number(crate::Number::Float(crate::Float::$name(self)));
-                }
-            }
-
-            impl crate::AsValue for $type {
-                fn as_value(&self) -> crate::Value {
+                fn to_value<'a>(&'a self) -> crate::Value<'a> {
                     return crate::Value::Number(crate::Number::Float(crate::Float::$name(*self)));
                 }
             }
 
-            impl From<$type> for crate::Value {
+            impl From<$type> for crate::Value<'static> {
                 fn from(value: $type) -> Self {
                     return Self::Number(crate::Number::Float(crate::Float::$name(value)));
                 }
             }
 
-            impl From<crate::Value> for $type {
-                fn from(value: crate::Value) -> Self {
+            impl From<crate::Value<'_>> for $type {
+                fn from(value: crate::Value<'_>) -> Self {
                     return match value {
                         crate::Value::Number(v) => v.to_float().$to_type(),
                         v => panic!("called 'From<Value>::from' on type '{}'", v.to_type()),
@@ -59,7 +53,7 @@ macro_rules! float {
                 }
             }
 
-            impl AsRef<$type> for crate::Value {
+            impl AsRef<$type> for crate::Value<'_> {
                 fn as_ref(&self) -> &$type {
                     return match self {
                         Self::Number(v) => AsRef::<$type>::as_ref(v),
@@ -68,7 +62,7 @@ macro_rules! float {
                 }
             }
 
-            impl AsMut<$type> for crate::Value {
+            impl AsMut<$type> for crate::Value<'_> {
                 fn as_mut(&mut self) -> &mut $type {
                     return match self {
                         Self::Number(v) => AsMut::<$type>::as_mut(v),
@@ -179,13 +173,7 @@ macro_rules! float {
         }
 
         impl crate::ToValue for crate::Float {
-            fn to_value(self) -> crate::Value {
-                return crate::Value::Number(crate::Number::Float(self.clone()));
-            }
-        }
-
-        impl crate::AsValue for crate::Float {
-            fn as_value(&self) -> crate::Value {
+            fn to_value<'a>(&'a self) -> crate::Value<'a> {
                 return crate::Value::Number(crate::Number::Float(*self));
             }
         }
@@ -222,7 +210,7 @@ macro_rules! float {
             }
         )*
 
-        impl PartialEq<crate::Value> for crate::Float {
+        impl PartialEq<crate::Value<'_>> for crate::Float {
             fn eq(&self, other: &crate::Value) -> bool {
                 return other.is_float() && other.as_number().as_float() == self;
             }

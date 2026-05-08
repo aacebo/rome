@@ -1,9 +1,5 @@
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(transparent)
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize), serde(transparent))]
 pub struct MutType(pub(crate) std::rc::Rc<crate::Type>);
 
 impl MutType {

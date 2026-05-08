@@ -1,29 +1,9 @@
-use std::sync::Arc;
-
 /// ## Object
 ///
-/// implemented by types that
-/// can reflect their value/type and that
-/// of their individual fields
-pub trait Object: crate::Dyn {
-    fn field(&self, name: &crate::FieldName) -> crate::Value;
-}
-
-impl dyn Object {
-    pub fn downcast_ref<T: std::any::Any>(&self) -> Option<&T> {
-        let value: &dyn std::any::Any = self;
-        value.downcast_ref::<T>()
-    }
-
-    pub fn downcast_mut<T: std::any::Any>(&mut self) -> Option<&mut T> {
-        let value: &mut dyn std::any::Any = self;
-        value.downcast_mut::<T>()
-    }
-
-    pub fn is<T: std::any::Any>(&self) -> bool {
-        let value: &dyn std::any::Any = self;
-        value.is::<T>()
-    }
+/// implemented by types that can reflect their value/type
+/// and the values of their individual fields
+pub trait Object: std::fmt::Debug + crate::ToType {
+    fn field(&self, name: &crate::FieldName) -> crate::Value<'_>;
 }
 
 #[cfg(feature = "serde")]
@@ -53,13 +33,6 @@ impl std::fmt::Display for dyn Object {
         for field in ty.fields().iter() {
             write!(f, "\n\t{}: {}", field.name(), self.field(field.name()))?;
         }
-
         write!(f, "\n}}")
-    }
-}
-
-impl<T: Clone + Object> Object for Arc<T> {
-    fn field(&self, name: &crate::FieldName) -> crate::Value {
-        self.as_ref().field(name)
     }
 }

@@ -1,7 +1,7 @@
 use crate::{Field, FieldName};
 
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Fields {
     pub(crate) layout: crate::Layout,
     pub(crate) fields: Vec<Field>,

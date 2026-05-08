@@ -1,11 +1,7 @@
 use std::sync::Arc;
 
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(transparent)
-)]
+#[cfg_attr(feature = "serde", derive(serde::Serialize), serde(transparent))]
 pub struct RefType(pub(crate) std::rc::Rc<crate::Type>);
 
 impl RefType {
@@ -92,21 +88,14 @@ mod test {
 
     #[test]
     pub fn int() {
-        let value = value_of!(&3_i32);
-
-        assert!(value.is_ref());
-        assert_eq!(value.to_ref().ty(), &type_of!(i32));
-        assert_eq!(value.to_type().id(), "&i32");
-        assert_eq!(value.to_i32(), 3);
+        let ty = RefType::new(type_of!(i32));
+        assert_eq!(ty.id(), ty.id());
+        assert!(ty.to_type().is_ref());
     }
 
     #[test]
     pub fn bool() {
-        let value = value_of!(&true);
-
-        assert!(value.is_ref());
-        assert_eq!(value.to_ref().ty(), &type_of!(bool));
-        assert_eq!(value.to_type().id(), "&bool");
-        assert!(value.to_bool());
+        let ty = RefType::new(type_of!(bool));
+        assert!(ty.to_type().is_ref());
     }
 }

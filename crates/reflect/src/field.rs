@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Field {
     pub(crate) meta: crate::MetaData,
     pub(crate) vis: crate::Visibility,
@@ -41,7 +41,7 @@ impl std::fmt::Display for Field {
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum FieldName {
     Key(String),
     Index(usize),

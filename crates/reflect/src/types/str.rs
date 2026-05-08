@@ -71,7 +71,8 @@ mod test {
 
     #[test]
     pub fn string() {
-        let value = value_of!("test".to_string());
+        let s = "test".to_string();
+        let value = value_of!(s);
 
         assert!(value.is_str());
         assert_eq!(value.len(), 4);

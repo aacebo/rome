@@ -1,9 +1,9 @@
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct ConstParam {
     pub(crate) name: String,
     pub(crate) ty: crate::Type,
-    pub(crate) default: Option<crate::Value>,
+    pub(crate) default: Option<crate::Value<'static>>,
 }
 
 impl ConstParam {
@@ -15,7 +15,7 @@ impl ConstParam {
         }
     }
 
-    pub fn with_default(self, default: &crate::Value) -> Self {
+    pub fn with_default(self, default: &crate::Value<'static>) -> Self {
         let mut next = self.clone();
         next.default = Some(default.clone());
         next
@@ -33,7 +33,7 @@ impl ConstParam {
         &self.ty
     }
 
-    pub fn default(&self) -> Option<&crate::Value> {
+    pub fn default(&self) -> Option<&crate::Value<'static>> {
         match &self.default {
             None => None,
             Some(v) => Some(v),

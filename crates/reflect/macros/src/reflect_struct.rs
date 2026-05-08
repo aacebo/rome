@@ -63,24 +63,16 @@ pub fn derive(input: &syn::DeriveInput, data: &syn::DataStruct) -> proc_macro2::
         }
 
         impl ::ayr_reflect::ToValue for #name {
-            fn to_value(self) -> ::ayr_reflect::Value {
-                ::ayr_reflect::Dynamic::from_object(self).to_value()
+            fn to_value<'__a>(&'__a self) -> ::ayr_reflect::Value<'__a> {
+                ::ayr_reflect::Value::Dynamic(::ayr_reflect::Dynamic::from_object(self))
             }
         }
-
-        impl ::ayr_reflect::AsValue for #name {
-            fn as_value(&self) -> ::ayr_reflect::Value {
-                ::ayr_reflect::Dynamic::from_object(self.clone()).as_value()
-            }
-        }
-
-        impl ::ayr_reflect::Dyn for #name { }
 
         impl ::ayr_reflect::Object for #name {
-            fn field(&self, name: &::ayr_reflect::FieldName) -> ::ayr_reflect::Value {
+            fn field(&self, name: &::ayr_reflect::FieldName) -> ::ayr_reflect::Value<'_> {
                 #(
                     if name == stringify!(#fields) {
-                        return ::ayr_reflect::value_of!(self.#fields.clone());
+                        return ::ayr_reflect::ToValue::to_value(&self.#fields);
                     }
                 )*
 
@@ -142,24 +134,16 @@ pub fn attr(item: &syn::ItemStruct) -> proc_macro2::TokenStream {
         }
 
         impl ::ayr_reflect::ToValue for #name {
-            fn to_value(self) -> ::ayr_reflect::Value {
-                ::ayr_reflect::Dynamic::from_object(self).to_value()
+            fn to_value<'__a>(&'__a self) -> ::ayr_reflect::Value<'__a> {
+                ::ayr_reflect::Value::Dynamic(::ayr_reflect::Dynamic::from_object(self))
             }
         }
-
-        impl ::ayr_reflect::AsValue for #name {
-            fn as_value(&self) -> ::ayr_reflect::Value {
-                ::ayr_reflect::Dynamic::from_object(self.clone()).as_value()
-            }
-        }
-
-        impl ::ayr_reflect::Dyn for #name { }
 
         impl ::ayr_reflect::Object for #name {
-            fn field(&self, name: &::ayr_reflect::FieldName) -> ::ayr_reflect::Value {
+            fn field(&self, name: &::ayr_reflect::FieldName) -> ::ayr_reflect::Value<'_> {
                 #(
                     if name == stringify!(#fields) {
-                        return ::ayr_reflect::value_of!(self.#fields.clone());
+                        return ::ayr_reflect::ToValue::to_value(&self.#fields);
                     }
                 )*
 

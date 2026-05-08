@@ -2,56 +2,33 @@ use crate::ToType;
 
 #[macro_export]
 macro_rules! map {
-    // empty -> HashMap
-    () => {{
-        ::std::collections::HashMap::new()
-    }};
-
-    // default HashMap with tuple-ish `{ {k, v}, ... }` syntax
+    () => {{ ::std::collections::HashMap::new() }};
     ( $( { $key:expr, $value:expr } ),+ $(,)? ) => {{
-        ::std::collections::HashMap::from([
-            $(($key, $value),)+
-        ])
+        ::std::collections::HashMap::from([ $(($key, $value),)+ ])
     }};
-
-    // default HashMap with `k => v` syntax
     ( $( $key:expr => $value:expr ),+ $(,)? ) => {{
-        ::std::collections::HashMap::from([
-            $(($key, $value),)+
-        ])
+        ::std::collections::HashMap::from([ $(($key, $value),)+ ])
     }};
 }
 
 #[macro_export]
 macro_rules! btree_map {
-    // empty -> BTreeMap
-    () => {{
-        ::std::collections::BTreeMap::new()
-    }};
-
-    // default BTreeMap with tuple-ish `{ {k, v}, ... }` syntax
+    () => {{ ::std::collections::BTreeMap::new() }};
     ( $( { $key:expr, $value:expr } ),+ $(,)? ) => {{
-        ::std::collections::BTreeMap::from([
-            $(($key, $value),)+
-        ])
+        ::std::collections::BTreeMap::from([ $(($key, $value),)+ ])
     }};
-
-    // default BTreeMap with `k => v` syntax
     ( $( $key:expr => $value:expr ),+ $(,)? ) => {{
-        ::std::collections::BTreeMap::from([
-            $(($key, $value),)+
-        ])
+        ::std::collections::BTreeMap::from([ $(($key, $value),)+ ])
     }};
 }
 
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Map {
+pub struct Map<'a> {
     pub(crate) ty: crate::MapType,
-    pub(crate) data: std::collections::BTreeMap<crate::Value, crate::Value>,
+    pub(crate) data: std::collections::BTreeMap<crate::Value<'a>, crate::Value<'a>>,
 }
 
-impl Map {
+impl<'a> Map<'a> {
     pub fn new(ty: &crate::MapType) -> Self {
         Self {
             ty: ty.clone(),
@@ -63,15 +40,21 @@ impl Map {
         crate::Type::Map(std::rc::Rc::new(self.ty.clone()))
     }
 
-    pub fn iter(&self) -> std::collections::btree_map::Iter<'_, crate::Value, crate::Value> {
+    pub fn iter(
+        &self,
+    ) -> std::collections::btree_map::Iter<'_, crate::Value<'a>, crate::Value<'a>> {
         self.data.iter()
     }
 
-    pub fn keys(&self) -> std::collections::btree_map::Keys<'_, crate::Value, crate::Value> {
+    pub fn keys(
+        &self,
+    ) -> std::collections::btree_map::Keys<'_, crate::Value<'a>, crate::Value<'a>> {
         self.data.keys()
     }
 
-    pub fn values(&self) -> std::collections::btree_map::Values<'_, crate::Value, crate::Value> {
+    pub fn values(
+        &self,
+    ) -> std::collections::btree_map::Values<'_, crate::Value<'a>, crate::Value<'a>> {
         self.data.values()
     }
 
@@ -83,75 +66,66 @@ impl Map {
         self.data.is_empty()
     }
 
-    pub fn data(&self) -> &std::collections::BTreeMap<crate::Value, crate::Value> {
+    pub fn data(&self) -> &std::collections::BTreeMap<crate::Value<'a>, crate::Value<'a>> {
         &self.data
     }
 
-    pub fn has(&self, key: &crate::Value) -> bool {
+    pub fn has(&self, key: &crate::Value<'a>) -> bool {
         self.data.contains_key(key)
     }
 
-    pub fn get(&self, key: &crate::Value) -> Option<&crate::Value> {
+    pub fn get(&self, key: &crate::Value<'a>) -> Option<&crate::Value<'a>> {
         self.data.get(key)
     }
 
-    pub fn get_mut(&mut self, key: &crate::Value) -> Option<&mut crate::Value> {
-        self.data.get_mut(key)
-    }
-
-    pub fn set(&mut self, map: Map) {
-        self.data = map.data;
-    }
-
-    pub fn set_key_value(&mut self, key: crate::Value, value: crate::Value) {
+    pub fn insert(&mut self, key: crate::Value<'a>, value: crate::Value<'a>) {
         self.data.insert(key, value);
     }
 }
 
-impl crate::ToType for Map {
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for Map<'a> {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        use serde::ser::SerializeMap;
+        let mut ser = s.serialize_map(Some(self.data.len()))?;
+
+        for (k, v) in &self.data {
+            ser.serialize_entry(k, v)?;
+        }
+        ser.end()
+    }
+}
+
+impl<'a> crate::ToType for Map<'a> {
     fn to_type(&self) -> crate::Type {
         crate::Type::Map(std::rc::Rc::new(self.ty.clone()))
     }
 }
 
-impl crate::ToValue for Map {
-    fn to_value(self) -> crate::Value {
+impl<'a> crate::ToValue for Map<'a> {
+    fn to_value<'b>(&'b self) -> crate::Value<'b> {
         crate::Value::Map(self.clone())
     }
 }
 
-impl crate::AsValue for Map {
-    fn as_value(&self) -> crate::Value {
-        crate::Value::Map(self.clone())
-    }
-}
+impl<'a> std::ops::Index<&crate::Value<'a>> for Map<'a> {
+    type Output = crate::Value<'a>;
 
-impl std::ops::Index<&crate::Value> for Map {
-    type Output = crate::Value;
-
-    fn index(&self, index: &crate::Value) -> &Self::Output {
+    fn index(&self, index: &crate::Value<'a>) -> &Self::Output {
         self.data.index(index)
     }
 }
 
-impl std::ops::IndexMut<&crate::Value> for Map {
-    fn index_mut(&mut self, index: &crate::Value) -> &mut Self::Output {
-        self.data.get_mut(index).unwrap()
-    }
-}
-
-impl std::fmt::Display for Map {
+impl<'a> std::fmt::Display for Map<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         write!(f, "{{")?;
 
         for (key, value) in &self.data {
             write!(f, "\n\t{}: {}", key, value)?;
         }
-
         if !self.data.is_empty() {
             writeln!(f)?;
         }
-
         write!(f, "}}")
     }
 }
@@ -161,32 +135,14 @@ where
     K: crate::TypeOf + crate::ToValue,
     V: crate::TypeOf + crate::ToValue,
 {
-    fn to_value(self) -> crate::Value {
+    fn to_value<'a>(&'a self) -> crate::Value<'a> {
         let ty = self.to_type();
-        let mut value = Map::new(ty.as_map());
+        let mut map = Map::new(ty.as_map());
 
         for (k, v) in self {
-            value.set_key_value(k.to_value(), v.to_value());
+            map.insert(k.to_value(), v.to_value());
         }
-
-        value.to_value()
-    }
-}
-
-impl<K, V> crate::AsValue for std::collections::HashMap<K, V>
-where
-    K: crate::TypeOf + crate::AsValue,
-    V: crate::TypeOf + crate::AsValue,
-{
-    fn as_value(&self) -> crate::Value {
-        let ty = self.to_type();
-        let mut value = Map::new(ty.as_map());
-
-        for (k, v) in self {
-            value.set_key_value(k.as_value(), v.as_value());
-        }
-
-        value.as_value()
+        crate::Value::Map(map)
     }
 }
 
@@ -195,32 +151,14 @@ where
     K: crate::TypeOf + crate::ToValue,
     V: crate::TypeOf + crate::ToValue,
 {
-    fn to_value(self) -> crate::Value {
+    fn to_value<'a>(&'a self) -> crate::Value<'a> {
         let ty = self.to_type();
-        let mut value = Map::new(ty.as_map());
+        let mut map = Map::new(ty.as_map());
 
         for (k, v) in self {
-            value.set_key_value(k.to_value(), v.to_value());
+            map.insert(k.to_value(), v.to_value());
         }
-
-        value.to_value()
-    }
-}
-
-impl<K, V> crate::AsValue for std::collections::BTreeMap<K, V>
-where
-    K: crate::TypeOf + crate::AsValue,
-    V: crate::TypeOf + crate::AsValue,
-{
-    fn as_value(&self) -> crate::Value {
-        let ty = self.to_type();
-        let mut value = Map::new(ty.as_map());
-
-        for (k, v) in self {
-            value.set_key_value(k.as_value(), v.as_value());
-        }
-
-        value.as_value()
+        crate::Value::Map(map)
     }
 }
 
@@ -230,13 +168,14 @@ mod test {
 
     #[test]
     pub fn to_value() {
-        let value = value_of!(btree_map! {
-            "hello".to_string() => 123,
-            "world".to_string() => 111
-        });
+        let map = btree_map! {
+            "hello".to_string() => 123_i32,
+            "world".to_string() => 111_i32
+        };
+        let value = value_of!(map);
 
         assert!(value.is_map());
         assert_eq!(value.len(), 2);
-        assert_eq!(value["hello"], value_of!(123));
+        assert_eq!(value["hello"], value_of!(123_i32));
     }
 }

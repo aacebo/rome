@@ -7,7 +7,7 @@ pub use lifetime::*;
 pub use r#type::*;
 
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Generics(pub(crate) Vec<Generic>);
 
 impl Default for Generics {
@@ -79,7 +79,7 @@ impl std::fmt::Display for Generics {
 }
 
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub enum Generic {
     Const(ConstParam),
     Lifetime(LifetimeParam),

@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct EnumType {
     pub(crate) path: crate::Path,
     pub(crate) meta: crate::MetaData,

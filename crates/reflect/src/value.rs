@@ -1,22 +1,19 @@
-use std::ops::Index;
-
-use crate::{ToType, ToValue};
+use crate::ToType;
 
 #[derive(Debug, Clone)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub enum Value {
+pub enum Value<'a> {
     Bool(bool),
     Number(crate::Number),
-    Str(crate::Str),
-    Slice(crate::Slice),
-    Map(crate::Map),
-    Mut(crate::Mut),
-    Ref(crate::Ref),
-    Dynamic(crate::Dynamic),
+    Str(crate::Str<'a>),
+    Slice(crate::Slice<'a>),
+    Map(crate::Map<'a>),
+    Mut(crate::Mut<'a>),
+    Ref(crate::Ref<'a>),
+    Dynamic(crate::Dynamic<'a>),
     Null,
 }
 
-impl Value {
+impl<'a> Value<'a> {
     pub fn to_type(&self) -> crate::Type {
         match self {
             Self::Bool(v) => v.to_type(),
@@ -51,42 +48,34 @@ impl Value {
             Self::Slice(v) => v.iter(),
             Self::Mut(v) => v.iter(),
             Self::Ref(v) => v.iter(),
-            v => panic!("called 'len' on '{}'", v.to_type()),
+            v => panic!("called 'iter' on '{}'", v.to_type()),
         }
     }
 
     pub fn is_bool(&self) -> bool {
         matches!(self, Self::Bool(_))
     }
-
     pub fn is_number(&self) -> bool {
         matches!(self, Self::Number(_))
     }
-
     pub fn is_mut(&self) -> bool {
         matches!(self, Self::Mut(_))
     }
-
     pub fn is_ref(&self) -> bool {
         matches!(self, Self::Ref(_))
     }
-
     pub fn is_str(&self) -> bool {
         matches!(self, Self::Str(_))
     }
-
     pub fn is_slice(&self) -> bool {
         matches!(self, Self::Slice(_))
     }
-
     pub fn is_map(&self) -> bool {
         matches!(self, Self::Map(_))
     }
-
     pub fn is_dynamic(&self) -> bool {
         matches!(self, Self::Dynamic(_))
     }
-
     pub fn is_null(&self) -> bool {
         matches!(self, Self::Null)
     }
@@ -109,25 +98,21 @@ impl Value {
         }
     }
 
-    pub fn as_str(&self) -> &crate::Str {
+    pub fn as_str(&self) -> &crate::Str<'a> {
         match self {
             Self::Str(v) => v,
-            Self::Ref(v) => v.as_str(),
-            Self::Mut(v) => v.as_str(),
             v => panic!("called 'as_str' on '{}'", v.to_type()),
         }
     }
 
-    pub fn as_slice(&self) -> &crate::Slice {
+    pub fn as_slice(&self) -> &crate::Slice<'a> {
         match self {
             Self::Slice(v) => v,
-            Self::Ref(v) => v.as_slice(),
-            Self::Mut(v) => v.as_slice(),
             v => panic!("called 'as_slice' on '{}'", v.to_type()),
         }
     }
 
-    pub fn as_dynamic(&self) -> &crate::Dynamic {
+    pub fn as_dynamic(&self) -> &crate::Dynamic<'a> {
         match self {
             Self::Dynamic(v) => v,
             Self::Ref(v) => v.as_dynamic(),
@@ -136,11 +121,9 @@ impl Value {
         }
     }
 
-    pub fn as_map(&self) -> &crate::Map {
+    pub fn as_map(&self) -> &crate::Map<'a> {
         match self {
             Self::Map(v) => v,
-            Self::Ref(v) => v.as_map(),
-            Self::Mut(v) => v.as_map(),
             v => panic!("called 'as_map' on '{}'", v.to_type()),
         }
     }
@@ -163,72 +146,89 @@ impl Value {
         }
     }
 
-    pub fn to_mut(&self) -> crate::Mut {
+    pub fn to_mut(&self) -> crate::Mut<'a> {
         match self {
             Self::Mut(v) => v.clone(),
-            Self::Ref(v) => v.to_mut(),
             v => panic!("called 'to_mut' on '{}'", v.to_type()),
         }
     }
 
-    pub fn to_ref(&self) -> crate::Ref {
+    pub fn to_ref(&self) -> crate::Ref<'a> {
         match self {
             Self::Ref(v) => v.clone(),
-            Self::Mut(v) => v.to_ref(),
             v => panic!("called 'to_ref' on '{}'", v.to_type()),
         }
     }
 
-    pub fn to_str(&self) -> crate::Str {
+    pub fn to_str(&self) -> crate::Str<'a> {
         match self {
             Self::Str(v) => v.clone(),
-            Self::Ref(v) => v.to_str(),
-            Self::Mut(v) => v.to_str(),
             v => panic!("called 'to_str' on '{}'", v.to_type()),
         }
     }
 
-    pub fn to_slice(&self) -> crate::Slice {
+    pub fn to_slice(&self) -> crate::Slice<'a> {
         match self {
             Self::Slice(v) => v.clone(),
-            Self::Ref(v) => v.to_slice(),
-            Self::Mut(v) => v.to_slice(),
             v => panic!("called 'to_slice' on '{}'", v.to_type()),
         }
     }
 
-    pub fn to_dynamic(&self) -> crate::Dynamic {
+    pub fn to_dynamic(&self) -> crate::Dynamic<'a> {
         match self {
             Self::Dynamic(v) => v.clone(),
-            Self::Ref(v) => v.to_dynamic(),
-            Self::Mut(v) => v.to_dynamic(),
             v => panic!("called 'to_dynamic' on '{}'", v.to_type()),
         }
     }
 
-    pub fn to_map(&self) -> crate::Map {
+    pub fn to_map(&self) -> crate::Map<'a> {
         match self {
             Self::Map(v) => v.clone(),
-            Self::Ref(v) => v.to_map(),
-            Self::Mut(v) => v.to_map(),
             v => panic!("called 'to_map' on '{}'", v.to_type()),
+        }
+    }
+
+    pub fn to_static(self) -> Value<'static> {
+        match self {
+            Self::Bool(v) => Value::Bool(v),
+            Self::Number(v) => Value::Number(v),
+            Self::Str(s) => {
+                let leaked: &'static str = Box::leak(s.0.to_string().into_boxed_str());
+                Value::Str(crate::Str(leaked))
+            }
+            Self::Slice(s) => Value::Slice(crate::Slice {
+                ty: s.ty.clone(),
+                value: s.value.into_iter().map(Value::to_static).collect(),
+            }),
+            Self::Map(m) => Value::Map(crate::Map {
+                ty: m.ty.clone(),
+                data: m
+                    .data
+                    .into_iter()
+                    .map(|(k, v)| (k.to_static(), v.to_static()))
+                    .collect(),
+            }),
+            Self::Mut(m) => m.value.clone().to_static(),
+            Self::Ref(r) => r.value.clone().to_static(),
+            Self::Dynamic(_) => Value::Null,
+            Self::Null => Value::Null,
         }
     }
 }
 
-impl AsRef<Value> for Value {
-    fn as_ref(&self) -> &Value {
+impl<'a> AsRef<Value<'a>> for Value<'a> {
+    fn as_ref(&self) -> &Value<'a> {
         self
     }
 }
 
-impl crate::TypeOf for Value {
+impl<'a> crate::TypeOf for Value<'a> {
     fn type_of() -> crate::Type {
         crate::Type::Any
     }
 }
 
-impl crate::ToType for Value {
+impl<'a> crate::ToType for Value<'a> {
     fn to_type(&self) -> crate::Type {
         match self {
             Self::Bool(v) => v.to_type(),
@@ -244,46 +244,13 @@ impl crate::ToType for Value {
     }
 }
 
-impl crate::ToValue for Value {
-    fn to_value(self) -> crate::Value {
-        self
-    }
-}
-
-impl crate::AsValue for Value {
-    fn as_value(&self) -> crate::Value {
+impl<'a> crate::ToValue for Value<'a> {
+    fn to_value<'b>(&'b self) -> crate::Value<'b> {
         self.clone()
     }
 }
 
-impl crate::Dyn for Value {}
-
-impl crate::Object for Value {
-    fn field(&self, name: &crate::FieldName) -> crate::Value {
-        match self {
-            Self::Dynamic(v) => v.field(name),
-            v => panic!("called 'ayr_reflect::Object::field' on '{}'", v.to_type()),
-        }
-    }
-}
-
-impl crate::Sequence for Value {
-    fn len(&self) -> usize {
-        match self {
-            Self::Dynamic(v) => v.len(),
-            v => panic!("called 'ayr_reflect::Sequence::len' on '{}'", v.to_type()),
-        }
-    }
-
-    fn index(&self, i: usize) -> crate::Value {
-        match self {
-            Self::Dynamic(v) => v.index(i).clone(),
-            v => panic!("called 'ayr_reflect::Sequence::index' on '{}'", v.to_type()),
-        }
-    }
-}
-
-impl PartialEq for Value {
+impl<'a> PartialEq for Value<'a> {
     fn eq(&self, other: &Self) -> bool {
         match self {
             Self::Bool(v) => other.is_bool() && other.as_bool() == v,
@@ -299,7 +266,7 @@ impl PartialEq for Value {
     }
 }
 
-impl std::ops::Index<usize> for Value {
+impl<'a> std::ops::Index<usize> for Value<'a> {
     type Output = Self;
 
     fn index(&self, index: usize) -> &Self::Output {
@@ -312,63 +279,30 @@ impl std::ops::Index<usize> for Value {
     }
 }
 
-impl std::ops::IndexMut<usize> for Value {
-    fn index_mut(&mut self, index: usize) -> &mut Self::Output {
-        match self {
-            Self::Slice(v) => v.index_mut(index),
-            Self::Ref(v) => v.index_mut(index),
-            Self::Mut(v) => v.index_mut(index),
-            _ => panic!(
-                "called 'IndexMut<usize>::index_mut' on '{}'",
-                self.to_type()
-            ),
-        }
-    }
-}
-
-impl std::ops::Index<&str> for Value {
+impl<'a> std::ops::Index<&'a str> for Value<'a> {
     type Output = Self;
 
-    fn index(&self, index: &str) -> &Self::Output {
+    fn index(&self, index: &'a str) -> &Self::Output {
         match self {
-            Self::Map(v) => v.index(&index.to_value()),
-            Self::Ref(v) => v.index(&index.to_value()),
-            Self::Mut(v) => v.index(&index.to_value()),
+            Self::Map(v) => v.index(&crate::Value::Str(crate::Str(index))),
             _ => panic!("called 'Index<&str>::index' on '{}'", self.to_type()),
         }
     }
 }
 
-impl std::ops::Index<&Self> for Value {
+impl<'a> std::ops::Index<&Self> for Value<'a> {
     type Output = Self;
 
     fn index(&self, index: &Self) -> &Self::Output {
         match self {
             Self::Map(v) => v.index(index),
             Self::Slice(v) => v.index(index.to_i32() as usize),
-            Self::Ref(v) => v.index(index),
-            Self::Mut(v) => v.index(index),
             _ => panic!("called 'Index<&Value>::index' on '{}'", self.to_type()),
         }
     }
 }
 
-impl std::ops::IndexMut<&Self> for Value {
-    fn index_mut(&mut self, index: &Self) -> &mut Self::Output {
-        match self {
-            Self::Map(v) => v.index_mut(index),
-            Self::Slice(v) => v.index_mut(index.to_i32() as usize),
-            Self::Ref(v) => v.index_mut(index),
-            Self::Mut(v) => v.index_mut(index),
-            _ => panic!(
-                "called 'IndexMut<&Value>::index_mut' on '{}'",
-                self.to_type()
-            ),
-        }
-    }
-}
-
-impl std::fmt::Display for Value {
+impl<'a> std::fmt::Display for Value<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
         match self {
             Self::Bool(v) => write!(f, "{}", v),
@@ -384,16 +318,16 @@ impl std::fmt::Display for Value {
     }
 }
 
-impl Eq for Value {}
+impl<'a> Eq for Value<'a> {}
 
-impl Ord for Value {
+impl<'a> Ord for Value<'a> {
     fn cmp(&self, other: &Self) -> std::cmp::Ordering {
         let ord = match self {
             Self::Bool(v) => v.partial_cmp(other.as_bool()),
             Self::Number(v) => v.partial_cmp(other.as_number()),
-            Self::Str(v) => v.partial_cmp(other.as_str()),
-            Self::Mut(v) => v.partial_cmp(other.to_mut().as_ref()),
-            Self::Ref(v) => v.partial_cmp(other.to_ref().as_ref()),
+            Self::Str(v) => v.0.partial_cmp(other.as_str().0),
+            Self::Mut(v) => v.as_ref().partial_cmp(other.to_mut().as_ref()),
+            Self::Ref(v) => v.as_ref().partial_cmp(other.to_ref().as_ref()),
             _ => None,
         };
 
@@ -404,8 +338,25 @@ impl Ord for Value {
     }
 }
 
-impl PartialOrd for Value {
+impl<'a> PartialOrd for Value<'a> {
     fn partial_cmp(&self, other: &Self) -> Option<std::cmp::Ordering> {
         Some(self.cmp(other))
+    }
+}
+
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for Value<'a> {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        match self {
+            Self::Bool(v) => v.serialize(s),
+            Self::Number(v) => v.serialize(s),
+            Self::Str(v) => v.0.serialize(s),
+            Self::Slice(v) => v.value.serialize(s),
+            Self::Map(v) => v.serialize(s),
+            Self::Mut(v) => v.value.serialize(s),
+            Self::Ref(v) => v.value.serialize(s),
+            Self::Dynamic(v) => v.serialize(s),
+            Self::Null => s.serialize_none(),
+        }
     }
 }

@@ -3,7 +3,7 @@ use crate::ToType;
 macro_rules! tuple {
     ($($name:ident $type_name:ident $to_type:ident $len:literal)*) => {
         #[derive(Debug, Clone, PartialEq)]
-        #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+        #[cfg_attr(feature = "serde", derive(serde::Serialize))]
         pub enum TupleType {
             $($name($type_name),)*
         }
@@ -90,7 +90,7 @@ macro_rules! tuple {
 
         $(
             #[derive(Debug, Clone, PartialEq)]
-            #[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize), serde(transparent))]
+            #[cfg_attr(feature = "serde", derive(serde::Serialize), serde(transparent))]
             pub struct $type_name([std::rc::Rc<crate::Type>; $len]);
 
             impl $type_name {
@@ -190,41 +190,24 @@ where
 
 impl<A, B> crate::ToValue for (A, B)
 where
-    A: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + crate::AsValue + 'static,
-    B: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + crate::AsValue + 'static,
+    A: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + 'static,
+    B: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + 'static,
 {
-    fn to_value(self) -> crate::Value {
-        crate::Dynamic::from_object(self).to_value()
+    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+        crate::Value::Dynamic(crate::Dynamic::from_object(self))
     }
-}
-
-impl<A, B> crate::AsValue for (A, B)
-where
-    A: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + crate::AsValue + 'static,
-    B: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + crate::AsValue + 'static,
-{
-    fn as_value(&self) -> crate::Value {
-        crate::Dynamic::from_object(self.clone()).as_value()
-    }
-}
-
-impl<A, B> crate::Dyn for (A, B)
-where
-    A: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + crate::AsValue + 'static,
-    B: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + crate::AsValue + 'static,
-{
 }
 
 impl<A, B> crate::Object for (A, B)
 where
-    A: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + crate::AsValue + 'static,
-    B: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + crate::AsValue + 'static,
+    A: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + 'static,
+    B: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + 'static,
 {
-    fn field(&self, name: &crate::FieldName) -> crate::Value {
+    fn field(&self, name: &crate::FieldName) -> crate::Value<'_> {
         match name.to_string().as_str() {
-            "0" => self.0.clone().to_value(),
-            "1" => self.1.clone().to_value(),
-            v => panic!("field '{}' not found on type '{}'", v, self.to_type()),
+            "0" => self.0.to_value(),
+            "1" => self.1.to_value(),
+            _ => crate::Value::Null,
         }
     }
 }

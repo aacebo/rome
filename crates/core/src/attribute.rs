@@ -1,6 +1,6 @@
 use super::{Context, Entity};
 
-pub trait Attribute: Send + Sync + std::fmt::Debug + std::any::Any + ayr_reflect::AsValue {
+pub trait Attribute: Send + Sync + std::fmt::Debug + std::any::Any + ayr_reflect::ToValue {
     fn name(&self) -> &'static str;
 
     fn on_spawn(&mut self, _ctx: &Context, _entity: &dyn Entity) {}
@@ -13,6 +13,6 @@ impl serde::Serialize for dyn Attribute {
     where
         S: serde::Serializer,
     {
-        self.as_value().serialize(s)
+        self.to_value().serialize(s)
     }
 }

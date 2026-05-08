@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct SliceType {
     pub(crate) ty: std::rc::Rc<crate::Type>,
     pub(crate) capacity: Option<usize>,

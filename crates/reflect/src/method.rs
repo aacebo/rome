@@ -1,7 +1,7 @@
 use crate::{Param, Visibility};
 
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
+#[cfg_attr(feature = "serde", derive(serde::Serialize))]
 pub struct Method {
     pub(crate) meta: crate::MetaData,
     pub(crate) is_async: bool,

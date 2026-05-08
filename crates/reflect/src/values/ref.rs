@@ -1,14 +1,10 @@
-use std::rc::Rc;
-use std::sync::Arc;
-
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(feature = "serde", derive(serde::Serialize, serde::Deserialize))]
-pub struct Ref {
+pub struct Ref<'a> {
     pub(crate) ty: crate::RefType,
-    pub(crate) value: Rc<crate::Value>,
+    pub(crate) value: &'a crate::Value<'a>,
 }
 
-impl Ref {
+impl<'a> Ref<'a> {
     pub fn to_type(&self) -> crate::Type {
         self.ty.to_type()
     }
@@ -17,145 +13,46 @@ impl Ref {
         &self.ty.0
     }
 
-    pub fn value(&self) -> &crate::Value {
-        &self.value
+    pub fn value(&self) -> &crate::Value<'a> {
+        self.value
     }
 }
 
-impl crate::ToValue for Ref {
-    fn to_value(self) -> crate::Value {
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for Ref<'a> {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        self.value.serialize(s)
+    }
+}
+
+impl<'a> crate::ToValue for Ref<'a> {
+    fn to_value<'b>(&'b self) -> crate::Value<'b> {
         crate::Value::Ref(self.clone())
     }
 }
 
-impl crate::AsValue for Ref {
-    fn as_value(&self) -> crate::Value {
-        crate::Value::Ref(self.clone())
+impl<'a> AsRef<crate::Value<'a>> for Ref<'a> {
+    fn as_ref(&self) -> &crate::Value<'a> {
+        self.value
     }
 }
 
-impl AsRef<crate::Value> for Ref {
-    fn as_ref(&self) -> &crate::Value {
-        &self.value
-    }
-}
-
-impl AsMut<crate::Value> for Ref {
-    fn as_mut(&mut self) -> &mut crate::Value {
-        Rc::make_mut(&mut self.value)
-    }
-}
-
-impl std::ops::Deref for Ref {
-    type Target = crate::Value;
+impl<'a> std::ops::Deref for Ref<'a> {
+    type Target = crate::Value<'a>;
 
     fn deref(&self) -> &Self::Target {
-        &self.value
+        self.value
     }
 }
 
-impl std::ops::DerefMut for Ref {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        Rc::make_mut(&mut self.value)
-    }
-}
-
-impl std::fmt::Display for Ref {
+impl<'a> std::fmt::Display for Ref<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.value)
+        write!(f, "{}", self.value)
     }
 }
 
-impl PartialEq<crate::Value> for Ref {
-    fn eq(&self, other: &crate::Value) -> bool {
+impl<'a> PartialEq<crate::Value<'a>> for Ref<'a> {
+    fn eq(&self, other: &crate::Value<'a>) -> bool {
         other.is_ref() && other.to_ref() == *self
-    }
-}
-
-impl<T> crate::ToValue for &T
-where
-    T: Clone + crate::ToValue + crate::ToType,
-{
-    fn to_value(self) -> crate::Value {
-        crate::Value::Ref(Ref {
-            ty: crate::RefType(Rc::new(self.clone().to_type())),
-            value: Rc::new(self.clone().to_value()),
-        })
-    }
-}
-
-impl<T> crate::AsValue for &T
-where
-    T: Clone + crate::AsValue + crate::ToType,
-{
-    #[allow(suspicious_double_ref_op)]
-    fn as_value(&self) -> crate::Value {
-        let value = self.clone().clone();
-
-        crate::Value::Ref(Ref {
-            ty: crate::RefType(Rc::new(value.to_type())),
-            value: Rc::new(value.as_value()),
-        })
-    }
-}
-
-impl<T> crate::ToValue for Arc<T>
-where
-    T: Clone + crate::ToValue + crate::ToType,
-{
-    fn to_value(self) -> crate::Value {
-        crate::Value::Ref(Ref {
-            ty: crate::RefType(Rc::new(self.as_ref().to_type())),
-            value: Rc::new(self.as_ref().clone().to_value()),
-        })
-    }
-}
-
-impl<T> crate::AsValue for Arc<T>
-where
-    T: Clone + crate::AsValue + crate::ToType,
-{
-    fn as_value(&self) -> crate::Value {
-        crate::Value::Ref(Ref {
-            ty: crate::RefType(Rc::new(self.as_ref().to_type())),
-            value: Rc::new(self.as_ref().clone().as_value()),
-        })
-    }
-}
-
-impl<T> From<&T> for crate::Value
-where
-    T: Clone + crate::ToValue + crate::ToType,
-{
-    fn from(value: &T) -> Self {
-        Self::Ref(Ref {
-            ty: crate::RefType(Rc::new(value.to_type())),
-            value: Rc::new(value.clone().to_value()),
-        })
-    }
-}
-
-#[cfg(test)]
-mod test {
-    use crate::*;
-
-    #[test]
-    pub fn int() {
-        let value = value_of!(&3_i32);
-
-        assert!(value.is_ref());
-        assert_eq!(value.to_ref().ty(), &type_of!(i32));
-        assert_eq!(value.to_type().id(), "&i32");
-        assert_eq!(value.to_i32(), 3);
-    }
-
-    #[test]
-    pub fn bool() {
-        let value = value_of!(&true);
-
-        assert!(value.is_ref());
-        assert_eq!(value.to_ref().ty(), &type_of!(bool));
-        assert_eq!(value.to_type().id(), "&bool");
-        assert!(value.to_bool());
     }
 }

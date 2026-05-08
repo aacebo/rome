@@ -22,7 +22,6 @@ impl Number {
     pub fn is_int(&self) -> bool {
         matches!(self, Self::Int(_))
     }
-
     pub fn is_float(&self) -> bool {
         matches!(self, Self::Float(_))
     }
@@ -54,30 +53,16 @@ impl Number {
             v => panic!("called 'as_float' on '{}'", v.to_type()),
         }
     }
-
-    pub fn set_int(&mut self, value: Int) {
-        *self = Self::Int(value);
-    }
-
-    pub fn set_float(&mut self, value: Float) {
-        *self = Self::Float(value);
-    }
 }
 
 impl crate::ToValue for Number {
-    fn to_value(self) -> crate::Value {
-        crate::Value::Number(self)
-    }
-}
-
-impl crate::AsValue for Number {
-    fn as_value(&self) -> crate::Value {
+    fn to_value<'a>(&'a self) -> crate::Value<'a> {
         crate::Value::Number(*self)
     }
 }
 
-impl PartialEq<crate::Value> for Number {
-    fn eq(&self, other: &crate::Value) -> bool {
+impl PartialEq<crate::Value<'_>> for Number {
+    fn eq(&self, other: &crate::Value<'_>) -> bool {
         other.is_number() && other.as_number() == self
     }
 }

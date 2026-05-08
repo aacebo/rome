@@ -1,12 +1,7 @@
 #[derive(Debug, Clone, PartialEq)]
-#[cfg_attr(
-    feature = "serde",
-    derive(serde::Serialize, serde::Deserialize),
-    serde(transparent)
-)]
-pub struct Str(pub(crate) std::string::String);
+pub struct Str<'a>(pub(crate) &'a str);
 
-impl Str {
+impl<'a> Str<'a> {
     pub fn to_type(&self) -> crate::Type {
         crate::Type::Str(crate::StrType)
     }
@@ -20,71 +15,54 @@ impl Str {
     }
 }
 
-impl AsRef<str> for Str {
+impl<'a> AsRef<str> for Str<'a> {
     fn as_ref(&self) -> &str {
-        &self.0
+        self.0
     }
 }
 
-impl AsMut<str> for Str {
-    fn as_mut(&mut self) -> &mut str {
-        &mut self.0
-    }
-}
-
-impl std::ops::Deref for Str {
+impl<'a> std::ops::Deref for Str<'a> {
     type Target = str;
 
     fn deref(&self) -> &Self::Target {
-        &self.0
+        self.0
     }
 }
 
-impl std::ops::DerefMut for Str {
-    fn deref_mut(&mut self) -> &mut Self::Target {
-        &mut self.0
-    }
-}
-
-impl std::fmt::Display for Str {
+impl<'a> std::fmt::Display for Str<'a> {
     fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        write!(f, "{}", &self.0)
+        write!(f, "{}", self.0)
     }
 }
 
-impl From<std::string::String> for crate::Value {
-    fn from(value: std::string::String) -> Self {
-        Self::Str(Str(value))
+#[cfg(feature = "serde")]
+impl<'a> serde::Serialize for Str<'a> {
+    fn serialize<S: serde::Serializer>(&self, s: S) -> Result<S::Ok, S::Error> {
+        self.0.serialize(s)
     }
 }
 
-impl From<crate::Value> for std::string::String {
-    fn from(val: crate::Value) -> Self {
-        val.to_string()
+impl<'a> PartialEq<std::string::String> for Str<'a> {
+    fn eq(&self, other: &std::string::String) -> bool {
+        self.0 == other.as_str()
     }
 }
 
 impl crate::ToValue for std::string::String {
-    fn to_value(self) -> crate::Value {
-        crate::Value::Str(Str(self.clone()))
-    }
-}
-
-impl crate::AsValue for std::string::String {
-    fn as_value(&self) -> crate::Value {
-        crate::Value::Str(Str(self.clone()))
+    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+        crate::Value::Str(Str(self.as_str()))
     }
 }
 
 impl crate::ToValue for &str {
-    fn to_value(self) -> crate::Value {
-        crate::Value::Str(Str(self.to_string()))
+    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+        crate::Value::Str(Str(self))
     }
 }
 
-impl crate::AsValue for &str {
-    fn as_value(&self) -> crate::Value {
-        crate::Value::Str(Str(self.to_string()))
+impl crate::ToValue for str {
+    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+        crate::Value::Str(Str(self))
     }
 }
 
@@ -103,7 +81,8 @@ mod test {
 
     #[test]
     pub fn string() {
-        let value = value_of!("test".to_string());
+        let s = "test".to_string();
+        let value = value_of!(s);
 
         assert!(value.is_str());
         assert_eq!(value.len(), 4);
