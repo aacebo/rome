@@ -38,7 +38,7 @@ impl<'a> crate::ToType for Mut<'a> {
 }
 
 impl<'a> crate::ToValue for Mut<'a> {
-    fn to_value<'b>(&'b self) -> crate::Value<'b> {
+    fn to_value(&self) -> crate::Value<'_> {
         crate::Value::Mut(self.clone())
     }
 }

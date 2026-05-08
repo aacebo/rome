@@ -1,8 +1,9 @@
 use std::collections::BTreeMap;
+use std::rc::Rc;
 
 #[derive(Debug, Clone, PartialEq, Default)]
 #[cfg_attr(feature = "serde", derive(serde::Serialize), serde(transparent))]
-pub struct MetaData(BTreeMap<String, crate::Value<'static>>);
+pub struct MetaData(BTreeMap<String, Rc<crate::Value<'static>>>);
 
 impl MetaData {
     pub fn new() -> Self {
@@ -17,7 +18,7 @@ impl MetaData {
         self.0.is_empty()
     }
 
-    pub fn iter(&self) -> std::collections::btree_map::Iter<'_, String, crate::Value<'static>> {
+    pub fn iter(&self) -> std::collections::btree_map::Iter<'_, String, Rc<crate::Value<'static>>> {
         self.0.iter()
     }
 
@@ -26,13 +27,14 @@ impl MetaData {
     }
 
     pub fn get(&self, key: &str) -> Option<&crate::Value<'static>> {
-        self.0.get(key)
+        self.0.get(key).map(Rc::as_ref)
     }
 
     pub fn merge(mut self, other: &Self) -> Self {
         for (key, value) in &other.0 {
             self.0.insert(key.clone(), value.clone());
         }
+
         self
     }
 }
@@ -42,9 +44,10 @@ impl<const N: usize, V: crate::ToValue + 'static> From<[(&str, V); N]> for MetaD
         let mut data = BTreeMap::new();
 
         for (key, value) in items {
-            let static_val: crate::Value<'static> = value.to_value().to_static();
-            data.insert(key.to_string(), static_val);
+            let v: &'static V = Box::leak(Box::new(value));
+            data.insert(key.to_string(), Rc::new(v.to_value()));
         }
+
         Self(data)
     }
 }
@@ -64,9 +67,11 @@ impl std::fmt::Display for MetaData {
         for (key, value) in &self.0 {
             write!(f, "\n\t{}: {}", key, value)?;
         }
+
         if !self.0.is_empty() {
             writeln!(f)?;
         }
+
         write!(f, "}}")
     }
 }
@@ -89,7 +94,7 @@ impl crate::ToType for MetaData {
 }
 
 impl crate::ToValue for MetaData {
-    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+    fn to_value(&self) -> crate::Value<'_> {
         crate::Value::Dynamic(crate::Dynamic::from_object(self))
     }
 }

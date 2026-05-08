@@ -95,7 +95,7 @@ pub fn derive(input: &syn::DeriveInput, data: &syn::DataEnum) -> proc_macro2::To
         }
 
         impl ::ayr_reflect::ToValue for #name {
-            fn to_value<'__a>(&'__a self) -> ::ayr_reflect::Value<'__a> {
+            fn to_value(&self) -> ::ayr_reflect::Value<'_> {
                 ::ayr_reflect::Value::Dynamic(::ayr_reflect::Dynamic::from_object(self))
             }
         }
@@ -179,7 +179,7 @@ pub fn attr(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
         }
 
         impl ::ayr_reflect::ToValue for #name {
-            fn to_value<'__a>(&'__a self) -> ::ayr_reflect::Value<'__a> {
+            fn to_value(&self) -> ::ayr_reflect::Value<'_> {
                 match self {
                     #(#variants,)*
                 }

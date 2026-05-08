@@ -193,7 +193,7 @@ where
     A: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + 'static,
     B: Clone + std::fmt::Debug + crate::ToType + crate::ToValue + 'static,
 {
-    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+    fn to_value(&self) -> crate::Value<'_> {
         crate::Value::Dynamic(crate::Dynamic::from_object(self))
     }
 }

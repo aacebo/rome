@@ -56,7 +56,7 @@ impl Number {
 }
 
 impl crate::ToValue for Number {
-    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+    fn to_value(&self) -> crate::Value<'static> {
         crate::Value::Number(*self)
     }
 }

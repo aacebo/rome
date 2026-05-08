@@ -26,7 +26,7 @@ impl<'a> serde::Serialize for Ref<'a> {
 }
 
 impl<'a> crate::ToValue for Ref<'a> {
-    fn to_value<'b>(&'b self) -> crate::Value<'b> {
+    fn to_value(&self) -> crate::Value<'_> {
         crate::Value::Ref(self.clone())
     }
 }

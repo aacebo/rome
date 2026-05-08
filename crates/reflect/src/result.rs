@@ -22,7 +22,7 @@ impl<T, E> crate::ToType for Result<T, E> {
 }
 
 impl<T: crate::ToValue, E: crate::ToValue> crate::ToValue for Result<T, E> {
-    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+    fn to_value(&self) -> crate::Value<'_> {
         match self {
             Err(err) => err.to_value(),
             Ok(v) => v.to_value(),

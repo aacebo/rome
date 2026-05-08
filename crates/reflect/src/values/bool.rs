@@ -5,7 +5,7 @@ impl From<bool> for crate::Value<'static> {
 }
 
 impl crate::ToValue for bool {
-    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+    fn to_value(&self) -> crate::Value<'static> {
         crate::Value::Bool(*self)
     }
 }

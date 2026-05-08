@@ -64,7 +64,7 @@ impl<'a> crate::ToType for Slice<'a> {
 }
 
 impl<'a> crate::ToValue for Slice<'a> {
-    fn to_value<'b>(&'b self) -> crate::Value<'b> {
+    fn to_value(&self) -> crate::Value<'_> {
         crate::Value::Slice(self.clone())
     }
 }
@@ -73,7 +73,7 @@ impl<T> crate::ToValue for &[T]
 where
     T: Clone + crate::TypeOf + crate::ToValue,
 {
-    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+    fn to_value(&self) -> crate::Value<'_> {
         crate::Value::Slice(Slice {
             ty: crate::SliceType {
                 ty: std::rc::Rc::new(T::type_of()),
@@ -88,7 +88,7 @@ impl<const N: usize, T> crate::ToValue for [T; N]
 where
     T: Clone + crate::TypeOf + crate::ToValue,
 {
-    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+    fn to_value(&self) -> crate::Value<'_> {
         crate::Value::Slice(Slice {
             ty: crate::SliceType {
                 ty: std::rc::Rc::new(T::type_of()),

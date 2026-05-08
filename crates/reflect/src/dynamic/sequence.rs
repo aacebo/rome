@@ -74,7 +74,7 @@ impl<T> crate::ToValue for Vec<T>
 where
     T: Clone + crate::TypeOf + crate::ToValue,
 {
-    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+    fn to_value(&self) -> crate::Value<'_> {
         crate::Value::Slice(crate::Slice {
             ty: crate::SliceType {
                 ty: std::rc::Rc::new(T::type_of()),

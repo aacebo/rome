@@ -33,7 +33,7 @@ macro_rules! int {
 
         $(
             impl crate::ToValue for $type {
-                fn to_value<'a>(&'a self) -> crate::Value<'a> {
+                fn to_value(&self) -> crate::Value<'static> {
                     return crate::Value::Number(crate::Number::Int(crate::Int::$name(*self)));
                 }
             }
@@ -173,7 +173,7 @@ macro_rules! int {
         }
 
         impl crate::ToValue for crate::Int {
-            fn to_value<'a>(&'a self) -> crate::Value<'a> {
+            fn to_value(&self) -> crate::Value<'static> {
                 return crate::Value::Number(crate::Number::Int(*self));
             }
         }

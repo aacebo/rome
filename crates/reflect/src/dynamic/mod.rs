@@ -85,7 +85,7 @@ impl<'a> crate::ToType for Dynamic<'a> {
 }
 
 impl<'a> crate::ToValue for Dynamic<'a> {
-    fn to_value<'b>(&'b self) -> crate::Value<'b> {
+    fn to_value(&self) -> crate::Value<'_> {
         crate::Value::Dynamic(self.clone())
     }
 }

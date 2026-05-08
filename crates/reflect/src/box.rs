@@ -10,3 +10,9 @@ where
         Box::new(self.clone())
     }
 }
+
+impl<T: crate::ToValue> crate::ToValue for std::rc::Rc<T> {
+    fn to_value(&self) -> crate::Value<'_> {
+        self.as_ref().to_value()
+    }
+}

@@ -14,7 +14,17 @@ macro_rules! value_of {
 /// The lifetime `'a` ties the returned [`Value`] to the borrow of `self`,
 /// allowing string/slice data to be borrowed rather than cloned.
 pub trait ToValue {
-    fn to_value<'a>(&'a self) -> crate::Value<'a>;
+    fn to_value(&self) -> crate::Value<'_>;
+}
+
+#[cfg(feature = "serde")]
+impl serde::Serialize for dyn ToValue {
+    fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+    where
+        S: serde::Serializer,
+    {
+        self.to_value().serialize(serializer)
+    }
 }
 
 #[cfg(test)]

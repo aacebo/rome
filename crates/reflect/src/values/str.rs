@@ -49,19 +49,19 @@ impl<'a> PartialEq<std::string::String> for Str<'a> {
 }
 
 impl crate::ToValue for std::string::String {
-    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+    fn to_value(&self) -> crate::Value<'_> {
         crate::Value::Str(Str(self.as_str()))
     }
 }
 
-impl crate::ToValue for &str {
-    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+impl crate::ToValue for &'static str {
+    fn to_value(&self) -> crate::Value<'static> {
         crate::Value::Str(Str(self))
     }
 }
 
 impl crate::ToValue for str {
-    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+    fn to_value(&self) -> crate::Value<'_> {
         crate::Value::Str(Str(self))
     }
 }

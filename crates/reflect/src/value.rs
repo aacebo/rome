@@ -187,33 +187,6 @@ impl<'a> Value<'a> {
             v => panic!("called 'to_map' on '{}'", v.to_type()),
         }
     }
-
-    pub fn to_static(self) -> Value<'static> {
-        match self {
-            Self::Bool(v) => Value::Bool(v),
-            Self::Number(v) => Value::Number(v),
-            Self::Str(s) => {
-                let leaked: &'static str = Box::leak(s.0.to_string().into_boxed_str());
-                Value::Str(crate::Str(leaked))
-            }
-            Self::Slice(s) => Value::Slice(crate::Slice {
-                ty: s.ty.clone(),
-                value: s.value.into_iter().map(Value::to_static).collect(),
-            }),
-            Self::Map(m) => Value::Map(crate::Map {
-                ty: m.ty.clone(),
-                data: m
-                    .data
-                    .into_iter()
-                    .map(|(k, v)| (k.to_static(), v.to_static()))
-                    .collect(),
-            }),
-            Self::Mut(m) => m.value.clone().to_static(),
-            Self::Ref(r) => r.value.clone().to_static(),
-            Self::Dynamic(_) => Value::Null,
-            Self::Null => Value::Null,
-        }
-    }
 }
 
 impl<'a> AsRef<Value<'a>> for Value<'a> {
@@ -245,7 +218,7 @@ impl<'a> crate::ToType for Value<'a> {
 }
 
 impl<'a> crate::ToValue for Value<'a> {
-    fn to_value<'b>(&'b self) -> crate::Value<'b> {
+    fn to_value(&self) -> crate::Value<'_> {
         self.clone()
     }
 }
@@ -263,6 +236,12 @@ impl<'a> PartialEq for Value<'a> {
             Self::Null => other.is_null(),
             _ => false,
         }
+    }
+}
+
+impl<'a> PartialEq<dyn crate::ToValue> for Value<'a> {
+    fn eq(&self, other: &dyn crate::ToValue) -> bool {
+        self.eq(&other.to_value())
     }
 }
 

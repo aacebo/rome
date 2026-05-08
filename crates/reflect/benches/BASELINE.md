@@ -231,11 +231,11 @@ Changes:
 
 | Bench | prev | after migration | Time Δ | Notes |
 |---|---|---|---|---|
-| `type_of_struct` | 5.35 ns | **4.21 ns** | **-21%** | thread_local cache still wins |
-| `assignable_to_primitive` | 28.9 ns | **9.67 ns** | **-67%** | `ptr::eq` + `&'static str` intern |
-| `clone_struct_type` | 2.29 ns | **1.82 ns** | **-21%** | |
-| `to_value_vec_string` | 210 ns | **151 ns** | **-28%** | borrows `&'a str`; Vec<Value> still allocated |
-| `serialize_object_json` | 1.08 µs | **717 ns** | **-34%** | no-clone `from_object(&user)` |
+| `type_of_struct` | 5.35 ns | **4.31 ns** | **-19%** | thread_local cache still wins |
+| `assignable_to_primitive` | 28.9 ns | **9.91 ns** | **-66%** | `ptr::eq` + `&'static str` intern |
+| `clone_struct_type` | 2.29 ns | **1.89 ns** | **-17%** | |
+| `to_value_vec_string` | 210 ns | **150 ns** | **-29%** | borrows `&'a str`; Vec<Value> still allocated |
+| `serialize_object_json` | 1.08 µs | **726 ns** | **-33%** | no-clone `from_object(&user)` |
 
 ## vs `valuable` comparison
 
@@ -251,8 +251,8 @@ Date captured: 2026-05-08.
 
 | Bench | `ayr-reflect` | `valuable` | Notes |
 |---|---|---|---|
-| `type_of_struct` / `visit_struct` | 4.21 ns | 16.6 ns | ayr-reflect wins — thread_local cache |
-| `assignable_to_primitive` | 9.67 ns | — | no valuable equivalent |
-| `clone_struct_type` | 1.82 ns | — | no valuable equivalent |
-| `to_value_vec_string` / `visit_vec_string` | 151 ns | 1.99 ns | valuable borrows; ayr-reflect allocates Vec<Value> |
-| `serialize_object_json` | 717 ns | — | no valuable equivalent |
+| `type_of_struct` / `visit_struct` | 4.31 ns | 17.2 ns | ayr-reflect wins — thread_local cache |
+| `assignable_to_primitive` | 9.91 ns | — | no valuable equivalent |
+| `clone_struct_type` | 1.89 ns | — | no valuable equivalent |
+| `to_value_vec_string` / `visit_vec_string` | 150 ns | 2.01 ns | valuable borrows; ayr-reflect allocates Vec<Value> |
+| `serialize_object_json` | 726 ns | — | no valuable equivalent |

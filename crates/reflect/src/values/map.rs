@@ -103,7 +103,7 @@ impl<'a> crate::ToType for Map<'a> {
 }
 
 impl<'a> crate::ToValue for Map<'a> {
-    fn to_value<'b>(&'b self) -> crate::Value<'b> {
+    fn to_value(&self) -> crate::Value<'_> {
         crate::Value::Map(self.clone())
     }
 }
@@ -135,7 +135,7 @@ where
     K: crate::TypeOf + crate::ToValue,
     V: crate::TypeOf + crate::ToValue,
 {
-    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+    fn to_value(&self) -> crate::Value<'_> {
         let ty = self.to_type();
         let mut map = Map::new(ty.as_map());
 
@@ -151,7 +151,7 @@ where
     K: crate::TypeOf + crate::ToValue,
     V: crate::TypeOf + crate::ToValue,
 {
-    fn to_value<'a>(&'a self) -> crate::Value<'a> {
+    fn to_value(&self) -> crate::Value<'_> {
         let ty = self.to_type();
         let mut map = Map::new(ty.as_map());
 
