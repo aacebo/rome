@@ -7,7 +7,6 @@ pub mod prelude;
 pub mod state;
 pub mod view;
 pub mod world;
-mod zone;
 
 pub use attribute::*;
 pub use context::Context;
@@ -16,4 +15,3 @@ pub use layer::*;
 pub use node::*;
 pub use view::Style;
 pub use world::World;
-pub use zone::*;

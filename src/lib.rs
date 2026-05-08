@@ -1,6 +1,5 @@
 pub mod prelude;
 pub mod runtime;
-pub mod schedule;
 
 pub use ayr_core::*;
 pub use runtime::Runtime;

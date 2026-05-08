@@ -1,10 +1,7 @@
-use serde::ser::SerializeStruct;
-
 use super::{Context, Entity};
 
-pub trait Attribute: Send + Sync + std::fmt::Debug + std::any::Any {
+pub trait Attribute: Send + Sync + std::fmt::Debug + std::any::Any + ayr_reflect::AsValue {
     fn name(&self) -> &'static str;
-    fn value(&self) -> ayr_reflect::Value;
 
     fn on_spawn(&mut self, _ctx: &Context, _entity: &dyn Entity) {}
     fn on_change(&mut self, _ctx: &Context, _entity: &dyn Entity) {}
@@ -16,9 +13,6 @@ impl serde::Serialize for dyn Attribute {
     where
         S: serde::Serializer,
     {
-        let mut v = s.serialize_struct("Entity", 2)?;
-        v.serialize_field("name", self.name())?;
-        v.serialize_field("value", &self.value())?;
-        v.end()
+        self.as_value().serialize(s)
     }
 }

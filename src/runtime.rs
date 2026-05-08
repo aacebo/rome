@@ -1,10 +1,9 @@
-use crate::{prelude::*, schedule, state::Store, time};
+use crate::{prelude::*, state::Store, time};
 
 pub struct Runtime {
     world: Store<World>,
     clock: Box<dyn Clock>,
     layers: Vec<Box<dyn Layer>>,
-    scheduler: Box<dyn Scheduler>,
 }
 
 impl Runtime {
@@ -24,7 +23,10 @@ impl Runtime {
             &mut self.world,
         );
 
-        self.scheduler.on_start(&mut ctx, &mut self.layers);
+        for layer in self.layers.iter_mut() {
+            layer.on_start(&ctx);
+            ctx.flush();
+        }
 
         while duration > std::time::Instant::now().duration_since(start) {
             let now = std::time::Instant::now();
@@ -35,19 +37,25 @@ impl Runtime {
             last = now;
 
             for _ in 0..tick.steps {
-                self.scheduler.on_tick(&mut ctx, &mut self.layers);
+                for layer in self.layers.iter_mut() {
+                    layer.on_tick(&ctx);
+                    ctx.flush();
+                }
+
                 self.clock.wait();
             }
         }
 
-        self.scheduler.on_stop(&mut ctx, &mut self.layers);
+        for layer in self.layers.iter_mut() {
+            layer.on_stop(&ctx);
+            ctx.flush();
+        }
     }
 }
 
 pub struct RuntimeBuilder {
     clock: Box<dyn Clock>,
     layers: Vec<Box<dyn Layer>>,
-    scheduler: Box<dyn Scheduler>,
 }
 
 impl RuntimeBuilder {
@@ -55,17 +63,11 @@ impl RuntimeBuilder {
         Self {
             clock: Box::new(time::Fixed::new(60)),
             layers: vec![],
-            scheduler: Box::new(schedule::Sequence),
         }
     }
 
     pub fn clock(mut self, clock: impl Clock) -> Self {
         self.clock = Box::new(clock);
-        self
-    }
-
-    pub fn scheduler(mut self, scheduler: impl Scheduler) -> Self {
-        self.scheduler = Box::new(scheduler);
         self
     }
 
@@ -79,7 +81,6 @@ impl RuntimeBuilder {
             world: Store::new(World::new()),
             clock: self.clock,
             layers: self.layers,
-            scheduler: self.scheduler,
         }
     }
 }
