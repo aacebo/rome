@@ -168,22 +168,22 @@ impl FieldBuilder {
         })
     }
 
-    pub fn with_name(mut self, name: crate::FieldName) -> Self {
+    pub fn name(mut self, name: crate::FieldName) -> Self {
         self.0.name = name;
         self
     }
 
-    pub fn with_type(mut self, ty: crate::Type) -> Self {
+    pub fn ty(mut self, ty: crate::Type) -> Self {
         self.0.ty = std::rc::Rc::new(ty);
         self
     }
 
-    pub fn with_meta(mut self, meta: crate::MetaData) -> Self {
+    pub fn meta(mut self, meta: crate::MetaData) -> Self {
         self.0.meta = meta;
         self
     }
 
-    pub fn with_visibility(mut self, vis: crate::Visibility) -> Self {
+    pub fn visibility(mut self, vis: crate::Visibility) -> Self {
         self.0.vis = vis;
         self
     }

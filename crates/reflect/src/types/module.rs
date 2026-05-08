@@ -116,22 +116,22 @@ impl ModTypeBuilder {
         })
     }
 
-    pub fn with_path(mut self, path: crate::Path) -> Self {
+    pub fn path(mut self, path: crate::Path) -> Self {
         self.0.path = path;
         self
     }
 
-    pub fn with_meta(mut self, meta: crate::MetaData) -> Self {
+    pub fn meta(mut self, meta: crate::MetaData) -> Self {
         self.0.meta = meta;
         self
     }
 
-    pub fn with_visibility(mut self, vis: crate::Visibility) -> Self {
+    pub fn visibility(mut self, vis: crate::Visibility) -> Self {
         self.0.vis = vis;
         self
     }
 
-    pub fn with_items(mut self, items: impl IntoIterator<Item = crate::Item>) -> Self {
+    pub fn items(mut self, items: impl IntoIterator<Item = crate::Item>) -> Self {
         self.0.items.extend(items);
         self
     }

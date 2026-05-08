@@ -60,17 +60,17 @@ impl VariantBuilder {
         })
     }
 
-    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+    pub fn name(mut self, name: impl Into<String>) -> Self {
         self.0.name = name.into();
         self
     }
 
-    pub fn with_meta(mut self, meta: crate::MetaData) -> Self {
+    pub fn meta(mut self, meta: crate::MetaData) -> Self {
         self.0.meta = meta;
         self
     }
 
-    pub fn with_fields(mut self, fields: crate::Fields) -> Self {
+    pub fn fields(mut self, fields: crate::Fields) -> Self {
         self.0.fields = fields;
         self
     }

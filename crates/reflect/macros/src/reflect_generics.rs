@@ -50,14 +50,14 @@ pub fn build_type(param: &syn::TypeParam) -> proc_macro2::TokenStream {
 
     let tokens = quote! {
         ::ayr_reflect::TypeParam::new()
-            .with_name(stringify!(#name))
-            .with_bounds([#(#bounds.to_bound(),)*])
+            .name(stringify!(#name))
+            .bounds([#(#bounds.to_bound(),)*])
     };
 
     match &param.default {
         None => quote!(#tokens.build()),
         Some(default) => {
-            quote!(#tokens.with_default(::ayr_reflect::type_of!(#default)).build())
+            quote!(#tokens.default(::ayr_reflect::type_of!(#default)).build())
         }
     }
 }
@@ -74,7 +74,7 @@ pub fn build_const(param: &syn::ConstParam) -> proc_macro2::TokenStream {
 
     match &param.default {
         None => tokens,
-        Some(default) => quote!(#tokens.with_default(#default)),
+        Some(default) => quote!(#tokens.default(#default)),
     }
 }
 

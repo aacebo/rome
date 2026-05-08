@@ -35,10 +35,10 @@ pub fn build(meta: proc_macro2::TokenStream, item: &mut syn::ItemMod) -> proc_ma
 
     quote! {
         ::ayr_reflect::ModType::new()
-            .with_path(::ayr_reflect::Path::from(module_path!()))
-            .with_meta(#meta.merge(&#inner_meta))
-            .with_visibility(#vis)
-            .with_items([#(#children,)*])
+            .path(::ayr_reflect::Path::from(module_path!()))
+            .meta(#meta.merge(&#inner_meta))
+            .visibility(#vis)
+            .items([#(#children,)*])
             .build()
             .to_type()
     }

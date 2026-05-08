@@ -114,42 +114,42 @@ impl MethodBuilder {
         })
     }
 
-    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+    pub fn name(mut self, name: impl Into<String>) -> Self {
         self.0.name = name.into();
         self
     }
 
-    pub fn with_meta(mut self, meta: crate::MetaData) -> Self {
+    pub fn meta(mut self, meta: crate::MetaData) -> Self {
         self.0.meta = meta;
         self
     }
 
-    pub fn with_is_async(mut self, is_async: bool) -> Self {
+    pub fn is_async(mut self, is_async: bool) -> Self {
         self.0.is_async = is_async;
         self
     }
 
-    pub fn with_visibility(mut self, vis: crate::Visibility) -> Self {
+    pub fn visibility(mut self, vis: crate::Visibility) -> Self {
         self.0.vis = vis;
         self
     }
 
-    pub fn with_generics(mut self, generics: crate::Generics) -> Self {
+    pub fn generics(mut self, generics: crate::Generics) -> Self {
         self.0.generics = generics;
         self
     }
 
-    pub fn with_params(mut self, params: impl IntoIterator<Item = crate::Param>) -> Self {
+    pub fn params(mut self, params: impl IntoIterator<Item = crate::Param>) -> Self {
         self.0.params.extend(params);
         self
     }
 
-    pub fn with_param(mut self, param: crate::Param) -> Self {
+    pub fn param(mut self, param: crate::Param) -> Self {
         self.0.params.push(param);
         self
     }
 
-    pub fn with_return_type(mut self, ty: crate::Type) -> Self {
+    pub fn return_type(mut self, ty: crate::Type) -> Self {
         self.0.return_type = std::rc::Rc::new(ty);
         self
     }

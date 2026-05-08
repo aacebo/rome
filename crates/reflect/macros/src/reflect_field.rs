@@ -16,10 +16,10 @@ pub fn build(field: &syn::Field, index: usize, is_named: bool) -> proc_macro2::T
 
     quote! {
         ::ayr_reflect::Field::new()
-            .with_name(#field_name)
-            .with_type(::ayr_reflect::type_of!(#field_type))
-            .with_visibility(#field_vis)
-            .with_meta(#field_meta)
+            .name(#field_name)
+            .ty(::ayr_reflect::type_of!(#field_type))
+            .visibility(#field_vis)
+            .meta(#field_meta)
             .build()
     }
 }

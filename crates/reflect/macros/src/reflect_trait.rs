@@ -117,12 +117,12 @@ pub fn build(meta: proc_macro2::TokenStream, item: &syn::ItemTrait) -> proc_macr
 
                 return Some(quote! {
                     ::ayr_reflect::Method::new()
-                        .with_name(stringify!(#fn_name))
-                        .with_meta(#fn_meta)
-                        .with_is_async(#fn_is_async)
-                        .with_visibility(::ayr_reflect::Visibility::Public(::ayr_reflect::Public::Full))
-                        .with_params([#(#fn_params,)*])
-                        .with_return_type(#fn_return_type)
+                        .name(stringify!(#fn_name))
+                        .meta(#fn_meta)
+                        .is_async(#fn_is_async)
+                        .visibility(::ayr_reflect::Visibility::Public(::ayr_reflect::Public::Full))
+                        .params([#(#fn_params,)*])
+                        .return_type(#fn_return_type)
                         .build()
                 });
             }
@@ -133,12 +133,12 @@ pub fn build(meta: proc_macro2::TokenStream, item: &syn::ItemTrait) -> proc_macr
 
     quote! {
         ::ayr_reflect::TraitType::new()
-            .with_path(::ayr_reflect::Path::from(module_path!()))
-            .with_name(stringify!(#name))
-            .with_meta(#meta.merge(&#inner_meta))
-            .with_generics(#generics)
-            .with_visibility(#vis)
-            .with_methods([#(#methods,)*])
+            .path(::ayr_reflect::Path::from(module_path!()))
+            .name(stringify!(#name))
+            .meta(#meta.merge(&#inner_meta))
+            .generics(#generics)
+            .visibility(#vis)
+            .methods([#(#methods,)*])
             .build()
             .to_type()
     }

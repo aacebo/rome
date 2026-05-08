@@ -119,37 +119,37 @@ impl ImplBuilder {
         })
     }
 
-    pub fn with_path(mut self, path: crate::Path) -> Self {
+    pub fn path(mut self, path: crate::Path) -> Self {
         self.0.path = path;
         self
     }
 
-    pub fn with_type(mut self, ty: crate::Type) -> Self {
+    pub fn ty(mut self, ty: crate::Type) -> Self {
         self.0.self_ty = ty;
         self
     }
 
-    pub fn with_meta(mut self, meta: crate::MetaData) -> Self {
+    pub fn meta(mut self, meta: crate::MetaData) -> Self {
         self.0.meta = meta;
         self
     }
 
-    pub fn with_of(mut self, _trait: crate::Path) -> Self {
+    pub fn of(mut self, _trait: crate::Path) -> Self {
         self.0.of_trait = Some(_trait);
         self
     }
 
-    pub fn with_generics(mut self, generics: crate::Generics) -> Self {
+    pub fn generics(mut self, generics: crate::Generics) -> Self {
         self.0.generics = generics;
         self
     }
 
-    pub fn with_methods(mut self, methods: impl IntoIterator<Item = crate::Method>) -> Self {
+    pub fn methods(mut self, methods: impl IntoIterator<Item = crate::Method>) -> Self {
         self.0.methods.extend(methods);
         self
     }
 
-    pub fn with_method(mut self, method: crate::Method) -> Self {
+    pub fn method(mut self, method: crate::Method) -> Self {
         self.0.methods.push(method);
         self
     }

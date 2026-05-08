@@ -44,19 +44,19 @@ impl Fields {
 
 impl From<&[crate::Field]> for Fields {
     fn from(value: &[crate::Field]) -> Self {
-        Self::new().with_fields(value.iter().cloned()).build()
+        Self::new().fields(value.iter().cloned()).build()
     }
 }
 
 impl<const N: usize> From<&[crate::Field; N]> for Fields {
     fn from(value: &[crate::Field; N]) -> Self {
-        Self::new().with_fields(value.iter().cloned()).build()
+        Self::new().fields(value.iter().cloned()).build()
     }
 }
 
 impl<const N: usize> From<[crate::Field; N]> for Fields {
     fn from(value: [crate::Field; N]) -> Self {
-        Self::new().with_fields(value).build()
+        Self::new().fields(value).build()
     }
 }
 
@@ -158,17 +158,17 @@ impl FieldsBuilder {
         })
     }
 
-    pub fn with_layout(mut self, layout: crate::Layout) -> Self {
+    pub fn layout(mut self, layout: crate::Layout) -> Self {
         self.0.layout = layout;
         self
     }
 
-    pub fn with_fields(mut self, fields: impl IntoIterator<Item = crate::Field>) -> Self {
+    pub fn fields(mut self, fields: impl IntoIterator<Item = crate::Field>) -> Self {
         self.0.fields.extend(fields);
         self
     }
 
-    pub fn with_field(mut self, field: crate::Field) -> Self {
+    pub fn field(mut self, field: crate::Field) -> Self {
         self.0.fields.push(field);
         self
     }

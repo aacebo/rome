@@ -198,15 +198,15 @@ pub fn build(item: &syn::ItemStruct) -> proc_macro2::TokenStream {
 
     quote! {
         ::ayr_reflect::StructType::new()
-            .with_path(::ayr_reflect::Path::from(module_path!()))
-            .with_name(stringify!(#name))
-            .with_visibility(#vis)
-            .with_meta(#meta)
-            .with_generics(#generics)
-            .with_fields(
+            .path(::ayr_reflect::Path::from(module_path!()))
+            .name(stringify!(#name))
+            .visibility(#vis)
+            .meta(#meta)
+            .generics(#generics)
+            .fields(
                 ::ayr_reflect::Fields::new()
-                    .with_layout(#layout)
-                    .with_fields([#(#fields,)*])
+                    .layout(#layout)
+                    .fields([#(#fields,)*])
                     .build()
             )
             .build()

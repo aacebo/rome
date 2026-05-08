@@ -77,22 +77,22 @@ impl TypeParamBuilder {
         })
     }
 
-    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+    pub fn name(mut self, name: impl Into<String>) -> Self {
         self.0.name = name.into();
         self
     }
 
-    pub fn with_default(mut self, default: crate::Type) -> Self {
+    pub fn default(mut self, default: crate::Type) -> Self {
         self.0.default = Some(default);
         self
     }
 
-    pub fn with_bounds(mut self, bounds: impl IntoIterator<Item = crate::Bound>) -> Self {
+    pub fn bounds(mut self, bounds: impl IntoIterator<Item = crate::Bound>) -> Self {
         self.0.bounds.extend(bounds);
         self
     }
 
-    pub fn with_bound(mut self, bound: crate::Bound) -> Self {
+    pub fn bound(mut self, bound: crate::Bound) -> Self {
         self.0.bounds.push(bound);
         self
     }

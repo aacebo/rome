@@ -172,37 +172,37 @@ impl TraitTypeBuilder {
         })
     }
 
-    pub fn with_path(mut self, path: crate::Path) -> Self {
+    pub fn path(mut self, path: crate::Path) -> Self {
         self.0.path = path;
         self
     }
 
-    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+    pub fn name(mut self, name: impl Into<String>) -> Self {
         self.0.name = name.into();
         self
     }
 
-    pub fn with_meta(mut self, meta: crate::MetaData) -> Self {
+    pub fn meta(mut self, meta: crate::MetaData) -> Self {
         self.0.meta = meta;
         self
     }
 
-    pub fn with_visibility(mut self, vis: crate::Visibility) -> Self {
+    pub fn visibility(mut self, vis: crate::Visibility) -> Self {
         self.0.vis = vis;
         self
     }
 
-    pub fn with_generics(mut self, generics: crate::Generics) -> Self {
+    pub fn generics(mut self, generics: crate::Generics) -> Self {
         self.0.generics = generics;
         self
     }
 
-    pub fn with_methods(mut self, methods: impl IntoIterator<Item = crate::Method>) -> Self {
+    pub fn methods(mut self, methods: impl IntoIterator<Item = crate::Method>) -> Self {
         self.0.methods.extend(methods);
         self
     }
 
-    pub fn with_method(mut self, method: crate::Method) -> Self {
+    pub fn method(mut self, method: crate::Method) -> Self {
         self.0.methods.push(method);
         self
     }

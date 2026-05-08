@@ -126,37 +126,37 @@ impl EnumTypeBuilder {
         })
     }
 
-    pub fn with_path(mut self, path: crate::Path) -> Self {
+    pub fn path(mut self, path: crate::Path) -> Self {
         self.0.path = path;
         self
     }
 
-    pub fn with_name(mut self, name: impl Into<String>) -> Self {
+    pub fn name(mut self, name: impl Into<String>) -> Self {
         self.0.name = name.into();
         self
     }
 
-    pub fn with_meta(mut self, meta: crate::MetaData) -> Self {
+    pub fn meta(mut self, meta: crate::MetaData) -> Self {
         self.0.meta = meta;
         self
     }
 
-    pub fn with_visibility(mut self, vis: crate::Visibility) -> Self {
+    pub fn visibility(mut self, vis: crate::Visibility) -> Self {
         self.0.vis = vis;
         self
     }
 
-    pub fn with_generics(mut self, generics: crate::Generics) -> Self {
+    pub fn generics(mut self, generics: crate::Generics) -> Self {
         self.0.generics = generics;
         self
     }
 
-    pub fn with_variants(mut self, variants: impl IntoIterator<Item = crate::Variant>) -> Self {
+    pub fn variants(mut self, variants: impl IntoIterator<Item = crate::Variant>) -> Self {
         self.0.variants.extend(variants);
         self
     }
 
-    pub fn with_variant(mut self, variant: crate::Variant) -> Self {
+    pub fn variant(mut self, variant: crate::Variant) -> Self {
         self.0.variants.push(variant);
         self
     }

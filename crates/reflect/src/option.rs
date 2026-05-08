@@ -3,11 +3,11 @@ use crate::TypeOf;
 impl<T> crate::TypeOf for Option<T> {
     fn type_of() -> crate::Type {
         crate::EnumType::new()
-            .with_path(crate::Path::from("core::option"))
-            .with_name("Option")
-            .with_visibility(crate::Visibility::Public(crate::Public::Full))
-            .with_generics(crate::Generics::from([crate::TypeParam::new()
-                .with_name("T")
+            .path(crate::Path::from("core::option"))
+            .name("Option")
+            .visibility(crate::Visibility::Public(crate::Public::Full))
+            .generics(crate::Generics::from([crate::TypeParam::new()
+                .name("T")
                 .build()
                 .to_generic()]))
             .build()

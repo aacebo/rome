@@ -210,7 +210,7 @@ pub fn build(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
             match &variant.fields {
                 syn::Fields::Unit => quote! {
                     ::ayr_reflect::Variant::new()
-                        .with_name(stringify!(#variant_name))
+                        .name(stringify!(#variant_name))
                         .build()
                 },
                 syn::Fields::Named(named_fields) => {
@@ -223,12 +223,12 @@ pub fn build(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
 
                     quote! {
                         ::ayr_reflect::Variant::new()
-                            .with_name(stringify!(#variant_name))
-                            .with_meta(#variant_meta)
-                            .with_fields(
+                            .name(stringify!(#variant_name))
+                            .meta(#variant_meta)
+                            .fields(
                                 ::ayr_reflect::Fields::new()
-                                    .with_layout(::ayr_reflect::Layout::Key)
-                                    .with_fields([#(#fields,)*])
+                                    .layout(::ayr_reflect::Layout::Key)
+                                    .fields([#(#fields,)*])
                                     .build()
                             )
                             .build()
@@ -244,12 +244,12 @@ pub fn build(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
 
                     quote! {
                         ::ayr_reflect::Variant::new()
-                            .with_name(stringify!(#variant_name))
-                            .with_meta(#variant_meta)
-                            .with_fields(
+                            .name(stringify!(#variant_name))
+                            .meta(#variant_meta)
+                            .fields(
                                 ::ayr_reflect::Fields::new()
-                                    .with_layout(::ayr_reflect::Layout::Index)
-                                    .with_fields([#(#fields,)*])
+                                    .layout(::ayr_reflect::Layout::Index)
+                                    .fields([#(#fields,)*])
                                     .build()
                             )
                             .build()
@@ -261,12 +261,12 @@ pub fn build(item: &syn::ItemEnum) -> proc_macro2::TokenStream {
 
     quote! {
         ::ayr_reflect::EnumType::new()
-            .with_path(::ayr_reflect::Path::from(module_path!()))
-            .with_name(stringify!(#name))
-            .with_meta(#meta)
-            .with_generics(#generics)
-            .with_visibility(#vis)
-            .with_variants([#(#variants,)*])
+            .path(::ayr_reflect::Path::from(module_path!()))
+            .name(stringify!(#name))
+            .meta(#meta)
+            .generics(#generics)
+            .visibility(#vis)
+            .variants([#(#variants,)*])
             .build()
             .to_type()
     }
