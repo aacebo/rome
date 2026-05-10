@@ -12,5 +12,4 @@ pub use map::*;
 pub use mutable::*;
 pub use number::*;
 pub use r#ref::*;
-pub use slice::*;
 pub use str::*;

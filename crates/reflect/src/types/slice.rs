@@ -127,14 +127,17 @@ mod test {
     pub fn ok() {
         let value = value_of!([1, 2, 3]);
 
-        assert!(value.is_slice());
-        assert_eq!(value.len(), 3);
+        assert!(value.is_dynamic());
         assert_eq!(value.to_type().len(), 3);
         assert_eq!(value.to_type().id(), "[i32; 3]");
 
-        for (i, value) in value.as_slice().iter().enumerate() {
-            assert!(value.is_i32());
-            assert_eq!(i + 1, value.to_i32() as usize);
+        let seq = value.as_dynamic().as_sequence();
+        assert_eq!(seq.len(), 3);
+
+        for i in 0..seq.len() {
+            let v = seq.index(i);
+            assert!(v.is_i32());
+            assert_eq!(i + 1, v.to_i32() as usize);
         }
     }
 }

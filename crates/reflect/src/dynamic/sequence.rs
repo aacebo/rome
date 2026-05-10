@@ -1,15 +1,13 @@
-use crate::TypeOf;
-
 /// ## Sequence
 ///
 /// implemented by types that can reflect their value/type
 /// and the values of their individual elements
 pub trait Sequence: std::fmt::Debug + crate::ToType {
     fn len(&self) -> usize;
+    fn index(&self, i: usize) -> crate::Value<'_>;
     fn is_empty(&self) -> bool {
         self.len() == 0
     }
-    fn index(&self, i: usize) -> crate::Value<'_>;
 }
 
 #[cfg(feature = "serde")]
@@ -48,16 +46,10 @@ where
     T: crate::TypeOf,
 {
     fn type_of() -> crate::Type {
-        crate::StructType::new()
-            .path(crate::Path::from("std::vec"))
-            .name("Vec")
-            .visibility(crate::Visibility::Public(crate::Public::Full))
-            .generics(crate::Generics::from([crate::TypeParam::new()
-                .name("T")
-                .build()
-                .to_generic()]))
-            .build()
-            .to_type()
+        crate::Type::Slice(crate::SliceType {
+            ty: std::rc::Rc::new(T::type_of()),
+            capacity: None,
+        })
     }
 }
 
@@ -66,28 +58,22 @@ where
     T: crate::TypeOf,
 {
     fn to_type(&self) -> crate::Type {
-        Vec::<T>::type_of()
+        <Vec<T> as crate::TypeOf>::type_of()
     }
 }
 
 impl<T> crate::ToValue for Vec<T>
 where
-    T: Clone + crate::TypeOf + crate::ToValue,
+    T: std::fmt::Debug + crate::TypeOf + crate::ToValue + 'static,
 {
     fn to_value(&self) -> crate::Value<'_> {
-        crate::Value::Slice(crate::Slice {
-            ty: crate::SliceType {
-                ty: std::rc::Rc::new(T::type_of()),
-                capacity: None,
-            },
-            value: self.iter().map(|v| v.to_value()).collect(),
-        })
+        crate::Value::Dynamic(crate::Dynamic::from_sequence(self))
     }
 }
 
 impl<T> crate::Sequence for Vec<T>
 where
-    T: Clone + std::fmt::Debug + crate::TypeOf + crate::ToValue + 'static,
+    T: std::fmt::Debug + crate::TypeOf + crate::ToValue + 'static,
 {
     fn len(&self) -> usize {
         self.len()
@@ -101,9 +87,34 @@ where
     }
 }
 
+impl<const N: usize, T> crate::Sequence for [T; N]
+where
+    T: std::fmt::Debug + crate::TypeOf + crate::ToValue + 'static,
+{
+    fn len(&self) -> usize {
+        N
+    }
+
+    fn index(&self, i: usize) -> crate::Value<'_> {
+        match self.get(i) {
+            None => crate::Value::Null,
+            Some(v) => v.to_value(),
+        }
+    }
+}
+
+impl<const N: usize, T> crate::ToValue for [T; N]
+where
+    T: std::fmt::Debug + crate::TypeOf + crate::ToValue + 'static,
+{
+    fn to_value(&self) -> crate::Value<'_> {
+        crate::Value::Dynamic(crate::Dynamic::from_sequence(self))
+    }
+}
+
 #[cfg(test)]
 mod test {
-    use crate::Dynamic;
+    use crate::{Dynamic, ToValue};
 
     #[test]
     pub fn vec_sequence_index_returns_element() {
@@ -112,5 +123,27 @@ mod test {
 
         assert_eq!(dynamic.len(), 3);
         assert_eq!(dynamic.as_sequence().index(1).to_i32(), 20);
+    }
+
+    #[test]
+    pub fn vec_to_value_routes_through_dynamic_sequence() {
+        let vec = vec![10_i32, 20, 30];
+        let value = vec.to_value();
+
+        assert!(value.is_dynamic());
+        let seq = value.as_dynamic().as_sequence();
+        assert_eq!(seq.len(), 3);
+        assert_eq!(seq.index(2).to_i32(), 30);
+    }
+
+    #[test]
+    pub fn array_to_value_routes_through_dynamic_sequence() {
+        let arr: [i32; 3] = [1, 2, 3];
+        let value = arr.to_value();
+
+        assert!(value.is_dynamic());
+        let seq = value.as_dynamic().as_sequence();
+        assert_eq!(seq.len(), 3);
+        assert_eq!(seq.index(0).to_i32(), 1);
     }
 }

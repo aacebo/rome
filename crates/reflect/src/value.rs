@@ -5,7 +5,6 @@ pub enum Value<'a> {
     Bool(bool),
     Number(crate::Number),
     Str(crate::Str<'a>),
-    Slice(crate::Slice<'a>),
     Map(crate::Map<'a>),
     Mut(crate::Mut<'a>),
     Ref(crate::Ref<'a>),
@@ -19,7 +18,6 @@ impl<'a> Value<'a> {
             Self::Bool(v) => v.to_type(),
             Self::Number(v) => v.to_type(),
             Self::Str(v) => v.to_type(),
-            Self::Slice(v) => v.to_type(),
             Self::Map(v) => v.to_type(),
             Self::Mut(v) => v.to_type(),
             Self::Ref(v) => v.to_type(),
@@ -30,11 +28,11 @@ impl<'a> Value<'a> {
 
     pub fn len(&self) -> usize {
         match self {
-            Self::Slice(v) => v.len(),
             Self::Map(v) => v.len(),
             Self::Str(v) => v.len(),
             Self::Mut(v) => v.len(),
             Self::Ref(v) => v.len(),
+            Self::Dynamic(v) if v.is_sequence() => v.len(),
             v => panic!("called 'len' on '{}'", v.to_type()),
         }
     }
@@ -45,10 +43,12 @@ impl<'a> Value<'a> {
 
     pub fn iter(&self) -> std::slice::Iter<'_, Self> {
         match self {
-            Self::Slice(v) => v.iter(),
             Self::Mut(v) => v.iter(),
             Self::Ref(v) => v.iter(),
-            v => panic!("called 'iter' on '{}'", v.to_type()),
+            v => panic!(
+                "called 'iter' on '{}'; lazy sequences cannot return std::slice::Iter, use as_dynamic().as_sequence() and index by position",
+                v.to_type()
+            ),
         }
     }
 
@@ -66,9 +66,6 @@ impl<'a> Value<'a> {
     }
     pub fn is_str(&self) -> bool {
         matches!(self, Self::Str(_))
-    }
-    pub fn is_slice(&self) -> bool {
-        matches!(self, Self::Slice(_))
     }
     pub fn is_map(&self) -> bool {
         matches!(self, Self::Map(_))
@@ -102,13 +99,6 @@ impl<'a> Value<'a> {
         match self {
             Self::Str(v) => v,
             v => panic!("called 'as_str' on '{}'", v.to_type()),
-        }
-    }
-
-    pub fn as_slice(&self) -> &crate::Slice<'a> {
-        match self {
-            Self::Slice(v) => v,
-            v => panic!("called 'as_slice' on '{}'", v.to_type()),
         }
     }
 
@@ -167,13 +157,6 @@ impl<'a> Value<'a> {
         }
     }
 
-    pub fn to_slice(&self) -> crate::Slice<'a> {
-        match self {
-            Self::Slice(v) => v.clone(),
-            v => panic!("called 'to_slice' on '{}'", v.to_type()),
-        }
-    }
-
     pub fn to_dynamic(&self) -> crate::Dynamic<'a> {
         match self {
             Self::Dynamic(v) => v.clone(),
@@ -207,7 +190,6 @@ impl<'a> crate::ToType for Value<'a> {
             Self::Bool(v) => v.to_type(),
             Self::Number(v) => v.to_type(),
             Self::Str(v) => v.to_type(),
-            Self::Slice(v) => v.to_type(),
             Self::Map(v) => v.to_type(),
             Self::Mut(v) => v.to_type(),
             Self::Ref(v) => v.to_type(),
@@ -229,7 +211,6 @@ impl<'a> PartialEq for Value<'a> {
             Self::Bool(v) => other.is_bool() && other.as_bool() == v,
             Self::Number(v) => other.is_number() && other.as_number() == v,
             Self::Str(v) => other.is_str() && other.as_str() == v,
-            Self::Slice(v) => other.is_slice() && other.as_slice() == v,
             Self::Map(v) => other.is_map() && other.as_map() == v,
             Self::Mut(v) => other.is_mut() && other.to_mut() == *v,
             Self::Ref(v) => other.is_ref() && other.to_ref() == *v,
@@ -250,7 +231,6 @@ impl<'a> std::ops::Index<usize> for Value<'a> {
 
     fn index(&self, index: usize) -> &Self::Output {
         match self {
-            Self::Slice(v) => v.index(index),
             Self::Ref(v) => v.index(index),
             Self::Mut(v) => v.index(index),
             _ => panic!("called 'Index<usize>::index' on '{}'", self.to_type()),
@@ -275,7 +255,6 @@ impl<'a> std::ops::Index<&Self> for Value<'a> {
     fn index(&self, index: &Self) -> &Self::Output {
         match self {
             Self::Map(v) => v.index(index),
-            Self::Slice(v) => v.index(index.to_i32() as usize),
             _ => panic!("called 'Index<&Value>::index' on '{}'", self.to_type()),
         }
     }
@@ -287,7 +266,6 @@ impl<'a> std::fmt::Display for Value<'a> {
             Self::Bool(v) => write!(f, "{}", v),
             Self::Number(v) => write!(f, "{}", v),
             Self::Str(v) => write!(f, "{}", v),
-            Self::Slice(v) => write!(f, "{}", v),
             Self::Map(v) => write!(f, "{}", v),
             Self::Mut(v) => write!(f, "{}", v),
             Self::Ref(v) => write!(f, "{}", v),
@@ -330,7 +308,6 @@ impl<'a> serde::Serialize for Value<'a> {
             Self::Bool(v) => v.serialize(s),
             Self::Number(v) => v.serialize(s),
             Self::Str(v) => v.0.serialize(s),
-            Self::Slice(v) => v.value.serialize(s),
             Self::Map(v) => v.serialize(s),
             Self::Mut(v) => v.value.serialize(s),
             Self::Ref(v) => v.value.serialize(s),

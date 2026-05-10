@@ -37,13 +37,18 @@ mod test {
 
     #[test]
     pub fn basic() {
-        let meta = crate::MetaData::from([
-            ("a", value_of!(21)),
-            ("b", value_of!(true)),
-            ("c", value_of!([3, 2, 1])),
-        ]);
+        let meta = crate::MetaData::from([("a", value_of!(21)), ("b", value_of!(true))]);
 
-        let out = get!(meta => /c/1);
-        assert_eq!(out, &value_of!(2));
+        let out = get!(meta => /a);
+        assert_eq!(out, &value_of!(21));
+    }
+
+    #[test]
+    pub fn dynamic_sequence_index() {
+        let arr: [i32; 3] = [3, 2, 1];
+        let value = value_of!(arr);
+
+        let seq = value.as_dynamic().as_sequence();
+        assert_eq!(seq.index(1).to_i32(), 2);
     }
 }

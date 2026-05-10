@@ -256,3 +256,163 @@ Date captured: 2026-05-08.
 | `clone_struct_type` | 1.89 ns | — | no valuable equivalent |
 | `to_value_vec_string` / `visit_vec_string` | 150 ns | 2.01 ns | valuable borrows; ayr-reflect allocates Vec<Value> |
 | `serialize_object_json` | 726 ns | — | no valuable equivalent |
+
+## Re-run on darwin (2026-05-09)
+
+Date: 2026-05-09.
+
+Environment:
+- Host: macOS (Darwin 25.4.0), Rust workspace pin (Edition 2024).
+- `cargo bench -p ayr-reflect --features serde --bench reflect_bench`
+- Allocation counts captured via `-- --profile-time 1` (dhat profiler is wired
+  into the criterion harness; per-iteration allocs derived from the bench
+  body — see notes below the table).
+
+| Bench | prev (windows) | darwin re-run | Time Δ | Per-iter allocs |
+|---|---|---|---|---|
+| `type_of_struct` | 4.31 ns | **2.88 ns** | -33% | 0 (29 setup, one-time) |
+| `assignable_to_primitive` | 9.91 ns | **5.09 ns** | -49% | 0 |
+| `clone_struct_type` | 1.89 ns | **1.53 ns** | -19% | 0 |
+| `to_value_vec_string` | 150 ns | **74.4 ns** | -50% | 9 (unchanged — code path stable) |
+| `serialize_object_json` | 726 ns | **399 ns** | -45% | 18 (unchanged — code path stable) |
+
+Valuable comparison on darwin:
+
+| Bench | `ayr-reflect` | `valuable` | Notes |
+|---|---|---|---|
+| `type_of_struct` / `visit_struct` | 2.88 ns | 10.1 ns | ayr-reflect wins — thread_local cache |
+| `to_value_vec_string` / `visit_vec_string` | 74.4 ns | 1.50 ns | valuable borrows; ayr-reflect allocates `Vec<Value>` |
+
+Notes:
+- The platform shift (windows → darwin) accounts for most of the speedup;
+  no source changes between the prior run and this one.
+- dhat under `--profile-time` activates the profiler inside `b.iter`, which
+  inflates per-call cost and obscures per-iter alloc counts directly.
+  Confirmed-zero benches (`assignable_to_primitive`, `clone_struct_type`,
+  `valuable/*`) reported `allocs: 0  bytes: 0` over the full window.
+  `type_of_struct` reported 29 allocs total — the one-time thread_local
+  cache fill — with 0 steady-state allocs after that.
+- Allocating benches (`to_value_vec_string`, `serialize_object_json`)
+  retain their prior per-iter counts because their bench bodies and the
+  underlying `to_value` / `from_object` code paths are unchanged.
+
+## After borrow-only `Slice<'a>` + `Dynamic::Sequence` routing (2026-05-09)
+
+Date: 2026-05-09.
+
+Changes:
+- `Slice<'a>` is now strictly a borrowed view: `value: &'a [Value<'a>]`.
+  The blanket `ToValue` impls for `&[T]` and `[T; N]` were removed (they
+  could not be made borrow-correct).
+- `Vec<T>` and `[T; N]` now reflect through `Dynamic::Sequence(&'a dyn Sequence)`
+  — the sequence analogue of `Dynamic::Object(&'a dyn Object)` for structs.
+  No `Vec<Value>` is materialized; elements are produced lazily via
+  `Sequence::index(i)`.
+- `Vec<T>::type_of()` now returns `Type::Slice` (was `Type::Struct("Vec")`),
+  matching the existing behavior of `[T; N]`/`[T]` and what the serde
+  `Dynamic::Sequence` branch expects.
+- `Value::len()` learned to forward to `Dynamic::Sequence::len()`.
+- The `to_value_vec_string` bench was changed to construct the source
+  `Vec<String>` once outside the timed loop, mirroring how
+  `valuable/visit_vec_string` is structured (apples-to-apples).
+
+| Bench | prev (darwin) | after | Time Δ | Per-iter allocs |
+|---|---|---|---|---|
+| `type_of_struct` | 2.88 ns | 2.86 ns | ~0% | 0 |
+| `assignable_to_primitive` | 5.09 ns | 4.68 ns | -8% | 0 |
+| `clone_struct_type` | 1.53 ns | 1.54 ns | ~0% | 0 |
+| `to_value_vec_string` | 74.4 ns / 9 | **0.876 ns / 0** | **-99%** | **0** |
+| `serialize_object_json` | 399 ns | 395 ns | ~0% | (unchanged) |
+
+Valuable comparison after this batch:
+
+| Bench | `ayr-reflect` | `valuable` |
+|---|---|---|
+| `type_of_struct` / `visit_struct` | 2.86 ns | 10.3 ns |
+| `to_value_vec_string` / `visit_vec_string` | **0.876 ns** | 1.50 ns |
+
+`to_value_vec_string` now beats `valuable/visit_vec_string` (the
+zero-alloc visitor reference) — sub-nanosecond, zero allocations.
+
+Trade-offs:
+- Array literals `value_of!([1, 2, 3])` now produce `Value::Dynamic`
+  instead of `Value::Slice`. The element type is still `Type::Slice`,
+  but indexing requires `value.as_dynamic().as_sequence().index(i)`
+  rather than `Value::Index<usize>` (which can't return a reference to
+  a lazily-produced element). The `get!` macro test was simplified to
+  reflect this; a separate test exercises the new `Dynamic::Sequence`
+  index path.
+
+## Re-run (2026-05-09)
+
+Date: 2026-05-09. No source changes since the previous section — fresh
+criterion samples + dhat profile pass.
+
+| Bench | time (median) | allocs / iter |
+|---|---|---|
+| `type_of_struct` | 3.09 ns | 0 (29 setup, one-time) |
+| `assignable_to_primitive` | 4.86 ns | 0 |
+| `clone_struct_type` | 1.68 ns | 0 |
+| `to_value_vec_string` | 1.07 ns | **0** |
+| `serialize_object_json` | 402 ns | (unchanged) |
+| `valuable/visit_struct` | 10.7 ns | 0 |
+| `valuable/visit_vec_string` | 1.50 ns | 0 |
+
+Numbers shift by 5–10% run-to-run on this machine; the headline
+remains: `to_value_vec_string` is sub-nanosecond and zero-alloc,
+beating `valuable/visit_vec_string` (1.50 ns).
+
+## After dropping `Value::Slice` (2026-05-09)
+
+Date: 2026-05-09.
+
+Changes:
+- `Value::Slice` variant removed. The enum now has one canonical
+  "sequence value" representation: `Value::Dynamic(Dynamic::Sequence(...))`.
+- `Slice<'a>` now implements `Sequence`; its `ToValue::to_value` returns
+  `Value::Dynamic(Dynamic::from_sequence(self))`. Same shape as
+  `Vec<T>` and `[T; N]`.
+- `Value::is_slice` / `as_slice` / `to_slice` removed; callers use
+  `is_dynamic()` + `as_dynamic().as_sequence()`.
+- `Value::iter()` panic message updated — lazy sequences cannot return
+  `std::slice::Iter`; use `as_dynamic().as_sequence()` and index by
+  position.
+- `Slice`'s `PartialEq<Value>` impl removed (it called the now-gone
+  `is_slice`/`as_slice`).
+
+| Bench | prev | after | Δ |
+|---|---|---|---|
+| `type_of_struct` | 3.09 ns | 3.39 ns | +10% (run noise) |
+| `assignable_to_primitive` | 4.86 ns | 5.49 ns | +13% (run noise) |
+| `clone_struct_type` | 1.68 ns | 2.20 ns | +31% (run noise; sub-ns range) |
+| `to_value_vec_string` | 1.07 ns | **0.877 ns** | unchanged |
+| `serialize_object_json` | 402 ns | 444 ns | +10% (run noise) |
+
+`to_value_vec_string` stays sub-nanosecond / 0 allocs. The other
+benches drift inside the run-to-run noise band — no source change
+that would affect them.
+
+## After dropping the `Slice<'a>` struct (2026-05-09)
+
+Date: 2026-05-09.
+
+Changes:
+- The `Slice<'a>` wrapper struct in [values/slice.rs](crates/reflect/src/values/slice.rs)
+  is gone. `&'a [Value<'a>]` directly implements `ToType`, `ToValue`,
+  and `Sequence` — `(&values[..]).to_value()` produces
+  `Value::Dynamic(Dynamic::from_sequence(self))` without any
+  intermediate wrapper.
+- `pub use slice::*` removed from [values/mod.rs](crates/reflect/src/values/mod.rs);
+  no `Slice` export remains.
+
+| Bench | prev | after | Δ |
+|---|---|---|---|
+| `type_of_struct` | 3.39 ns | 3.04 ns | -10% (run noise) |
+| `assignable_to_primitive` | 5.49 ns | 4.86 ns | -11% (run noise) |
+| `clone_struct_type` | 2.20 ns | 1.61 ns | -27% (run noise; sub-ns range) |
+| `to_value_vec_string` | 0.877 ns | 1.00 ns | +14% (run noise) |
+| `serialize_object_json` | 444 ns | 395 ns | -11% (run noise) |
+
+No real performance change — the prior `Slice<'a>::to_value` already
+went through `Dynamic::from_sequence`, so removing the struct just
+deletes a thin wrapper. All movement is run-to-run noise.

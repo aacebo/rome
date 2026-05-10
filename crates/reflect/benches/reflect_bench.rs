@@ -165,8 +165,9 @@ fn clone_struct_type(c: &mut Criterion) {
 }
 
 fn to_value_vec_string(c: &mut Criterion) {
+    let v = sample_strings();
     c.bench_function("to_value_vec_string", |b| {
-        b.iter_with_setup(sample_strings, |v| bench_to_value_vec_string(&v));
+        b.iter(|| bench_to_value_vec_string(&v));
     });
 }
 
