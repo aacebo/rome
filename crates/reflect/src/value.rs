@@ -229,10 +229,10 @@ impl<'a> PartialEq<dyn crate::ToValue> for Value<'a> {
 impl<'a> std::ops::Index<usize> for Value<'a> {
     type Output = Self;
 
-    fn index(&self, index: usize) -> &Self::Output {
+    fn index(&self, _index: usize) -> &Self::Output {
         match self {
-            Self::Ref(v) => v.index(index),
-            Self::Mut(v) => v.index(index),
+            Self::Ref(v) => v.index(_index),
+            Self::Mut(v) => v.index(_index),
             _ => panic!("called 'Index<usize>::index' on '{}'", self.to_type()),
         }
     }

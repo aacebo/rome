@@ -61,6 +61,7 @@ impl std::fmt::Display for EntityId {
     }
 }
 
+#[derive(Default)]
 pub struct EntityTable {
     next_id: AtomicU64,
     rows: HashMap<EntityId, Row<EntityId, Arc<dyn Entity>>>,
