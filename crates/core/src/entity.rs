@@ -6,7 +6,7 @@ use std::{
     },
 };
 
-use crate::table::{Row, Table};
+use ayr_storage::{Row, Table};
 
 use super::Context;
 

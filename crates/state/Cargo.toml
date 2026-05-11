@@ -1,5 +1,5 @@
 [package]
-name = "ayr-core"
+name = "ayr-state"
 version.workspace = true
 edition.workspace = true
 license.workspace = true
@@ -17,9 +17,3 @@ workspace = true
 [dependencies]
 crossbeam = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }
-
-ayr-diagnostic.path = "../diagnostic"
-ayr-time.path = "../time"
-ayr-reflect = { path = "../reflect", features = ["serde", "macros"] }
-ayr-state = { path = "../state" }
-ayr-storage = { path = "../storage" }

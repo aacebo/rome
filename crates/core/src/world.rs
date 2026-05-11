@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, sync::Arc};
 
-use crate::{Entity, NodeId, state::State};
+use crate::{Entity, NodeId};
 
 #[derive(
     Debug,
@@ -28,7 +28,7 @@ impl WorldId {
 pub struct World {
     id: WorldId,
     node_id: NodeId,
-    nodes: BTreeMap<NodeId, State<Arc<dyn Entity>>>,
+    nodes: BTreeMap<NodeId, ayr_state::State<Arc<dyn Entity>>>,
 }
 
 impl World {
@@ -65,7 +65,8 @@ impl World {
 
     pub fn spawn<TEntity: Entity>(&mut self, entity: TEntity) -> NodeId {
         let id = self.next_id();
-        self.nodes.insert(id, State::new(Arc::new(entity)));
+        self.nodes
+            .insert(id, ayr_state::State::new(Arc::new(entity)));
         id
     }
 

@@ -9,13 +9,21 @@ pub mod derive {
     pub use ayr_derive::*;
 }
 
+pub mod diagnostic {
+    pub use ayr_diagnostic::*;
+}
+
 #[cfg(feature = "reflect")]
 pub mod reflect {
     pub use ayr_reflect::*;
 }
 
-pub mod diagnostic {
-    pub use ayr_diagnostic::*;
+pub mod state {
+    pub use ayr_state::*;
+}
+
+pub mod storage {
+    pub use ayr_storage::*;
 }
 
 pub mod task {

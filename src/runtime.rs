@@ -1,7 +1,7 @@
-use crate::{prelude::*, state::Store, time};
+use crate::{prelude::*, time};
 
 pub struct Runtime {
-    world: Store<World>,
+    world: ayr_state::Store<World>,
     clock: Box<dyn Clock>,
     layers: Vec<Box<dyn Layer>>,
 }
@@ -11,7 +11,7 @@ impl Runtime {
         RuntimeBuilder::new()
     }
 
-    pub fn world(&self) -> &Store<World> {
+    pub fn world(&self) -> &ayr_state::Store<World> {
         &self.world
     }
 
@@ -78,7 +78,7 @@ impl RuntimeBuilder {
 
     pub fn build(self) -> Runtime {
         Runtime {
-            world: Store::new(World::new()),
+            world: ayr_state::Store::new(World::new()),
             clock: self.clock,
             layers: self.layers,
         }

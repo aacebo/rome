@@ -52,6 +52,8 @@ dependencies = [
  "ayr-derive",
  "ayr-diagnostic",
  "ayr-reflect",
+ "ayr-state",
+ "ayr-storage",
  "ayr-task",
  "ayr-time",
 ]
@@ -62,10 +64,11 @@ version = "0.0.0"
 dependencies = [
  "ayr-diagnostic",
  "ayr-reflect",
+ "ayr-state",
+ "ayr-storage",
  "ayr-time",
  "crossbeam",
  "serde",
- "slotmap",
 ]
 
 [[package]]
@@ -101,6 +104,22 @@ dependencies = [
  "proc-macro2",
  "quote",
  "syn",
+]
+
+[[package]]
+name = "ayr-state"
+version = "0.0.0"
+dependencies = [
+ "crossbeam",
+ "serde",
+]
+
+[[package]]
+name = "ayr-storage"
+version = "0.0.0"
+dependencies = [
+ "serde",
+ "slotmap",
 ]
 
 [[package]]
