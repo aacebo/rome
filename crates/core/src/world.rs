@@ -28,7 +28,7 @@ impl WorldId {
 pub struct World {
     id: WorldId,
     node_id: NodeId,
-    nodes: BTreeMap<NodeId, ayr_state::State<Arc<dyn Entity>>>,
+    nodes: BTreeMap<NodeId, ayr_state::Slot<Arc<dyn Entity>>>,
 }
 
 impl World {
@@ -66,7 +66,7 @@ impl World {
     pub fn spawn<TEntity: Entity>(&mut self, entity: TEntity) -> NodeId {
         let id = self.next_id();
         self.nodes
-            .insert(id, ayr_state::State::new(Arc::new(entity)));
+            .insert(id, ayr_state::Slot::new(Arc::new(entity)));
         id
     }
 

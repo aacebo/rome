@@ -1,20 +1,20 @@
-use std::{any::TypeId, collections::HashMap, sync::RwLock};
+use std::{any::TypeId, collections::HashMap};
 
-use crate::{Action, Selector, State, Trigger, action::Next, select::Select, trigger};
+use crate::{Action, Selector, Slot, Trigger, action::Next, select::Select, trigger};
 
 /// Central coordinator that owns state and processes actions.
 pub struct Store<TState: 'static> {
-    state: State<TState>,
+    state: Slot<TState>,
     buffer: Next<TState>,
-    triggers: RwLock<HashMap<TypeId, Vec<Box<dyn trigger::AnyTrigger<TState>>>>>,
+    triggers: HashMap<TypeId, Vec<Box<dyn trigger::AnyTrigger<TState>>>>,
 }
 
 impl<TState: 'static> Store<TState> {
     pub fn new(state: TState) -> Self {
         Self {
-            state: State::new(state),
+            state: Slot::new(state),
             buffer: Next::with_capacity(1024),
-            triggers: RwLock::new(HashMap::new()),
+            triggers: HashMap::new(),
         }
     }
 
@@ -40,14 +40,12 @@ impl<TState: 'static> Store<TState> {
     }
 
     /// Register a new Trigger that will be executed for each dispatch of [`TAction`]
-    pub fn trigger<TAction, T>(&self, trigger: T)
+    pub fn trigger<TAction, T>(&mut self, trigger: T)
     where
         TAction: Action<State = TState>,
         T: Trigger<TAction>,
     {
         self.triggers
-            .write()
-            .unwrap()
             .entry(TypeId::of::<TAction>())
             .or_default()
             .push(Box::new(trigger::TriggerGuard::<TAction, T>::new(trigger)));
@@ -59,15 +57,14 @@ impl<TState: 'static> Store<TState> {
             return;
         }
 
-        let triggers = self.triggers.read().unwrap();
-
         while let drained = self.buffer.drain()
             && !drained.is_empty()
         {
             for action in &drained {
                 action.reduce(self.state.as_mut());
+                self.state.version().increment();
 
-                if let Some(bucket) = triggers.get(&action.type_id()) {
+                if let Some(bucket) = self.triggers.get(&action.type_id()) {
                     for trigger in bucket {
                         trigger.execute(self.state.as_mut(), action.as_ref(), &self.buffer);
                     }
