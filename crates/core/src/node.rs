@@ -1,3 +1,7 @@
+use std::rc::Rc;
+
+use crate::{Attribute, Entity};
+
 #[derive(
     Debug,
     Default,
@@ -21,9 +25,12 @@ impl NodeId {
 }
 
 #[derive(Debug, Clone, serde::Serialize)]
-pub struct Node {
-    pub id: NodeId,
-    pub parent: Option<NodeId>,
-    pub name: String,
-    pub children: Vec<NodeId>,
+#[serde(tag = "type", rename_all = "snake_case")]
+pub enum Node {
+    Entity {
+        parent: Option<NodeId>,
+        entity: Rc<dyn Entity>,
+        children: Vec<NodeId>,
+        attributes: Vec<Rc<dyn Attribute>>,
+    },
 }

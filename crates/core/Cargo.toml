@@ -17,6 +17,8 @@ workspace = true
 [dependencies]
 crossbeam = { workspace = true }
 serde = { workspace = true, features = ["derive", "rc"] }
+slotmap = "1.0"
+
 ayr-diagnostic.path = "../diagnostic"
 ayr-time.path = "../time"
 ayr-reflect = { path = "../reflect", features = ["serde", "macros"] }

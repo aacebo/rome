@@ -5,6 +5,7 @@ mod layer;
 mod node;
 pub mod prelude;
 pub mod state;
+pub mod table;
 pub mod view;
 pub mod world;
 
